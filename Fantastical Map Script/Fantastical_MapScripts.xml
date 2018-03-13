@@ -1,0 +1,102 @@
+<GameInfo>
+	<!-- Add the map script to the list of maps. -->
+	<Maps>
+		<Row File="Fantastical.lua" Name="Fantastical" SortIndex="8"
+			 Description="Weird lands and squiggly rivers unhindered by realism." />
+	</Maps>
+
+	<!-- User-selectable parameters for this map. -->
+	<Parameters>
+
+		<!-- Core Map options: -->
+		<!-- Map Size sort: 220 -->
+		<!-- Resources and Start refuse to obey sort indices...because they're shared by all map scripts? -->
+		<!-- SP Resources: Abundant -->
+		<Row ParameterId="Resources"
+		     Name="LOC_MAP_RESOURCES_NAME" Description="LOC_MAP_RESOURCES_DESCRIPTION"
+			 Domain="Resources" ConfigurationId="resources"
+			 SupportsLANMultiplayer="0" SupportsInternetMultiplayer="0" SupportsHotSeat="0"
+			 DefaultValue="3"
+			 SortIndex="230" Key1="Map" Key2="GotLakes.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+		<!-- MP Resources: Standard -->
+		<Row ParameterId="Resources"
+		     Name="LOC_MAP_RESOURCES_NAME" Description="LOC_MAP_RESOURCES_DESCRIPTION"
+			 Domain="Resources" ConfigurationId="resources"
+			 SupportsSinglePlayer="0"
+			 DefaultValue="2"
+			 SortIndex="230" Key1="Map" Key2="GotLakes.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+		<!-- SP Start: Standard -->
+		<Row ParameterId="StartPosition"
+		     Name="LOC_MAP_START_POSITION_NAME" Description="LOC_MAP_START_POSITION_DESCRIPTION"
+			 Domain="GLDomain_StartPosition" ConfigurationId="start"
+			 SupportsLANMultiplayer="0" SupportsInternetMultiplayer="0" SupportsHotSeat="0"
+			 DefaultValue="2"
+			 SortIndex="240" Key1="Map" Key2="GotLakes.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+		<!-- MP Start: Balanced -->
+		<Row ParameterId="StartPosition"
+		     Name="LOC_MAP_START_POSITION_NAME" Description="LOC_MAP_START_POSITION_DESCRIPTION"
+			 Domain="GLDomain_StartPosition" ConfigurationId="start"
+			 SupportsSinglePlayer="0"
+			 DefaultValue="1"
+			 SortIndex="240" Key1="Map" Key2="GotLakes.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+		<Row ParameterId="WorldAge"
+			 Name="LOC_MAP_WORLD_AGE_NAME" Description="LOC_MAP_WORLD_AGE_DESCRIPTION"
+			 Domain="GLDomain_WorldAge" ConfigurationId="world_age"
+			 DefaultValue="4"
+			 SortIndex="250" Key1="Map" Key2="GotLakes.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+		<Row ParameterId="SeaLevel"
+			 Name="LOC_MAP_SEA_LEVEL_NAME" Description="LOC_MAP_SEA_LEVEL_DESCRIPTION"
+			 Domain="GLDomain_SeaLevel" ConfigurationId="sea_level"
+			 DefaultValue="4"
+			 SortIndex="260" Key1="Map" Key2="GotLakes.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+		<Row ParameterId="Temperature"
+			 Name="LOC_MAP_TEMPERATURE_NAME" Description="LOC_GL_TEMPERATURE_DESCRIPTION"
+			 Domain="GLDomain_Temperature" ConfigurationId="temperature"
+			 DefaultValue="4"
+			 SortIndex="270" Key1="Map" Key2="GotLakes.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+		<Row ParameterId="Rainfall"
+			 Name="LOC_MAP_RAINFALL_NAME" Description="LOC_GL_RAINFALL_DESCRIPTION"
+ 			 Domain="GLDomain_Rainfall" ConfigurationId="rainfall"
+	 		 DefaultValue="4"
+			 SortIndex="280" Key1="Map" Key2="GotLakes.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+	</Parameters>
+
+	
+	<!-- Domain is the list of options in the dropdown -->
+	<DomainValues>
+		
+		<!-- Core options -->
+		<Row Domain="GLDomain_WorldAge" Value="1" Name="LOC_MAP_WORLD_AGE_NEW_NAME"      Description="LOC_MAP_WORLD_AGE_NEW_DESCRIPTION"      SortIndex="10"/>
+		<Row Domain="GLDomain_WorldAge" Value="2" Name="LOC_MAP_WORLD_AGE_STANDARD_NAME" Description="LOC_MAP_WORLD_AGE_STANDARD_DESCRIPTION" SortIndex="11"/>
+		<Row Domain="GLDomain_WorldAge" Value="3" Name="LOC_MAP_WORLD_AGE_OLD_NAME"      Description="LOC_MAP_WORLD_AGE_OLD_DESCRIPTION"      SortIndex="12"/>
+		<Row Domain="GLDomain_WorldAge" Value="4" Name="LOC_MAP_WORLD_AGE_RANDOM_NAME"   Description="LOC_MAP_WORLD_AGE_RANDOM_DESCRIPTION"   SortIndex="13"/>
+
+		<Row Domain="GLDomain_SeaLevel" Value="1" Name="LOC_MAP_SEA_LEVEL_LOW_NAME"      Description="LOC_MAP_SEA_LEVEL_LOW_DESCRIPTION"      SortIndex="10"/>
+		<Row Domain="GLDomain_SeaLevel" Value="2" Name="LOC_MAP_SEA_LEVEL_STANDARD_NAME" Description="LOC_MAP_SEA_LEVEL_STANDARD_DESCRIPTION" SortIndex="11"/>
+		<Row Domain="GLDomain_SeaLevel" Value="3" Name="LOC_MAP_SEA_LEVEL_HIGH_NAME"     Description="LOC_MAP_SEA_LEVEL_HIGH_DESCRIPTION"     SortIndex="12"/>
+		<Row Domain="GLDomain_SeaLevel" Value="4" Name="LOC_MAP_SEA_LEVEL_RANDOM_NAME"   Description="LOC_MAP_SEA_LEVEL_RANDOM_DESCRIPTION"   SortIndex="13"/>
+
+		<Row Domain="GLDomain_Temperature" Value="1" Name="LOC_GL_TEMPERATURE_COOLER_NAME" Description="LOC_GL_TEMPERATURE_COOLER_DESC" SortIndex="10"/>
+		<Row Domain="GLDomain_Temperature" Value="2" Name="LOC_GL_TEMPERATURE_NORMAL_NAME" Description="LOC_GL_TEMPERATURE_NORMAL_DESC" SortIndex="11"/>
+		<Row Domain="GLDomain_Temperature" Value="3" Name="LOC_GL_TEMPERATURE_WARMER_NAME" Description="LOC_GL_TEMPERATURE_WARMER_DESC" SortIndex="12"/>
+		<Row Domain="GLDomain_Temperature" Value="4" Name="LOC_GL_TEMPERATURE_RANDOM_NAME" Description="LOC_GL_TEMPERATURE_RANDOM_DESC" SortIndex="13"/>
+
+		<Row Domain="GLDomain_Rainfall" Value="1" Name="LOC_GL_RAINFALL_DRIER_NAME"  Description="LOC_GL_RAINFALL_DRIER_DESC"  SortIndex="10"/>
+		<Row Domain="GLDomain_Rainfall" Value="2" Name="LOC_GL_RAINFALL_NORMAL_NAME" Description="LOC_GL_RAINFALL_NORMAL_DESC" SortIndex="11"/>
+		<Row Domain="GLDomain_Rainfall" Value="3" Name="LOC_GL_RAINFALL_WETTER_NAME" Description="LOC_GL_RAINFALL_WETTER_DESC" SortIndex="12"/>
+		<Row Domain="GLDomain_Rainfall" Value="4" Name="LOC_GL_RAINFALL_RANDOM_NAME" Description="LOC_GL_RAINFALL_RANDOM_DESC" SortIndex="13"/>
+
+		<Row Domain="GLDomain_StartPosition" Value="1" Name="LOC_MAP_START_POSITION_BALANCED_NAME"  Description="LOC_MAP_START_POSITION_BALANCED_DESCRIPTION"  SortIndex="10"/>
+		<Row Domain="GLDomain_StartPosition" Value="2" Name="LOC_MAP_START_POSITION_STANDARD_NAME"  Description="LOC_MAP_START_POSITION_STANDARD_DESCRIPTION"  SortIndex="11"/>
+		<Row Domain="GLDomain_StartPosition" Value="3" Name="LOC_MAP_START_POSITION_LEGENDARY_NAME" Description="LOC_MAP_START_POSITION_LEGENDARY_DESCRIPTION" SortIndex="12"/>
+		
+	</DomainValues>
+</GameInfo>
