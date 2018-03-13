@@ -1329,6 +1329,11 @@ Hex = class(function(a, space, x, y, index)
 	end
 end)
 
+function Hex:GetPlotIndex()
+	-- return self.index - 1
+	return (self.y * self.space.iW) + (self.shiftedX or self.x)
+end
+
 function Hex:Place(relax)
 	self.subPolygon = self:ClosestSubPolygon()
 	tInsert(self.subPolygon.hexes, self)
@@ -1525,6 +1530,11 @@ function Hex:SetTerrain()
 	-- if self.subPolygon.polar and (self.plotType == plotLand or self.plotType == plotMountain or self.plotType == plotHills) then
 		-- self.terrainType = terrainSnow
 	-- end
+	if self.plotType == plotHills then
+		self.terrainType = self.terrainType + 1
+	elseif self.plotType == plotMountain then
+		self.terrainType = self.terrainType + 2
+	end
 	TerrainBuilder.SetTerrainType(self.plot, self.terrainType)
 end
 
@@ -3729,6 +3739,7 @@ function Space:ShiftGlobe()
 			local shiftedX = (hex.x + shiftX) % self.iW
 			local shiftedHex = self:GetHexByXY(shiftedX, hex.y)
 			hex.plot = Map.GetPlotByIndex(shiftedHex.index-1)
+			hex.shifedX = shiftedX
 		end
 	end
 end
@@ -3740,15 +3751,21 @@ function Space:StripResources()
 end
 
 function Space:SetPlots()
+	local plotTypes = {}
 	for i, hex in pairs(self.hexes) do
 		hex:SetPlot()
+		plotTypes[hex:GetPlotIndex()] = hex.plotType
 	end
+	return plotTypes
 end
 
 function Space:SetTerrains()
+	local terrainTypes = {}
 	for i, hex in pairs(self.hexes) do
 		hex:SetTerrain()
+		terrainTypes[hex:GetPlotIndex()] = hex.terrainTypes
 	end
+	return terrainTypes
 end
 
 function Space:SetFeatures()
@@ -6801,12 +6818,12 @@ function GeneratePlotTypes()
 	print("Shifting globe to accomodate continents (Fantastical) ...")
 	mySpace:ShiftGlobe()
     print("Setting Plot Types (Fantastical) ...")
-    mySpace:SetPlots()
+    return mySpace:SetPlots()
 end
 
 function GenerateTerrain()
     print("Setting Terrain Types (Fantastical) ...")
-	mySpace:SetTerrains()
+	return mySpace:SetTerrains()
 end
 
 function AddFeatures()
@@ -6854,9 +6871,46 @@ end
 -- ENTRY POINT:
 function GenerateMap()
 	print("Generating Fantastical Map...")
-	GeneratePlotTypes()
-	GenerateTerrain()
+	plotTypes = GeneratePlotTypes()
+	terrainTypes = GenerateTerrain()
 	AddFeatures()
 	AddRivers()
-	DetermineContinents()
+
+	AreaBuilder.Recalculate();
+	print("Adding cliffs");
+	AddCliffs(plotTypes, terrainTypes);
+	
+	local args = {
+		numberToPlace = GameInfo.Maps[Map.GetMapSize()].NumNaturalWonders,
+	};
+
+	local nwGen = NaturalWonderGenerator.Create(args);
+
+	AreaBuilder.Recalculate();
+	TerrainBuilder.AnalyzeChokepoints();
+	TerrainBuilder.StampContinents();
+	
+	resourcesConfig = MapConfiguration.GetValue("resources");
+	local startConfig = MapConfiguration.GetValue("start");-- Get the start config
+	local args = {
+		iWaterLux = 2,
+		resources = resourcesConfig,
+		START_CONFIG = startConfig,
+	}
+	local resGen = ResourceGenerator.Create(args);
+
+	print("Creating start plot database.");
+	-- START_MIN_Y and START_MAX_Y is the percent of the map ignored for major civs' starting positions.
+	local args = {
+		MIN_MAJOR_CIV_FERTILITY = 300,
+		MIN_MINOR_CIV_FERTILITY = 50, 
+		MIN_BARBARIAN_FERTILITY = 1,
+		START_MIN_Y = 15,
+		START_MAX_Y = 15,
+		START_CONFIG = startConfig,
+		LAND = true,
+	};
+	local start_plot_database = AssignStartingPlots.Create(args)
+
+	local GoodyGen = AddGoodies(mySpace.iW, mySpace.iH);
 end
