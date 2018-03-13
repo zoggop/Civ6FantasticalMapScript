@@ -1530,20 +1530,24 @@ function Hex:SetTerrain()
 	-- if self.subPolygon.polar and (self.plotType == plotLand or self.plotType == plotMountain or self.plotType == plotHills) then
 		-- self.terrainType = terrainSnow
 	-- end
+	local terrainType = self.terrainType
 	if self.plotType == plotHills then
-		self.terrainType = self.terrainType + 1
+		terrainType = terrainType + 1
 	elseif self.plotType == plotMountain then
-		self.terrainType = self.terrainType + 2
+		terrainType = terrainType + 2
 	end
-	TerrainBuilder.SetTerrainType(self.plot, self.terrainType)
+	TerrainBuilder.SetTerrainType(self.plot, terrainType)
 end
 
 function Hex:SetFeature()
 	-- if self.polygon.oceanIndex then self.featureType = featureReef end -- uncomment to debug ocean rifts
 	-- if self.polygon.astronomyBlob then self.featureType = featureReef end -- uncomment to debug astronomy blobs
 	-- if self.polygon.astronomyIndex < 100 then self.featureType = featureReef end -- uncomment to debug astronomy basins
+	if self.plot == nil then
+		EchoDebug("hex has no plot", hex:Locate())
+		return
+	end
 	if self.featureType == nil then return end
-	if self.plot == nil then return end
 	if self.plotType == plotMountain then
 		if self.space.falloutEnabled and mRandom(0, 100) < mMin(25, FeatureDictionary[featureFallout].percent) then
 			-- self.featureType = featureFallout
@@ -6550,6 +6554,26 @@ function Space:AdjustMountains()
 	end
 end
 
+function Space:AddTrickSnow()
+	for y = 0, self.h, self.h do
+		for x = 0, self.w do
+			local hex = self:GetHexByXY(x, y)
+			if hex.plotType ~= plotOcean then
+				TerrainBuilder.SetTerrainType(hex.plot, terrainSnow)
+			end
+		end
+	end
+end
+
+function Space:RemoveTrickSnow()
+	for y = 0, self.h, self.h do
+		for x = 0, self.w do
+			local hex = self:GetHexByXY(x, y)
+			hex:SetTerrain()
+		end
+	end
+end
+
 ----------------------------------
 -- INTERNAL FUNCTIONS: --
 
@@ -6873,20 +6897,26 @@ function GenerateMap()
 	print("Generating Fantastical Map...")
 	plotTypes = GeneratePlotTypes()
 	terrainTypes = GenerateTerrain()
+
+	AreaBuilder.Recalculate();
+
 	AddFeatures()
 	AddRivers()
 
-	AreaBuilder.Recalculate();
 	print("Adding cliffs");
 	AddCliffs(plotTypes, terrainTypes);
-	
+
+	mySpace:AddTrickSnow() -- because the natural wonder generator is deeply stupid and assumes snow at map top and bottom
+
 	local args = {
 		numberToPlace = GameInfo.Maps[Map.GetMapSize()].NumNaturalWonders,
 	};
-
 	local nwGen = NaturalWonderGenerator.Create(args);
 
+	mySpace:RemoveTrickSnow()
+
 	AreaBuilder.Recalculate();
+
 	TerrainBuilder.AnalyzeChokepoints();
 	TerrainBuilder.StampContinents();
 	
