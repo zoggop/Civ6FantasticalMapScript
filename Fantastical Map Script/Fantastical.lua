@@ -1023,7 +1023,8 @@ local function SetConstants()
 
 	DirConvert = { [DirW] = DirectionTypes.DIRECTION_WEST, [DirNW] = DirectionTypes.DIRECTION_NORTHWEST, [DirNE] = DirectionTypes.DIRECTION_NORTHEAST, [DirE] = DirectionTypes.DIRECTION_EAST, [DirSE] = DirectionTypes.DIRECTION_SOUTHEAST, [DirSW] = DirectionTypes.DIRECTION_SOUTHWEST }
 
-	-- routeRoad = GameInfo.Routes.ROUTE_ROAD.ID
+	EchoDebug(GameInfo.Routes, GameInfo.Routes.ROUTE_ANCIENT_ROAD)
+	routeRoad = GameInfo.Routes.ROUTE_ANCIENT_ROAD.Index
 
 	plotOcean = g_PLOT_TYPE_OCEAN -- PlotTypes.PLOT_OCEAN
 	plotLand = g_PLOT_TYPE_LAND -- PlotTypes.PLOT_LAND
@@ -1040,6 +1041,12 @@ local function SetConstants()
 	EchoDebug("ocean " .. terrainOcean, "coast " .. terrainCoast, "grass " .. terrainGrass, "plains " .. terrainPlains, "desert " .. terrainDesert, "tundra " .. terrainTundra, "snow " .. terrainSnow)
 	for thisTerrain in GameInfo.Terrains() do
 		EchoDebug(thisTerrain.TerrainType, thisTerrain.RowId, thisTerrain.Index, thisTerrain.Hash)
+	end
+	for improvement in GameInfo.Improvements() do
+		EchoDebug(improvement.Name, improvement.Index, improvement.ImprovementType)
+	end
+	for route in GameInfo.Routes() do
+		EchoDebug(route.Name, route.Index, route.RouteType)
 	end
 
 	featureNone = g_FEATURE_NONE
@@ -1590,14 +1597,14 @@ end
 function Hex:SetRoad()
 	if self.plot == nil then return end
 	if not self.road then return end
-	self.plot:SetRouteType(routeRoad)
-	EchoDebug("routeType " .. routeRoad .. " at " .. self.x .. "," .. self.y)
+	RouteBuilder.SetRouteType(self.plot, routeRoad)
+	-- EchoDebug("routeType " .. routeRoad .. " at " .. self.x .. "," .. self.y)
 end
 
 function Hex:SetImprovement()
 	if self.plot == nil then return end
 	if not self.improvementType then return end
-	EchoDebug("improvementType " .. self.improvementType .. " at " .. self.x .. "," .. self.y)
+	-- EchoDebug("improvementType " .. self.improvementType .. " at " .. self.x .. "," .. self.y)
 	self.plot:SetImprovementType(self.improvementType)
 end
 
@@ -2286,7 +2293,6 @@ function Region:GiveParameters()
 	-- get latitude (real or fake)
 	self:GiveLatitude()
 	self.hillyness = self.space:GetHillyness()
-	EchoDebug("hillyness: " .. self.hillyness)
 	self.mountainous = mRandom(1, 100) < self.space.mountainousRegionPercent
 	self.mountainousness = 0
 	if self.mountainous then self.mountainousness = mRandom(self.space.mountainousnessMin, self.space.mountainousnessMax) end
@@ -6861,8 +6867,6 @@ end
 function AddFeatures()
 	print("Setting Feature Types (Fantastical) ...")
 	mySpace:SetFeatures()
-	-- print("Setting roads instead (Fantastical) ...")
-	-- mySpace:SetRoads()
 end
 
 function AddRivers()
@@ -6872,6 +6876,11 @@ end
 
 function AddLakes()
 	print("Adding No Lakes (lakes have already been added) (Fantastical)")
+end
+
+function AddRoutes()
+	print("Setting routes (Fantastical) ...")
+	mySpace:SetRoads()
 end
 
 function DetermineContinents()
@@ -6914,6 +6923,7 @@ function GenerateMap()
 
 	AddFeatures()
 	AddRivers()
+	AddRoutes()
 
 	print("Adding cliffs");
 	AddCliffs(plotTypes, terrainTypes);
