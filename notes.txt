@@ -1,0 +1,13 @@
+- mountains and hills can be controlled more easily
+
+	- pick mountain ranges before filling regions
+
+	- reserve a percentage of the prescribed mountains for region filling
+	- determine number of subpolygons and hexes an edge creates as its added to a range
+	- do not pick every subpolygon (or hex) along an edge for mountains. leave out a prescribed percentage of the subpolygons (and hexes). this way, the passableness of mountain ranges can be controlled without overfilling & then resizing
+
+	- set a percentage of the land that should be hills
+	- as long as regions are being filled in a random order, maxhillyness can be determined by how far from the hills goal we are
+	- the goal is how many hills are left to create after the number of hills already created by mountain passes
+	- a fraction of the hills can be reserved for region filling in advance
+	- because mountain ranges are begun randomly, the prescribed number of hills created by mountain passes can be used to determine the chance of a pass being hilly. this has the added benefit of creating a variety of mountain regions

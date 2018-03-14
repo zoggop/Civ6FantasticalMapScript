@@ -2623,7 +2623,7 @@ Space = class(function(a)
 	a.mountainRangeMaxEdges = 4 -- how many polygon edges long can a mountain range be
 	a.coastRangeRatio = 0.33 -- what ratio of the total mountain ranges should be coastal
 	a.mountainRatio = 0.06 -- how much of the land to be mountain tiles
-	a.mountainRangeMult = 1.3 -- higher mult means more (globally) scattered mountain ranges
+	a.mountainRangeMult = 2.25 -- higher mult means more (globally) scattered mountain ranges
 	a.mountainSubPolygonMult = 2 -- higher mult means more (globally) scattered subpolygon mountain clumps
 	a.mountainTinyIslandMult = 12
 	a.coastalPolygonChance = 1 -- out of ten, how often do water polygons become coastal?
@@ -5035,13 +5035,15 @@ function Space:PickMountainRanges()
 	self.continentMountainEdgeCounts = {}
 	local edgeBuffer = {}
 	for i, edge in pairs(self.edges) do
-		tInsert(edgeBuffer, edge)
+		if edge.polygons[1].continent or edge.polygons[2].continent then
+			tInsert(edgeBuffer, edge)
+		end
 	end
 	local mountainRangeRatio = self.mountainRatio * self.mountainRangeMult
-	local prescribedEdges = mountainRangeRatio * #self.edges
+	local prescribedEdges = mountainRangeRatio * #edgeBuffer
 	local coastPrescription = mFloor(prescribedEdges * self.coastRangeRatio)
 	local interiorPrescription = prescribedEdges - coastPrescription
-	EchoDebug("prescribed mountain range edges: " .. prescribedEdges .. " of " .. #self.edges)
+	EchoDebug("prescribed mountain range edges: " .. prescribedEdges .. " of " .. #edgeBuffer .. " edges on land")
 	local edgeCount = 0
 	local coastCount = 0
 	local interiorCount = 0
@@ -5050,11 +5052,11 @@ function Space:PickMountainRanges()
 		local coastRange
 		repeat
 			edge = tRemoveRandom(edgeBuffer)
-			if (edge.polygons[1].continent or edge.polygons[2].continent) and not edge.mountains then
-				if edge.polygons[1].continent and edge.polygons[2].continent  and edge.polygons[1].region ~= edge.polygons[2].region and interiorCount < interiorPrescription then
+			if not edge.mountains then
+				if edge.polygons[1].continent and edge.polygons[2].continent and edge.polygons[1].region ~= edge.polygons[2].region and interiorCount < interiorPrescription then
 					coastRange = false
 					break
-				elseif coastCount < coastPrescription then
+				elseif edge.polygons[1].continent ~= edge.polygons[2].continent and coastCount < coastPrescription then
 					coastRange = true
 					break
 				end
