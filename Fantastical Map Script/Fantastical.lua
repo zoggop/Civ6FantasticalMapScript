@@ -1532,9 +1532,13 @@ function Hex:SetTerrain()
 	-- end
 	local terrainType = self.terrainType
 	if self.plotType == plotHills then
+		self.space.hillCount = (self.space.hillCount or 0) + 1
 		terrainType = terrainType + 1
 	elseif self.plotType == plotMountain then
+		self.space.mountainCount = (self.space.mountainCount or 0) + 1
 		terrainType = terrainType + 2
+	elseif self.plotType == plotLand then
+		self.space.landCount = (self.space.landCount or 0) + 1
 	end
 	TerrainBuilder.SetTerrainType(self.plot, terrainType)
 end
@@ -2282,6 +2286,7 @@ function Region:GiveParameters()
 	-- get latitude (real or fake)
 	self:GiveLatitude()
 	self.hillyness = self.space:GetHillyness()
+	EchoDebug("hillyness: " .. self.hillyness)
 	self.mountainous = mRandom(1, 100) < self.space.mountainousRegionPercent
 	self.mountainousness = 0
 	if self.mountainous then self.mountainousness = mRandom(self.space.mountainousnessMin, self.space.mountainousnessMax) end
@@ -2491,6 +2496,7 @@ function Region:Fill()
 						-- EchoDebug("lake hex at ", hex:Locate())
 					end
 					hex.plotType = element.plotType
+					if element.plotType == plotHills then self.space.actualHillCount = (self.space.actualHillCount or 0) + 1 end
 					if element.plotType == plotMountain then tInsert(self.space.mountainHexes, hex) end
 					hex.terrainType = element.terrainType
 					if FeatureDictionary[element.featureType].limitRatio == -1 or self.featureFillCounts[element.featureType] < FeatureDictionary[element.featureType].limitRatio * self.area then
@@ -2594,7 +2600,7 @@ Space = class(function(a)
 	a.astronomyBlobMaxPolygons = 20
 	a.astronomyBlobsMustConnectToOcean = false
 	a.majorContinentNumber = 2 -- how many large continents on the whole map
-	a.islandNumber = 3 -- how many 1-3-polygon islands on the whole map
+	a.islandNumber = 4 -- how many 1-3-polygon islands on the whole map
 	a.openWaterRatio = 0.1 -- what part of an astronomy basin is reserved for open water
 	a.polarMaxLandRatio = 0.4 -- how much of the land in each astronomy basin can be at the poles
 	a.useMapLatitudes = false -- should the climate have anything to do with latitude?
@@ -2610,7 +2616,7 @@ Space = class(function(a)
 	a.hillChance = 3 -- how many possible mountains out of ten become a hill when expanding and reducing
 	a.mountainRangeMaxEdges = 4 -- how many polygon edges long can a mountain range be
 	a.coastRangeRatio = 0.33 -- what ratio of the total mountain ranges should be coastal
-	a.mountainRatio = 0.04 -- how much of the land to be mountain tiles
+	a.mountainRatio = 0.06 -- how much of the land to be mountain tiles
 	a.mountainRangeMult = 1.3 -- higher mult means more (globally) scattered mountain ranges
 	a.mountainSubPolygonMult = 2 -- higher mult means more (globally) scattered subpolygon mountain clumps
 	a.mountainTinyIslandMult = 12
@@ -2622,7 +2628,7 @@ Space = class(function(a)
 	a.rainfallMidpoint = 49.5 -- 25 means rainfall varies from 0 to 50, 75 means 50 to 100, 50 means 0 to 100.
 	a.temperatureMin = 0 -- lowest temperature possible (plus or minus temperatureMaxDeviation)
 	a.temperatureMax = 99 -- highest temperature possible (plus or minus temperatureMaxDeviation)
-	a.hillynessMax = 40 -- of 100 how many of a region's tile collection can be hills
+	a.hillynessMax = 70 -- of 100 how many of a region's tile collection can be hills
 	a.mountainousRegionPercent = 3 -- of 100 how many regions will have mountains
 	a.mountainousnessMin = 33 -- in those mountainous regions, what's the minimum percentage of mountains in their collection
 	a.mountainousnessMax = 66 -- in those mountainous regions, what's the maximum percentage of mountains in their collection
@@ -6497,6 +6503,7 @@ function Space:ResizeMountains(prescribedArea)
 				end
 				if TerrainBuilder.GetRandomNumber(10, "hill dice") < self.hillChance then
 					hex.plotType = plotHills
+					self.actualHillCount = (self.actualHillCount or 0) + 1
 					if hex.featureType and not FeatureDictionary[hex.featureType].hill then
 						hex.featureType = featureNone
 					end
@@ -6525,6 +6532,7 @@ function Space:ResizeMountains(prescribedArea)
 			if nhex ~= nil and nhex.plotType == plotLand then
 				if TerrainBuilder.GetRandomNumber(10, "hill dice") < self.hillChance then
 					nhex.plotType = plotHills
+					self.actualHillCount = (self.actualHillCount or 0) + 1
 					if not FeatureDictionary[hex.featureType].hill then
 						hex.featureType = featureNone
 					end
@@ -6897,6 +6905,10 @@ function GenerateMap()
 	print("Generating Fantastical Map...")
 	plotTypes = GeneratePlotTypes()
 	terrainTypes = GenerateTerrain()
+	local totalDry = mySpace.hillCount + mySpace.mountainCount + mySpace.landCount
+	local hillPercent = mCeil((mySpace.hillCount / totalDry) * 100)
+	local mountainPercent = mCeil((mySpace.mountainCount /totalDry) * 100)
+	EchoDebug(mySpace.hillCount .. "(" .. hillPercent .. '\%) hills', mySpace.actualHillCount .. " hills set", mySpace.mountainCount .. "(" .. mountainPercent .. '\%) mountains', totalDry .. " total dry")
 
 	AreaBuilder.Recalculate();
 
