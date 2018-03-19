@@ -2628,9 +2628,7 @@ Space = class(function(a)
 	a.climateVoronoiRelaxations = 3 -- number of lloyd relaxations for a region's temperature/rainfall. higher number means less region internal variation
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
 	a.riverForkRatio = 0.33 -- how much of the river area should be reserved for forks
-	a.hillChance = 3 -- how many possible mountains out of ten become a hill when expanding and reducing
 	a.hillRatio = 0.25 -- how much of the land to be hills
-	a.hillPassRatio = 0.15 -- what portion of the hills to come from mountain range passes
 	a.mountainRangeMaxEdges = 4 -- how many polygon edges long can a mountain range be
 	a.coastRangeRatio = 0.33 -- what ratio of the total mountain ranges should be coastal
 	a.mountainRatio = 0.06 -- how much of the land to be mountain tiles
@@ -5166,11 +5164,12 @@ function Space:PickMountainRanges()
 		tInsert(self.mountainRanges, range)
 	end
 	EchoDebug(interiorCount .. " interior range edges with " .. interiorHexCountEstimate .. " hexes", coastCount .. " coastal range edges with " .. coastHexCountEstimate .. " hexes", hexCountEstimate .. " total mountain hexes")
+	self.hillRatio = mSqrt(self.mountainRatio)
 	self.hillPassRatio = totalRangeArea / self.regionHexCount
 	self.hillArea = mFloor(self.hillRatio * self.regionHexCount)
 	self.hillPassArea = mFloor(self.hillPassRatio * self.hillArea)
 	self.hillRegionArea = self.hillArea - self.hillPassArea
-	EchoDebug("hillPassRatio: " .. self.hillPassRatio)
+	EchoDebug("hillRatio: " .. self.hillRatio, "hillPassRatio: " .. self.hillPassRatio)
 	-- self:PickMountainSubPolygons()
 end
 
@@ -6570,78 +6569,6 @@ function Space:DisperseFakeLatitude()
     end
 	for i, polygon in pairs(self.polygons) do
 		polygon:GiveFakeLatitude()
-	end
-end
-
-function Space:ResizeMountains(prescribedArea)
-	local iterationsPossible = mMax(#self.mountainHexes, prescribedArea) * 3
-	local iterations = 0
-	local coreHexesLeft = #self.mountainCoreHexes
-	if #self.mountainHexes > prescribedArea then
-		repeat
-			local hex = tRemoveRandom(self.mountainHexes)
-			if hex.mountainRangeCore and #self.mountainCoreHexes > 0 and coreHexesLeft < prescribedArea and #self.mountainHexes > coreHexesLeft then
-				tInsert(self.mountainHexes, hex)
-			else
-				if hex.mountainRangeCore then
-					coreHexesLeft = coreHexesLeft - 1
-				end
-				if TerrainBuilder.GetRandomNumber(10, "hill dice") < self.hillChance then
-					hex.plotType = plotHills
-					if hex.featureType and not FeatureDictionary[hex.featureType].hill then
-						hex.featureType = featureNone
-					end
-				else
-					hex.plotType = plotLand
-				end
-			end
-			iterations = iterations + 1
-		until #self.mountainHexes <= prescribedArea or iterations > iterationsPossible
-		EchoDebug("mountains reduced to " .. #self.mountainHexes .. " after " .. iterations .. " iterations ", coreHexesLeft .. " core hexes remaining")
-	elseif #self.mountainHexes < prescribedArea then
-		local noNeighbors = 0
-		repeat
-			local hex = tGetRandom(self.mountainHexes)
-			local neighbors = hex:Neighbors()
-			local neighborBuffer = {} -- because neighbors has gaps in it
-			for n, nhex in pairs(neighbors) do
-				if nhex then
-					tInsert(neighborBuffer, nhex)
-				end
-			end
-			local nhex
-			repeat
-				nhex = tRemoveRandom(neighborBuffer)
-			until nhex.plotType == plotLand or #neighborBuffer == 0
-			if nhex ~= nil and nhex.plotType == plotLand then
-				if TerrainBuilder.GetRandomNumber(10, "hill dice") < self.hillChance then
-					nhex.plotType = plotHills
-					if not FeatureDictionary[hex.featureType].hill then
-						hex.featureType = featureNone
-					end
-				else
-					nhex.plotType = plotMountain
-					tInsert(self.mountainHexes, nhex)
-				end
-				noNeighbors = 0
-			else
-				noNeighbors = noNeighbors + 1
-			end
-			iterations = iterations + 1
-		until #self.mountainHexes >= prescribedArea or noNeighbors > 20
-		EchoDebug("mountains increased to " .. #self.mountainHexes .. " after " .. iterations .. " iterations ", coreHexesLeft .. " core hexes remaining")
-	end
-end
-
-function Space:AdjustMountains()
-	self.mountainArea = mCeil(self.mountainRatio * self.filledArea)
-	EchoDebug(#self.mountainHexes .. " base mountain hexes", self.mountainArea .. " prescribed mountain hexes", #self.mountainCoreHexes .. " mountain core hexes")
-	-- first expand them 1.1 times their size
-	-- self:ResizeMountains(#self.mountainHexes * 1.1)
-	-- then adjust to the right amount
-	self:ResizeMountains(self.mountainArea)
-	for i, hex in pairs(self.mountainHexes) do
-		hex.featureType = featureNone
 	end
 end
 
