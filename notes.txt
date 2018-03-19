@@ -11,3 +11,7 @@
 	- the goal is how many hills are left to create after the number of hills already created by mountain passes
 	- a fraction of the hills can be reserved for region filling in advance
 	- because mountain ranges are begun randomly, the prescribed number of hills created by mountain passes can be used to determine the chance of a pass being hilly. this has the added benefit of creating a variety of mountain regions
+
+	- problem: if/how to include tiny island mountains and if/how to include one-subpolygon mountain clumps in the predetermined mountain budget
+
+	- make number of mountain pass subpolygons per mountain range, not per edge. build the range by heuristically determining how many hexes the edge will add, and then after the range is done, go back to pick which subpolygons and hexes are passes? or pick the subpolygon passes on the fly with a mininum per range (1, probably) plus a chance per subpolygon?

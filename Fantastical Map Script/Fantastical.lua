@@ -808,14 +808,14 @@ local OptionDictionary = {
 			[6] = { name = "Random", values = "values", lowValues = {100}, highValues = {300} },
 		}
 	},
-	{ name = "World Age", keys = { "mountainRatio", "hillynessMax", "hillChance" }, default = 4,
+	{ name = "World Age", keys = { "mountainRatio" }, default = 4,
 	values = {
-			[1] = { name = "1 Billion Years", values = {0.25, 75, 5} },
-			[2] = { name = "2 Billion Years", values = {0.16, 60, 4} },
-			[3] = { name = "3 Billion Years", values = {0.08, 50, 3} },
-			[4] = { name = "4 Billion Years", values = {0.04, 40, 3} },
-			[5] = { name = "5 Billion Years", values = {0.02, 30, 2} },
-			[6] = { name = "6 Billion Years", values = {0.005, 20, 1} },
+			[1] = { name = "1 Billion Years", values = {0.25} },
+			[2] = { name = "2 Billion Years", values = {0.17} },
+			[3] = { name = "3 Billion Years", values = {0.1} },
+			[4] = { name = "4 Billion Years", values = {0.06} },
+			[5] = { name = "5 Billion Years", values = {0.03} },
+			[6] = { name = "6 Billion Years", values = {0.005} },
 			[7] = { name = "Random", values = "keys" },
 		}
 	},
@@ -2293,9 +2293,12 @@ function Region:GiveParameters()
 	-- get latitude (real or fake)
 	self:GiveLatitude()
 	self.hillyness = self.space:GetHillyness()
-	self.mountainous = mRandom(1, 100) < self.space.mountainousRegionPercent
+	self.mountainous = mRandom() < 1 - (self.space.totalMountains / self.space.mountainArea)
 	self.mountainousness = 0
-	if self.mountainous then self.mountainousness = mRandom(self.space.mountainousnessMin, self.space.mountainousnessMax) end
+	if self.mountainous then
+		self.mountainousness = mFloor(((self.space.mountainArea - self.space.totalMountains) / self.area) * 100)
+		EchoDebug("mountainousness: " .. self.mountainousness, "mountain deficit: ".. self.space.mountainArea - self.space.totalMountains)
+	end
 	self.lakey = #self.space.lakeSubPolygons < self.space.minLakes
 	self.lakeyness = 0
 	if self.lakey then self.lakeyness = mRandom(self.space.lakeynessMin, self.space.lakeynessMax) end
@@ -2466,7 +2469,7 @@ function Region:Fill()
 				until #subCollectionBuffer == 0 or subPolygon.polar == subCollection.polar
 			end
 			if subCollection.lake then
-				local doNotLake = subPolygon.topY or subPolygon.bottomY or ((subPolygon.topX or subPolygon.bottomX) and not self.space.wrapX)
+				local doNotLake = subPolygon.edgeY or ((subPolygon.topX or subPolygon.bottomX) and not self.space.wrapX) or subPolygon.mountainRange
 				if not doNotLake then
 					for ni, neighbor in pairs(subPolygon.neighbors) do
 						if not neighbor.superPolygon.continent or neighbor.lake then
@@ -2501,17 +2504,23 @@ function Region:Fill()
 						hex.lake = true
 						-- EchoDebug("lake hex at ", hex:Locate())
 					end
-					hex.plotType = element.plotType
-					if element.plotType == plotHills then self.space.actualHillCount = (self.space.actualHillCount or 0) + 1 end
-					if element.plotType == plotMountain then tInsert(self.space.mountainHexes, hex) end
+					if not hex.mountainRange and not hex.hill then
+						hex.plotType = element.plotType
+						if element.plotType == plotHills then
+							self.space.totalRegionHills = self.space.totalRegionHills + 1
+						elseif element.plotType == plotMountain then
+							tInsert(self.space.mountainHexes, hex)
+							self.space.totalMountains = self.space.totalMountains + 1
+						end
+					end
 					hex.terrainType = element.terrainType
-					if FeatureDictionary[element.featureType].limitRatio == -1 or self.featureFillCounts[element.featureType] < FeatureDictionary[element.featureType].limitRatio * self.area then
+					if not hex.mountainRange and (FeatureDictionary[element.featureType].limitRatio == -1 or self.featureFillCounts[element.featureType] < FeatureDictionary[element.featureType].limitRatio * self.area) then
 						hex.featureType = element.featureType
 						self.featureFillCounts[element.featureType] = self.featureFillCounts[element.featureType] + 1
+						if hex.featureType == featureMarsh then self.space.marshHexCount = self.space.marshHexCount + 1 end
 					else
 						hex.featureType = featureNone
 					end
-					if hex.featureType == featureMarsh then self.space.marshHexCount = self.space.marshHexCount + 1 end
 					hex.temperature = element.temperature
 					hex.rainfall = element.rainfall
 					filledHexes[hex] = true
@@ -2620,12 +2629,15 @@ Space = class(function(a)
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
 	a.riverForkRatio = 0.33 -- how much of the river area should be reserved for forks
 	a.hillChance = 3 -- how many possible mountains out of ten become a hill when expanding and reducing
+	a.hillRatio = 0.25 -- how much of the land to be hills
+	a.hillPassRatio = 0.15 -- what portion of the hills to come from mountain range passes
 	a.mountainRangeMaxEdges = 4 -- how many polygon edges long can a mountain range be
 	a.coastRangeRatio = 0.33 -- what ratio of the total mountain ranges should be coastal
 	a.mountainRatio = 0.06 -- how much of the land to be mountain tiles
-	a.mountainRangeMult = 2.25 -- higher mult means more (globally) scattered mountain ranges
+	a.mountainPassSubPolygonRatio = 0.1 -- what portion of a mountain range's subpolygons are passes (not mountains)
+	a.mountainRegionRatio = 0.15 -- of the area prescribed by mountainRatio, what part will come from inside regions
 	a.mountainSubPolygonMult = 2 -- higher mult means more (globally) scattered subpolygon mountain clumps
-	a.mountainTinyIslandMult = 12
+	a.mountainTinyIslandMult = 0
 	a.coastalPolygonChance = 1 -- out of ten, how often do water polygons become coastal?
 	a.coastalExpansionPercent = 67 -- out of 100, how often are hexes within coastal subpolygons but without adjacent land hexes coastal?
 	a.tinyIslandTarget = 7 -- how many tiny islands will a map attempt to have
@@ -2634,10 +2646,6 @@ Space = class(function(a)
 	a.rainfallMidpoint = 49.5 -- 25 means rainfall varies from 0 to 50, 75 means 50 to 100, 50 means 0 to 100.
 	a.temperatureMin = 0 -- lowest temperature possible (plus or minus temperatureMaxDeviation)
 	a.temperatureMax = 99 -- highest temperature possible (plus or minus temperatureMaxDeviation)
-	a.hillynessMax = 70 -- of 100 how many of a region's tile collection can be hills
-	a.mountainousRegionPercent = 3 -- of 100 how many regions will have mountains
-	a.mountainousnessMin = 33 -- in those mountainous regions, what's the minimum percentage of mountains in their collection
-	a.mountainousnessMax = 66 -- in those mountainous regions, what's the maximum percentage of mountains in their collection
 	-- all lake variables scale with global rainfall in Compute()
 	a.lakeMinRatio = 0.0065 -- below this fraction of filled subpolygos that are lakes will cause a region to become lakey
 	a.lakeynessMin = 5 -- in those lake regions, what's the minimum percentage of water in their collection
@@ -3128,10 +3136,12 @@ function Space:Compute()
 	EchoDebug(cliVorNum .. " climate voronoi created in " .. StopDebugTimer(regionclimatetime))
 	EchoDebug("assigning climate voronoi to regions...")
 	self:AssignClimateVoronoiToRegions(self.climateVoronoi)
-	EchoDebug("filling regions...")
-	self:FillRegions()
 	EchoDebug("picking mountain ranges...")
     self:PickMountainRanges()
+    EchoDebug("filling mountain ranges...")
+    self:FillMountainRanges()
+	EchoDebug("filling regions...")
+	self:FillRegions()
 	EchoDebug("computing landforms...")
 	self:ComputeLandforms()
 	EchoDebug("computing ocean temperatures...")
@@ -3168,7 +3178,7 @@ end
 function Space:ComputeLandforms()
 	self.tinyIslandMountainPercent = mCeil(self.mountainTinyIslandMult * self.mountainRatio * 100)
 	for pi, hex in pairs(self.hexes) do
-		if hex.polygon.continent ~= nil then
+		if hex.polygon.continent then
 			-- near ocean trench?
 			for neighbor, yes in pairs(hex.adjacentPolygons) do
 				if neighbor.oceanIndex ~= nil then
@@ -3180,19 +3190,18 @@ function Space:ComputeLandforms()
 			if hex.nearOceanTrench then
 				EchoDebug("CONTINENT PLOT NEAR OCEAN TRENCH")
 				hex.plotType = plotOcean
-			else
-				if hex.mountainRange then
-					hex.plotType = plotMountain
-					tInsert(self.mountainHexes, hex)
-				end
+			elseif hex.mountainRange then
+				hex.plotType = plotMountain
+				tInsert(self.mountainHexes, hex)
+			elseif hex.hill then
+				hex.plotType = plotHills
 			end
-		end
-		if hex.subPolygon.tinyIsland and mRandom(1, 100) < self.tinyIslandMountainPercent then
+		elseif hex.subPolygon.tinyIsland and mRandom(1, 100) < self.tinyIslandMountainPercent then
 			hex.plotType = plotMountain
 			tInsert(self.mountainHexes, hex)
 		end
 	end
-	self:AdjustMountains()
+	-- self:AdjustMountains()
 end
 
 function Space:ComputeSeas()
@@ -5032,50 +5041,102 @@ function Space:PickContinentsInBasin(astronomyIndex, islandNumber)
 end
 
 function Space:PickMountainRanges()
+	self.mountainPassHexRatio = mMin(0.035 / self.mountainRatio, 0.9)
+	-- self.mountainPassNonCoreHexRatio = 1 - ((1 - self.mountainPassHexRatio) / self.hexesPerSubPolygon)
+	self.mountainPassNonCoreHexRatio = self.mountainPassHexRatio ^ (1 / self.hexesPerSubPolygon)
+	self.mountainArea = mFloor(self.mountainRatio * self.regionHexCount)
+	self.mountainRegionArea = mFloor(self.mountainRegionRatio * self.mountainArea)
+	self.mountainRangeArea = self.mountainArea - self.mountainRegionArea
+	self.mountainCoastRangeArea = mFloor(self.mountainRangeArea * self.coastRangeRatio)
+	self.mountainInteriorRangeArea = self.mountainRangeArea - self.mountainCoastRangeArea
+	EchoDebug("mountainPassHexRatio: " .. self.mountainPassHexRatio, "mountainPassNonCoreHexRatio: " .. self.mountainPassNonCoreHexRatio)
+	EchoDebug("mountainArea: " .. self.mountainArea, "mountainRangeArea: " .. self.mountainRangeArea, "mountainRegionArea: " .. self.mountainRegionArea, "mountainCoastRangeArea: " .. self.mountainCoastRangeArea, "mountainInteriorRangeArea: " .. self.mountainInteriorRangeArea)
 	self.continentMountainEdgeCounts = {}
 	local edgeBuffer = {}
 	for i, edge in pairs(self.edges) do
-		if edge.polygons[1].continent or edge.polygons[2].continent then
+		if (edge.polygons[1].continent or edge.polygons[2].continent) and (edge.polygons[1].region ~= edge.polygons[2].region or edge.polygons[1].continent ~= edge.polygons[2].continent) then
 			tInsert(edgeBuffer, edge)
 		end
 	end
-	local mountainRangeRatio = self.mountainRatio * self.mountainRangeMult
-	local prescribedEdges = mountainRangeRatio * #edgeBuffer
-	local coastPrescription = mFloor(prescribedEdges * self.coastRangeRatio)
-	local interiorPrescription = prescribedEdges - coastPrescription
-	EchoDebug("prescribed mountain range edges: " .. prescribedEdges .. " of " .. #edgeBuffer .. " edges on land")
 	local edgeCount = 0
 	local coastCount = 0
 	local interiorCount = 0
-	while #edgeBuffer > 0 and edgeCount < prescribedEdges do
+	local hexCountEstimate = 0
+	local interiorHexCountEstimate = 0
+	local coastHexCountEstimate = 0
+	local totalRangeArea = 0
+	while #edgeBuffer > 0 and hexCountEstimate < self.mountainRangeArea do
 		local edge
 		local coastRange
 		repeat
-			edge = tRemoveRandom(edgeBuffer)
-			if not edge.mountains then
-				if edge.polygons[1].continent and edge.polygons[2].continent and edge.polygons[1].region ~= edge.polygons[2].region and interiorCount < interiorPrescription then
+			local e = tRemoveRandom(edgeBuffer)
+			if not e.mountains then
+				if e.polygons[1].continent and e.polygons[2].continent and interiorHexCountEstimate < self.mountainInteriorRangeArea then
 					coastRange = false
-					break
-				elseif edge.polygons[1].continent ~= edge.polygons[2].continent and coastCount < coastPrescription then
+					edge = e
+				elseif e.polygons[1].continent ~= e.polygons[2].continent and coastHexCountEstimate < self.mountainCoastRangeArea then
 					coastRange = true
-					break
+					edge = e
 				end
-			else
-				edge = nil
+				if edge then
+					for cedge, yes in pairs(e.connections) do
+						if cedge.mountains and cedge ~= e then
+							-- EchoDebug("would connect to another range")
+							edge = nil
+						end
+					end
+				end
 			end
-		until #edgeBuffer == 0
-		if edge == nil then break end
-		edge.mountains = true
-		local range = { edge }
-		edgeCount = edgeCount + 1
-		if coastRange then coastCount = coastCount + 1 else interiorCount = interiorCount + 1 end
-		if edge.polygons[1].continent then
-			self.continentMountainEdgeCounts[edge.polygons[1].continent] = (self.continentMountainEdgeCounts[edge.polygons[1].continent] or 0) + 1
-		end
-		if edge.polygons[2].continent and edge.polygons[2].continent ~= edge.polygons[1].continent then
-			self.continentMountainEdgeCounts[edge.polygons[2].continent] = (self.continentMountainEdgeCounts[edge.polygons[2].continent] or 0) + 1
-		end
+		until edge or #edgeBuffer == 0
+		if not edge then break end
+		local range = { edges = {}, subPolygons = {}, isCoreHex = {}, area = 0, typeString = "interior" }
+		if coastRange then range.typeString = "coast" end
+		local passSubPolyCount = 0
+		local rangeSubPolyCount = 0
 		repeat
+			edge.mountains = true
+			tInsert(range.edges, edge)
+			edgeCount = edgeCount + 1
+			if coastRange then coastCount = coastCount + 1 else interiorCount = interiorCount + 1 end
+			if edge.polygons[1].continent then
+				self.continentMountainEdgeCounts[edge.polygons[1].continent] = (self.continentMountainEdgeCounts[edge.polygons[1].continent] or 0) + 1
+			end
+			if edge.polygons[2].continent and edge.polygons[2].continent ~= edge.polygons[1].continent then
+				self.continentMountainEdgeCounts[edge.polygons[2].continent] = (self.continentMountainEdgeCounts[edge.polygons[2].continent] or 0) + 1
+			end
+			local edgeCountEst = 0
+			for ise, subEdge in pairs(edge.subEdges) do
+				-- pick one side of the subedge
+				local subPolygon
+				local subPolygons = tDuplicate(subEdge.polygons)
+				repeat
+					local subPoly = tRemoveRandom(subPolygons)
+					if not subPoly.lake and subPoly.superPolygon.continent then
+						subPolygon = subPoly
+						break
+					end
+				until #subPolygons == 0
+				tInsert(range.subPolygons, subPolygon)
+				local coreEst = 0
+				for ih, hex in pairs(subPolygon.hexes) do
+					if hex.subEdges[subEdge] then
+						coreEst = coreEst + 1
+						range.isCoreHex[hex] = subEdge
+					end
+				end
+				local nonCoreEst = #subPolygon.hexes - coreEst
+				local countEstimate = (coreEst * (1-self.mountainPassHexRatio)) + (nonCoreEst * (1-self.mountainPassNonCoreHexRatio))
+				edgeCountEst = edgeCountEst + countEstimate
+				totalRangeArea = totalRangeArea + #subPolygon.hexes
+				range.area = range.area + #subPolygon.hexes
+			end
+			edgeCountEst = edgeCountEst * (1-self.mountainPassSubPolygonRatio)
+			hexCountEstimate = hexCountEstimate + edgeCountEst
+			if coastRange then
+				coastHexCountEstimate = coastHexCountEstimate + edgeCountEst
+			else
+				interiorHexCountEstimate = interiorHexCountEstimate + edgeCountEst
+			end
 			local nextEdges = {}
 			for nextEdge, yes in pairs(edge.connections) do
 				local okay = false
@@ -5094,53 +5155,55 @@ function Space:PickMountainRanges()
 						end
 					end
 				end
-				-- EchoDebug(okay, coastRange, nextEdge.polygons[1].continent ~= nil, nextEdge.polygons[2].continent ~= nil, (nextEdge.polygons[1].region == nextEdge.polygons[2].region and nextEdge.polygons[2].region ~= nil), nextEdge.mountains)
 				if okay then
 					tInsert(nextEdges, nextEdge)
 				end
 			end
-			-- EchoDebug(#nextEdges)
 			if #nextEdges == 0 then break end
-			local nextEdge = tGetRandom(nextEdges)
-			nextEdge.mountains = true
-			tInsert(range, nextEdge)
-			edgeCount = edgeCount + 1
-			if coastRange then coastCount = coastCount + 1 else interiorCount = interiorCount + 1 end
-			if nextEdge.polygons[1].continent then
-				self.continentMountainEdgeCounts[nextEdge.polygons[1].continent] = (self.continentMountainEdgeCounts[nextEdge.polygons[1].continent] or 0) + 1
-			end
-			if nextEdge.polygons[2].continent and nextEdge.polygons[2].continent ~= nextEdge.polygons[1].continent then
-				self.continentMountainEdgeCounts[nextEdge.polygons[2].continent] = (self.continentMountainEdgeCounts[nextEdge.polygons[2].continent] or 0) + 1
-			end
-			edge = nextEdge
-		until #nextEdges == 0 or #range >= self.mountainRangeMaxEdges or coastCount > coastPrescription or interiorCount > interiorPrescription
-		EchoDebug("range ", #range, tostring(coastRange))
-		for ire, redge in pairs(range) do
-			for ise, subEdge in pairs(redge.subEdges) do
-				local sides = tDuplicate(subEdge.polygons)
-				local subPolygon
-				repeat
-					subPolygon = tRemoveRandom(sides)
-				until #sides == 0 or (subPolygon and not subPolygon.lake and subPolygon.superPolygon.continent)
-				if subPolygon and not subPolygon.lake and subPolygon.superPolygon.continent then
-					for ih, hex in pairs(subEdge.hexes) do
-						if hex.subPolygon == subPolygon and hex.plotType ~= plotOcean then
-							hex.mountainRangeCore = true
-							hex.mountainRange = true
-							tInsert(self.mountainCoreHexes, hex)
-						end
-					end
-					subPolygon.mountainRange = true
-					for hi, hex in pairs(subPolygon.hexes) do
-						if hex.plotType ~= plotOcean then hex.mountainRange = true end
-					end
+			edge = tGetRandom(nextEdges)
+		until #nextEdges == 0 or #range.edges >= self.mountainRangeMaxEdges or hexCountEstimate >= self.mountainRangeArea or (coastHexCountEstimate >= self.mountainCoastRangeArea and interiorHexCountEstimate >= self.mountainInteriorRangeArea)
+		EchoDebug(range.typeString .. " range of " .. #range.edges .. " edges and " .. #range.subPolygons .. " subpolygons")
+		tInsert(self.mountainRanges, range)
+	end
+	EchoDebug(interiorCount .. " interior range edges with " .. interiorHexCountEstimate .. " hexes", coastCount .. " coastal range edges with " .. coastHexCountEstimate .. " hexes", hexCountEstimate .. " total mountain hexes")
+	self.hillPassRatio = totalRangeArea / self.regionHexCount
+	self.hillArea = mFloor(self.hillRatio * self.regionHexCount)
+	self.hillPassArea = mFloor(self.hillPassRatio * self.hillArea)
+	self.hillRegionArea = self.hillArea - self.hillPassArea
+	EchoDebug("hillPassRatio: " .. self.hillPassRatio)
+	-- self:PickMountainSubPolygons()
+end
+
+function Space:FillMountainRanges()
+	local hillHexCount = 0
+	local mountainHexCount = 0
+	for i, range in pairs(self.mountainRanges) do
+		local subPolygons = tDuplicate(range.subPolygons)
+		local rangeSubPolyNum = mFloor((1-self.mountainPassSubPolygonRatio) * #range.subPolygons)
+		EchoDebug(rangeSubPolyNum .. " / " .. #range.subPolygons)
+		for ii = 1, #range.subPolygons do
+			local subPolygon = tRemoveRandom(subPolygons)
+			local isPassSubPolygon = ii > rangeSubPolyNum
+			for ih, hex in pairs(subPolygon.hexes) do
+				local passRatio = self.mountainPassNonCoreHexRatio
+				if range.isCoreHex[hex] then
+					passRatio = self.mountainPassHexRatio
+				end
+				local hillPassRatio = 1 - (hillHexCount / self.hillPassArea)
+				if not isPassSubPolygon and mRandom() >= passRatio then
+					hex.mountainRange = true
+					mountainHexCount = mountainHexCount + 1
+				elseif mRandom() < hillPassRatio then
+					hex.hill = true
+					hillHexCount = hillHexCount + 1
 				end
 			end
 		end
-		tInsert(self.mountainRanges, range)
 	end
-	EchoDebug(interiorCount .. " interior ranges ", coastCount .. " coastal ranges")
-	self:PickMountainSubPolygons()
+	self.totalHills = hillHexCount
+	self.hillRegionArea = self.hillArea - hillHexCount
+	self.totalMountains = mountainHexCount
+	EchoDebug(self.totalHills .. " total hills", self.totalMountains .. " total mountains")
 end
 
 -- add one-subpolygon mountain clumps to continents without any mountains
@@ -5175,6 +5238,7 @@ function Space:PickMountainSubPolygons()
 end
 
 function Space:PickRegions()
+	local regionHexCount = 0
 	for ci, continent in pairs(self.continents) do
 		local polygonBuffer = {}
 		for polyi, polygon in pairs(continent) do
@@ -5230,16 +5294,27 @@ function Space:PickRegions()
 					end
 				until #region.polygons == size or region.area > self.polygonMaxArea / 2 or #region.polygons == #continent
 			end
-			tInsert(self.regions, region)
+			if region then
+				tInsert(self.regions, region)
+				regionHexCount = regionHexCount + region.area
+			else
+				EchoDebug("nil region")
+			end
 		end
 	end
 	for p, polygon in pairs(self.tinyIslandPolygons) do
 		polygon.region = Region(self)
 		tInsert(polygon.region.polygons, polygon)
-		polygon.region.area = #polygon.hexes
+		for sp, subPolygon in pairs(polygon.subPolygons) do
+			if subPolygon.tinyIsland then
+				polygon.region.area = (polygon.region.area or 0) + #subPolygon.hexes
+			end
+		end
+		regionHexCount = regionHexCount + polygon.region.area
 		polygon.region.archipelago = true
 		tInsert(self.regions, polygon.region)
 	end
+	self.regionHexCount = regionHexCount
 end
 
 function Space:DistortClimateGrid(grid, tempExponent, rainExponent)
@@ -5417,6 +5492,7 @@ function Space:FillRegions()
 	self.minLakes = mCeil(self.lakeMinRatio * self.filledSubPolygons)
 	self.marshMinHexes = mFloor(self.marshMinHexRatio * self.filledArea)
 	self.marshHexCount = 0
+	self.totalRegionHills = 0
 	EchoDebug(self.minLakes .. " minimum lake subpolygons (of " .. self.filledSubPolygons .. ") ", self.marshMinHexes .. " minimum marsh hexes")
 	local regionBuffer = tDuplicate(self.regions)
 	-- for i, region in pairs(self.regions) do
@@ -5425,7 +5501,8 @@ function Space:FillRegions()
 		region:CreateCollection()
 		region:Fill()
 	end
-	EchoDebug(#self.lakeSubPolygons .. " total lake subpolygons", self.marshHexCount .. " total marsh hexes")
+	self.totalHills = self.totalHills + self.totalRegionHills
+	EchoDebug(#self.lakeSubPolygons .. " total lake subpolygons", self.marshHexCount .. " total marsh hexes", self.totalHills .. " total hill hexes of " .. self.hillArea .. " prescribed")
 end
 
 function Space:LabelSubPolygonsByPolygon()
@@ -5652,7 +5729,7 @@ function Space:LabelMap()
 	EchoDebug("labelling mountain ranges...")
 	local rangesByLength = {}
 	for i, range in pairs(self.mountainRanges) do
-		rangesByLength[-#range] = range
+		rangesByLength[-#range.edges] = range.edges
 	end
 	local rangesLabelled = 0
 	for negLength, range in pairsByKeys(rangesByLength) do
@@ -6511,7 +6588,6 @@ function Space:ResizeMountains(prescribedArea)
 				end
 				if TerrainBuilder.GetRandomNumber(10, "hill dice") < self.hillChance then
 					hex.plotType = plotHills
-					self.actualHillCount = (self.actualHillCount or 0) + 1
 					if hex.featureType and not FeatureDictionary[hex.featureType].hill then
 						hex.featureType = featureNone
 					end
@@ -6540,7 +6616,6 @@ function Space:ResizeMountains(prescribedArea)
 			if nhex ~= nil and nhex.plotType == plotLand then
 				if TerrainBuilder.GetRandomNumber(10, "hill dice") < self.hillChance then
 					nhex.plotType = plotHills
-					self.actualHillCount = (self.actualHillCount or 0) + 1
 					if not FeatureDictionary[hex.featureType].hill then
 						hex.featureType = featureNone
 					end
@@ -6643,7 +6718,12 @@ function Space:GetRainfall(latitude, noFloor)
 end
 
 function Space:GetHillyness()
-	return mRandom(0, self.hillynessMax)
+	local hillyness = mMax(0, mCeil(100 * (1 - (self.totalRegionHills / self.hillRegionArea))))
+	if self.totalRegionHills < self.hillRegionArea then
+		hillyness = mMax(20, hillyness)
+	end
+	EchoDebug(hillyness, self.hillRegionArea - self.totalRegionHills)
+	return hillyness
 end
 
 function Space:GetCollectionSize()
@@ -6919,7 +6999,6 @@ function GenerateMap()
 	local totalDry = mySpace.hillCount + mySpace.mountainCount + mySpace.landCount
 	local hillPercent = mCeil((mySpace.hillCount / totalDry) * 100)
 	local mountainPercent = mCeil((mySpace.mountainCount /totalDry) * 100)
-	EchoDebug(mySpace.hillCount .. "(" .. hillPercent .. '\%) hills', mySpace.actualHillCount .. " hills set", mySpace.mountainCount .. "(" .. mountainPercent .. '\%) mountains', totalDry .. " total dry")
 
 	AreaBuilder.Recalculate();
 
