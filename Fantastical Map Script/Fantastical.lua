@@ -2510,7 +2510,6 @@ function Region:Fill()
 						if element.plotType == plotHills then
 							self.space.totalRegionHills = self.space.totalRegionHills + 1
 						elseif element.plotType == plotMountain then
-							tInsert(self.space.mountainHexes, hex)
 							self.space.totalMountains = self.space.totalMountains + 1
 						end
 					end
@@ -2633,7 +2632,7 @@ Space = class(function(a)
 	a.coastRangeRatio = 0.33 -- what ratio of the total mountain ranges should be coastal
 	a.mountainPassSubPolygonRatio = 0.1 -- what portion of a mountain range's subpolygons are passes (not mountains)
 	a.mountainRatio = 0.06 -- how much of the land to be mountain tiles
-	a.mountainClumpRatio = 0.05 -- of the area prescribed by mountainRatio, what part will come from one-subpolygon clumps, including tiny islands
+	a.mountainClumpRatio = 0.1 -- of the area prescribed by mountainRatio, what part will come from one-subpolygon clumps, including tiny islands
 	a.mountainRegionRatio = 0.1 -- of the area prescribed by mountainRatio, what part will come from inside regions
 	a.mountainTinyIslandMult = 0
 	a.coastalPolygonChance = 1 -- out of ten, how often do water polygons become coastal?
@@ -2682,8 +2681,6 @@ Space = class(function(a)
 	a.edgeYPolygons = {}
 	a.edgeXPolygons = {}
 	a.hexes = {}
-    a.mountainHexes = {}
-    a.mountainCoreHexes = {}
     a.tinyIslandPolygons = {}
     a.tinyIslandSubPolygons = {}
     a.deepHexes = {}
@@ -3136,8 +3133,6 @@ function Space:Compute()
 	self:AssignClimateVoronoiToRegions(self.climateVoronoi)
 	EchoDebug("picking mountain ranges...")
     self:PickMountainRanges()
-    EchoDebug("filling mountain ranges...")
-    self:FillMountainRanges()
 	EchoDebug("filling regions...")
 	self:FillRegions()
 	EchoDebug("computing landforms...")
@@ -3190,16 +3185,13 @@ function Space:ComputeLandforms()
 				hex.plotType = plotOcean
 			elseif hex.mountainRange then
 				hex.plotType = plotMountain
-				tInsert(self.mountainHexes, hex)
 			elseif hex.hill then
 				hex.plotType = plotHills
 			end
-		elseif hex.subPolygon.tinyIsland and mRandom(1, 100) < self.tinyIslandMountainPercent then
+		elseif hex.subPolygon.tinyIsland and hex.mountainRange then
 			hex.plotType = plotMountain
-			tInsert(self.mountainHexes, hex)
 		end
 	end
-	-- self:AdjustMountains()
 end
 
 function Space:ComputeSeas()
@@ -5097,7 +5089,7 @@ function Space:PickMountainRanges()
 			end
 		until edge or #edgeBuffer == 0
 		if not edge then break end
-		local range = { edges = {}, subPolygons = {}, isCoreHex = {}, area = 0, typeString = "interior" }
+		local range = { edges = {}, subPolygons = {}, isCoreHex = {}, area = 0, estimate = 0, passHexes = {}, mountainHexCount = 0, typeString = "interior" }
 		local continent = edge.polygons[1].continent or edge.polygons[2].continent
 		local maxEdges
 		if coastRange then
@@ -5148,6 +5140,7 @@ function Space:PickMountainRanges()
 			end
 			edgeCountEst = edgeCountEst * (1-self.mountainPassSubPolygonRatio)
 			hexCountEstimate = hexCountEstimate + edgeCountEst
+			range.estimate = range.estimate + edgeCountEst
 			if coastRange then
 				coastHexCountEstimate = coastHexCountEstimate + edgeCountEst
 			else
@@ -5178,55 +5171,79 @@ function Space:PickMountainRanges()
 			if #nextEdges == 0 then break end
 			edge = tGetRandom(nextEdges)
 		until #nextEdges == 0 or #range.edges >= maxEdges or hexCountEstimate >= self.mountainRangeArea or (coastRange and coastHexCountEstimate >= self.mountainCoastRangeArea) or (not coastRange and interiorHexCountEstimate >= self.mountainInteriorRangeArea)
-		EchoDebug(range.typeString .. " range of " .. #range.edges .. " edges and " .. #range.subPolygons .. " subpolygons")
+		-- pick range passes
+		self:PickRangeMountains(range)
+		-- update running estimates with actual count from this range
+		hexCountEstimate = hexCountEstimate - range.estimate
+		hexCountEstimate = hexCountEstimate + range.mountainHexCount
+		if coastRange then
+			coastHexCountEstimate = coastHexCountEstimate - range.estimate
+			coastHexCountEstimate = coastHexCountEstimate + range.mountainHexCount
+		else
+			interiorHexCountEstimate = interiorHexCountEstimate - range.estimate
+			interiorHexCountEstimate = interiorHexCountEstimate + range.mountainHexCount
+		end
+		EchoDebug(range.typeString .. " range of " .. #range.edges .. " edges, " .. #range.subPolygons .. " subpolygons, " .. range.area .. " hexes, and " .. range.mountainHexCount .. " mountains")
 		tInsert(self.mountainRanges, range)
 	end
 	EchoDebug(interiorCount .. " interior range edges with " .. interiorHexCountEstimate .. " hexes", coastCount .. " coastal range edges with " .. coastHexCountEstimate .. " hexes", hexCountEstimate .. " total mountain hexes")
+	self.totalMountains = hexCountEstimate -- all ranges are done, so this is no longer an estimate
 	self.hillRatio = self.hillRatio or mSqrt(self.mountainRatio)
 	self.hillPassRatio = totalRangeArea / self.regionHexCount
 	self.hillArea = mFloor(self.hillRatio * self.regionHexCount)
 	self.hillPassArea = mFloor(self.hillPassRatio * self.hillArea)
 	self.hillRegionArea = self.hillArea - self.hillPassArea
 	EchoDebug("hillRatio: " .. self.hillRatio, "hillPassRatio: " .. self.hillPassRatio)
+	self:FillMountainRangeHills()
+	self:PickMountainClumps()
 end
 
-function Space:FillMountainRanges()
+function Space:PickRangeMountains(range)
+	local subPolygons = tDuplicate(range.subPolygons)
+	local rangeSubPolyNum = mFloor((1-self.mountainPassSubPolygonRatio) * #range.subPolygons)
+	-- EchoDebug(rangeSubPolyNum .. " / " .. #range.subPolygons)
+	for ii = 1, #range.subPolygons do
+		local subPolygon = tRemoveRandom(subPolygons)
+		local isPassSubPolygon = ii > rangeSubPolyNum
+		for ih, hex in pairs(subPolygon.hexes) do
+			local passRatio = self.mountainPassNonCoreHexRatio
+			if range.isCoreHex[hex] then
+				passRatio = self.mountainPassHexRatio
+			end
+			if not isPassSubPolygon and mRandom() > passRatio then
+				hex.mountainRange = true
+				range.mountainHexCount = range.mountainHexCount + 1
+			else
+				hex.mountainPass = true
+				tInsert(range.passHexes, hex)
+			end
+		end
+	end
+end
+
+function Space:FillMountainRangeHills()
+	EchoDebug("filling in mountain range hills...")
 	local hillHexCount = 0
-	local mountainHexCount = 0
 	local ranges = tDuplicate(self.mountainRanges)
 	while #ranges > 0 do
 		local range = tRemoveRandom(ranges)
-		local subPolygons = tDuplicate(range.subPolygons)
-		local rangeSubPolyNum = mFloor((1-self.mountainPassSubPolygonRatio) * #range.subPolygons)
-		-- EchoDebug(rangeSubPolyNum .. " / " .. #range.subPolygons)
-		for ii = 1, #range.subPolygons do
-			local subPolygon = tRemoveRandom(subPolygons)
-			local isPassSubPolygon = ii > rangeSubPolyNum
-			for ih, hex in pairs(subPolygon.hexes) do
-				local passRatio = self.mountainPassNonCoreHexRatio
-				if range.isCoreHex[hex] then
-					passRatio = self.mountainPassHexRatio
-				end
-				local hillPassRatio = 1 - (hillHexCount / self.hillPassArea)
-				if not isPassSubPolygon and mRandom() > passRatio then
-					hex.mountainRange = true
-					mountainHexCount = mountainHexCount + 1
-				elseif mRandom() <= hillPassRatio then
-					hex.hill = true
-					hillHexCount = hillHexCount + 1
-				end
+		while #range.passHexes > 0 do
+			local hex = tRemoveRandom(range.passHexes)
+			local hillPassRatio = 1 - (hillHexCount / self.hillPassArea)
+			if mRandom() < hillPassRatio then
+				hex.hill = true
+				hillHexCount = hillHexCount + 1
 			end
 		end
 	end
 	self.totalHills = hillHexCount
 	self.hillRegionArea = self.hillArea - hillHexCount
-	self.totalMountains = mountainHexCount
 	EchoDebug(self.totalHills .. " total hills", self.totalMountains .. " total mountains")
-	self:PickMountainClumps()
 end
 
 -- add one-subpolygon mountain clumps to continents without any mountains
 function Space:PickMountainClumps()
+	EchoDebug("picking mountain clumps...")
 	local continents = {}
 	for i, continent in pairs(self.continents) do
 		if self.continentMountainEdgeCounts[continent] == nil then
@@ -5259,8 +5276,12 @@ function Space:PickMountainClumps()
 	end
 	local addedSubPolygons = 0
 	local addedHexes = 0
-	local hexMountainChance = self.mountainClumpArea / clumpArea
-	for i, subPolygon in pairs(clumpSubPolys) do
+	-- local hexMountainChance = self.mountainClumpArea / clumpArea
+	local clumpAreaLeft = clumpArea
+	local mountainsLeftToAdd = self.mountainClumpArea
+	while #clumpSubPolys > 0 do
+		local subPolygon = tRemoveRandom(clumpSubPolys)
+		local hexMountainChance = mountainsLeftToAdd / clumpAreaLeft
 		local hexBuffer = tDuplicate(subPolygon.hexes)
 		while #hexBuffer > 0 do
 			local hex = tRemoveRandom(hexBuffer)
@@ -5268,11 +5289,16 @@ function Space:PickMountainClumps()
 				if not subPolygon.mountainRange then
 					subPolygon.mountainRange = true
 					addedSubPolygons = addedSubPolygons + 1
+					if subPolygon.tinyIsland then
+						EchoDebug("tiny island clump!")
+					end
 				end
 				hex.mountainRange = true
 				addedHexes = addedHexes + 1
+				mountainsLeftToAdd = mountainsLeftToAdd - 1
 			end
 		end
+		clumpAreaLeft = clumpAreaLeft - #subPolygon.hexes
 	end
 	self.totalMountains = self.totalMountains + addedHexes
 	EchoDebug(addedSubPolygons .. " subpolygon mountain clumps added with " .. addedHexes .. " mountain hexes", "total mountains: " .. self.totalMountains)
