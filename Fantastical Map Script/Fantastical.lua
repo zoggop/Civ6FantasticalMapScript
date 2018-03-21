@@ -1005,6 +1005,20 @@ local improvementCityRuins
 local artOcean, artAmerica, artAsia, artAfrica, artEurope
 local resourceSilver, resourceSpices
 local climateGrid
+local terrainNames = {}
+local plotNames = {}
+local featureNames = {}
+
+local function GetTerrainName(terrainType)
+	if not terrainType then return "nil" end
+	return terrainNames[terrainType] or "no name"
+end
+
+local function GetPlotName(plotType)
+	if not plotType then return "nil" end
+	return plotNames[plotType] or "no name"
+end
+
 
 local function SetConstants()
 	artOcean, artAmerica, artAsia, artAfrica, artEurope = 0, 1, 2, 3, 4
@@ -1023,7 +1037,6 @@ local function SetConstants()
 
 	DirConvert = { [DirW] = DirectionTypes.DIRECTION_WEST, [DirNW] = DirectionTypes.DIRECTION_NORTHWEST, [DirNE] = DirectionTypes.DIRECTION_NORTHEAST, [DirE] = DirectionTypes.DIRECTION_EAST, [DirSE] = DirectionTypes.DIRECTION_SOUTHEAST, [DirSW] = DirectionTypes.DIRECTION_SOUTHWEST }
 
-	EchoDebug(GameInfo.Routes, GameInfo.Routes.ROUTE_ANCIENT_ROAD)
 	routeRoad = GameInfo.Routes.ROUTE_ANCIENT_ROAD.Index
 
 	plotOcean = g_PLOT_TYPE_OCEAN -- PlotTypes.PLOT_OCEAN
@@ -1039,15 +1052,29 @@ local function SetConstants()
 	terrainTundra = g_TERRAIN_TYPE_TUNDRA -- TerrainTypes.TERRAIN_TUNDRA
 	terrainSnow = g_TERRAIN_TYPE_SNOW -- TerrainTypes.TERRAIN_SNOW
 	-- EchoDebug("ocean " .. terrainOcean, "coast " .. terrainCoast, "grass " .. terrainGrass, "plains " .. terrainPlains, "desert " .. terrainDesert, "tundra " .. terrainTundra, "snow " .. terrainSnow)
-	-- for thisTerrain in GameInfo.Terrains() do
-	-- 	EchoDebug(thisTerrain.TerrainType, thisTerrain.RowId, thisTerrain.Index, thisTerrain.Hash)
-	-- end
+	for t in GameInfo.Terrains() do
+		if t then
+			terrainNames[t.Index] = t.TerrainType
+		end
+	end
+	plotNames[plotOcean] = "ocean"
+	plotNames[plotLand] = "land"
+	plotNames[plotHills] = "hills"
+	plotNames[plotMountain] = "mountain"
+	for f in GameInfo.Features() do
+		featureNames[f.Index] = f.FeatureType
+	end
 	-- for improvement in GameInfo.Improvements() do
 	-- 	EchoDebug(improvement.Name, improvement.Index, improvement.ImprovementType)
 	-- end
 	-- for route in GameInfo.Routes() do
 	-- 	EchoDebug(route.Name, route.Index, route.RouteType)
 	-- end
+	for k, v in pairs(TerrainBuilder) do
+		if type(v) == "function" then
+			EchoDebug("TerrainBuilder." .. k)
+		end
+	end
 
 	featureNone = g_FEATURE_NONE
 	featureForest = g_FEATURE_FOREST
@@ -1527,8 +1554,12 @@ function Hex:FloodFillAwayFromIce(searched)
 end
 
 function Hex:SetPlot()
-	if self.plotType == nil then EchoDebug("nil plotType at " .. self.x .. ", " .. self.y) end
-	if self.plot == nil then return end
+	if self.plotType == nil then EchoDebug("nil plotType at " .. self:Locate()) end
+	if self.plot == nil then
+		EchoDebug("nil plot at " .. self:Locate())
+		return
+	end
+
 	-- self.plot:SetPlotType(self.plotType)
 end
 
@@ -1538,14 +1569,20 @@ function Hex:SetTerrain()
 		-- self.terrainType = terrainSnow
 	-- end
 	local terrainType = self.terrainType
-	if self.plotType == plotHills then
-		self.space.hillCount = (self.space.hillCount or 0) + 1
-		terrainType = terrainType + 1
-	elseif self.plotType == plotMountain then
-		self.space.mountainCount = (self.space.mountainCount or 0) + 1
-		terrainType = terrainType + 2
-	elseif self.plotType == plotLand then
-		self.space.landCount = (self.space.landCount or 0) + 1
+	if terrainType ~= terrainOcean and terrainType ~= terrainCoast then
+		if self.plotType == plotHills then
+			self.space.hillCount = (self.space.hillCount or 0) + 1
+			terrainType = terrainType + 1
+		elseif self.plotType == plotMountain then
+			self.space.mountainCount = (self.space.mountainCount or 0) + 1
+			terrainType = terrainType + 2
+		elseif self.plotType == plotLand then
+			self.space.landCount = (self.space.landCount or 0) + 1
+		end
+	end
+	if (terrainType == terrainOcean or terrainType == terrainCoast) and (self.plotType == plotMountain or self.plotType == plotHills or self.plotType == plotLand) then
+		EchoDebug("terrain type " .. GetTerrainName(terrainType) .. " doesn't match plot type " .. GetPlotName(self.plotType) .. " at " .. self:Locate())
+		EchoDebug(self:Report())
 	end
 	TerrainBuilder.SetTerrainType(self.plot, terrainType)
 end
@@ -1555,13 +1592,14 @@ function Hex:SetFeature()
 	-- if self.polygon.astronomyBlob then self.featureType = featureReef end -- uncomment to debug astronomy blobs
 	-- if self.polygon.astronomyIndex < 100 then self.featureType = featureReef end -- uncomment to debug astronomy basins
 	if self.plot == nil then
-		EchoDebug("hex has no plot", hex:Locate())
 		return
 	end
-	if self.featureType == nil then return end
 	if self.plotType == plotMountain then
 		if self.space.falloutEnabled and mRandom(0, 100) < mMin(25, FeatureDictionary[featureFallout].percent) then
 			-- self.featureType = featureFallout
+		elseif self.featureType ~= featureNone then
+			EchoDebug("mountain plot has a feature")
+			self.featureType = featureNone
 		end
 	elseif self.isRiver then
 		if self.space.falloutEnabled and self.space.contaminatedWater and mRandom(0, 100) < FeatureDictionary[featureFallout].percent then
@@ -1632,6 +1670,12 @@ end
 
 function Hex:Locate()
 	return self.x .. ", " .. self.y
+end
+
+function Hex:Report()
+	for k, v in pairs(self) do
+		EchoDebug(k, " = ", v)
+	end
 end
 
 function Hex:CanBeReef()
@@ -2631,10 +2675,10 @@ Space = class(function(a)
 	a.mountainRangeMaxEdges = 4 -- how many polygon edges long can a mountain range be
 	a.coastRangeRatio = 0.33 -- what ratio of the total mountain ranges should be coastal
 	a.mountainPassSubPolygonRatio = 0.1 -- what portion of a mountain range's subpolygons are passes (not mountains)
-	a.mountainRatio = 0.06 -- how much of the land to be mountain tiles
+	a.mountainRatio = 0.25 -- how much of the land to be mountain tiles
 	a.mountainClumpRatio = 0.1 -- of the area prescribed by mountainRatio, what part will come from one-subpolygon clumps, including tiny islands
 	a.mountainRegionRatio = 0.1 -- of the area prescribed by mountainRatio, what part will come from inside regions
-	a.mountainTinyIslandMult = 0
+	a.mountainTinyIslandHexChance = 0.1 -- every hex of tiny islands has this out of 1 chance to be a mountain
 	a.coastalPolygonChance = 1 -- out of ten, how often do water polygons become coastal?
 	a.coastalExpansionPercent = 67 -- out of 100, how often are hexes within coastal subpolygons but without adjacent land hexes coastal?
 	a.tinyIslandTarget = 7 -- how many tiny islands will a map attempt to have
@@ -2652,7 +2696,7 @@ Space = class(function(a)
 	a.marshMinHexRatio = 0.015
 	a.inlandSeaContinentRatio = 0.02 -- maximum size of each inland sea as a fraction of the polygons of the continent they're inside
 	a.inlandSeasMax = 1 -- maximum number of inland seas
-	a.ancientCitiesCount = 3
+	a.ancientCitiesCount = 0
 	a.falloutEnabled = false -- place fallout on the map?
 	a.postApocalyptic = false -- place fallout around ancient cities
 	a.contaminatedWater = false -- place fallout in rainy areas and along rivers?
@@ -3169,7 +3213,6 @@ function Space:Compute()
 end
 
 function Space:ComputeLandforms()
-	self.tinyIslandMountainPercent = mCeil(self.mountainTinyIslandMult * self.mountainRatio * 100)
 	for pi, hex in pairs(self.hexes) do
 		if hex.polygon.continent then
 			-- near ocean trench?
@@ -5183,7 +5226,7 @@ function Space:PickMountainRanges()
 			interiorHexCountEstimate = interiorHexCountEstimate - range.estimate
 			interiorHexCountEstimate = interiorHexCountEstimate + range.mountainHexCount
 		end
-		EchoDebug(range.typeString .. " range of " .. #range.edges .. " edges, " .. #range.subPolygons .. " subpolygons, " .. range.area .. " hexes, and " .. range.mountainHexCount .. " mountains")
+		EchoDebug(range.typeString .. " range of " .. #range.edges .. " edges, " .. range.area .. " hexes, and " .. range.mountainHexCount .. " mountains")
 		tInsert(self.mountainRanges, range)
 	end
 	EchoDebug(interiorCount .. " interior range edges with " .. interiorHexCountEstimate .. " hexes", coastCount .. " coastal range edges with " .. coastHexCountEstimate .. " hexes", hexCountEstimate .. " total mountain hexes")
@@ -5199,12 +5242,16 @@ function Space:PickMountainRanges()
 end
 
 function Space:PickRangeMountains(range)
-	local subPolygons = tDuplicate(range.subPolygons)
 	local rangeSubPolyNum = mFloor((1-self.mountainPassSubPolygonRatio) * #range.subPolygons)
 	-- EchoDebug(rangeSubPolyNum .. " / " .. #range.subPolygons)
-	for ii = 1, #range.subPolygons do
-		local subPolygon = tRemoveRandom(subPolygons)
-		local isPassSubPolygon = ii > rangeSubPolyNum
+	local i = 1
+	while #range.subPolygons > 0 do
+		local subPolygon = tRemoveRandom(range.subPolygons)
+		local isPassSubPolygon = i > rangeSubPolyNum
+		if isPassSubPolygon then
+			subPolygon.mountainPass = true
+		end
+		subPolygon.mountainRange = true
 		for ih, hex in pairs(subPolygon.hexes) do
 			local passRatio = self.mountainPassNonCoreHexRatio
 			if range.isCoreHex[hex] then
@@ -5218,6 +5265,7 @@ function Space:PickRangeMountains(range)
 				tInsert(range.passHexes, hex)
 			end
 		end
+		i = i + 1
 	end
 end
 
@@ -5244,6 +5292,7 @@ end
 -- add one-subpolygon mountain clumps to continents without any mountains
 function Space:PickMountainClumps()
 	EchoDebug("picking mountain clumps...")
+	if self.mountainClumpArea == 0 then return end
 	local continents = {}
 	for i, continent in pairs(self.continents) do
 		if self.continentMountainEdgeCounts[continent] == nil then
@@ -5282,6 +5331,9 @@ function Space:PickMountainClumps()
 	while #clumpSubPolys > 0 do
 		local subPolygon = tRemoveRandom(clumpSubPolys)
 		local hexMountainChance = mountainsLeftToAdd / clumpAreaLeft
+		if subPolygon.tinyIsland then
+			hexMountainChance = self.mountainTinyIslandHexChance
+		end
 		local hexBuffer = tDuplicate(subPolygon.hexes)
 		while #hexBuffer > 0 do
 			local hex = tRemoveRandom(hexBuffer)
@@ -5289,9 +5341,6 @@ function Space:PickMountainClumps()
 				if not subPolygon.mountainRange then
 					subPolygon.mountainRange = true
 					addedSubPolygons = addedSubPolygons + 1
-					if subPolygon.tinyIsland then
-						EchoDebug("tiny island clump!")
-					end
 				end
 				hex.mountainRange = true
 				addedHexes = addedHexes + 1
@@ -6991,9 +7040,9 @@ function GenerateMap()
 	print("Generating Fantastical Map...")
 	plotTypes = GeneratePlotTypes()
 	terrainTypes = GenerateTerrain()
-	local totalDry = mySpace.hillCount + mySpace.mountainCount + mySpace.landCount
-	local hillPercent = mCeil((mySpace.hillCount / totalDry) * 100)
-	local mountainPercent = mCeil((mySpace.mountainCount /totalDry) * 100)
+	local totalDry = (mySpace.hillCount or 0) + (mySpace.mountainCount or 0) + (mySpace.landCount or 0)
+	local hillPercent = mCeil(((mySpace.hillCount or 0) / totalDry) * 100)
+	local mountainPercent = mCeil(((mySpace.mountainCount or 0) / totalDry) * 100)
 	EchoDebug(mountainPercent, hillPercent)
 
 	AreaBuilder.Recalculate();
