@@ -857,6 +857,78 @@ local OptionDictionary = {
 	},
 }
 
+local function RowToXML(row)
+	local refTbl = {}
+	for k, v in pairs(row) do
+		tInsert(refTbl, k)
+	end
+	table.sort(refTbl)
+	local xml = "<Row"
+	for i, k in ipairs(refTbl) do
+		local v = row[k]
+		xml = xml .. "\n" .. k .. "=\"" .. v .. "\""
+	end
+	xml = xml .. "\n/>"
+	return xml
+end
+
+local function OptionDictionaryToXML(optDict)
+	local prefix = "FNTSTCL"
+	local xml = ""
+	-- parameters first
+	for i, opt in ipairs(OptionDictionary) do
+		local underscoredName = string.gsub(opt.name, " ", "_")
+		local lowerName = string.lower(underscoredName)
+		local row = {
+			ParameterId = prefix .. "_" .. underscoredName,
+			Name = opt.name,
+			Description = opt.description or "",
+			Domain = prefix .. "Domain_" .. underscoredName,
+			ConfigurationId = lowerName,
+			DefaultValue = opt.default,
+			SortIndex = 300 + (10 * i),
+			Key1 = "Map",
+			Key2 = "Fantastical.lua",
+			ConfigurationGroup = "Map",
+			GroupId = "MapOptions",
+			Hash = 0,
+		}
+		xml = xml .. RowToXML(row) .. "\n\n"
+		-- print(RowToXML(row))
+	end
+	-- then domain values
+	for i, opt in ipairs(OptionDictionary) do
+		local underscoredName = string.gsub(opt.name, " ", "_")
+		local lowerName = string.lower(underscoredName)
+		for ii, value in ipairs(opt.values) do
+			local row = {
+				Domain = prefix .. "Domain_" .. underscoredName,
+				Value = ii,
+				Name = value.name,
+				Description = value.description or "",
+				SortIndex = 9 + ii,
+			}
+			xml = xml .. RowToXML(row) .. "\n\n"
+			-- print(RowToXML(row))
+		end
+	end
+	return xml
+end
+
+		-- <Row ParameterId="FNTSTCL_Landmass_Type" 
+		-- 	 Name="Landmass Type" Description="The arrangement of land and water on the map."
+		-- 	 Domain="FNTSTCLDomain_Landmass_Type" ConfigurationId="landmasses"
+		-- 	 DefaultValue="8" 
+		-- 	 SortIndex="310" Key1="Map" Key2="Fantastical.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+		-- <Row Domain="GLDomain_Mountains" Value="1" Name="LOC_GL_MOUNTAINS_TECTONIC_NAME"  Description="LOC_GL_MOUNTAINS_TECTONIC_DESC"  SortIndex="10"/>
+		-- <Row Domain="GLDomain_Mountains" Value="2" Name="LOC_GL_MOUNTAINS_FRACTAL_NAME"   Description="LOC_GL_MOUNTAINS_FRACTAL_DESC"   SortIndex="11"/>
+		-- <Row Domain="GLDomain_Mountains" Value="3" Name="LOC_GL_MOUNTAINS_SCATTERED_NAME" Description="LOC_GL_MOUNTAINS_SCATTERED_DESC" SortIndex="12"/>
+		-- <Row Domain="GLDomain_Mountains" Value="4" Name="LOC_GL_MOUNTAINS_CLUSTERED_NAME" Description="LOC_GL_MOUNTAINS_CLUSTERED_DESC" SortIndex="13"/>
+		-- <Row Domain="GLDomain_Mountains" Value="5" Name="LOC_GL_MOUNTAINS_UNCANNY_NAME"   Description="LOC_GL_MOUNTAINS_UNCANNY_DESC"   SortIndex="14"/>
+		-- <Row Domain="GLDomain_Mountains" Value="6" Name="LOC_GL_MOUNTAINS_WINDING_NAME"   Description="LOC_GL_MOUNTAINS_WINDING_DESC"   SortIndex="15"/>
+		-- <Row Domain="GLDomain_Mountains" Value="7" Name="LOC_GL_MOUNTAINS_RANDOM_NAME"    Description="LOC_GL_MOUNTAINS_RANDOM_DESC"    SortIndex="16"/>
+
 local function GetCustomOptions()
 	local custOpts = {}
 	for i, option in ipairs(OptionDictionary) do
@@ -2678,7 +2750,6 @@ Space = class(function(a)
 	a.mountainRatio = 0.25 -- how much of the land to be mountain tiles
 	a.mountainClumpRatio = 0.1 -- of the area prescribed by mountainRatio, what part will come from one-subpolygon clumps, including tiny islands
 	a.mountainRegionRatio = 0.1 -- of the area prescribed by mountainRatio, what part will come from inside regions
-	a.mountainTinyIslandHexChance = 0.1 -- every hex of tiny islands has this out of 1 chance to be a mountain
 	a.coastalPolygonChance = 1 -- out of ten, how often do water polygons become coastal?
 	a.coastalExpansionPercent = 67 -- out of 100, how often are hexes within coastal subpolygons but without adjacent land hexes coastal?
 	a.tinyIslandTarget = 7 -- how many tiny islands will a map attempt to have
@@ -5292,6 +5363,7 @@ end
 -- add one-subpolygon mountain clumps to continents without any mountains
 function Space:PickMountainClumps()
 	EchoDebug("picking mountain clumps...")
+	self.mountainTinyIslandHexChance = self.mountainTinyIslandHexChance or self.mountainRatio
 	if self.mountainClumpArea == 0 then return end
 	local continents = {}
 	for i, continent in pairs(self.continents) do
@@ -7037,6 +7109,9 @@ end
 
 -- ENTRY POINT:
 function GenerateMap()
+	-- local file = io.open("stuff.xml", "w")
+	-- file:write(OptionDictionaryToXML(OptionDictionary))
+	-- file:close()
 	print("Generating Fantastical Map...")
 	plotTypes = GeneratePlotTypes()
 	terrainTypes = GenerateTerrain()
