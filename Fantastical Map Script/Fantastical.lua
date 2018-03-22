@@ -2329,7 +2329,7 @@ function Region:GiveParameters()
 	self.mountainous = self.space.totalMountains / self.space.mountainArea < 0.99
 	self.mountainousness = 0
 	if self.mountainous then
-		self.mountainousness = mFloor(((self.space.mountainArea - self.space.totalMountains) / self.area) * 100)
+		self.mountainousness = mMin(self.space.mountainRatio * 400, mFloor(((self.space.mountainArea - self.space.totalMountains) / self.area) * 100))
 		EchoDebug("mountainousness: " .. self.mountainousness, "mountain deficit: ".. self.space.mountainArea - self.space.totalMountains)
 	end
 	self.lakey = #self.space.lakeSubPolygons < self.space.minLakes
@@ -5061,7 +5061,7 @@ function Space:PickContinentsInBasin(astronomyIndex, islandNumber)
 end
 
 function Space:PickMountainRanges()
-	self.mountainPassHexRatio = mMin(0.04 / self.mountainRatio, 0.9)
+	self.mountainPassHexRatio = mMin(0.045 / self.mountainRatio, 0.9)
 	-- self.mountainPassNonCoreHexRatio = 1 - ((1 - self.mountainPassHexRatio) / self.hexesPerSubPolygon)
 	self.mountainPassNonCoreHexRatio = self.mountainPassHexRatio ^ (1 / self.hexesPerSubPolygon)
 	self.mountainArea = mFloor(self.mountainRatio * self.regionHexCount)
@@ -5121,14 +5121,14 @@ function Space:PickMountainRanges()
 		if not edge then break end
 		local range = { edges = {}, subPolygons = {}, isCoreHex = {}, area = 0, estimate = 0, passHexes = {}, mountainHexCount = 0, typeString = "interior" }
 		local continent = edge.polygons[1].continent or edge.polygons[2].continent
-		local maxEdges
+		local maxEdges -- = mMax(2, mCeil(mSqrt(#continent) * 0.75))
 		if coastRange then
 			range.typeString = "coast"
-			maxEdges = mMax(2, mCeil(coastEdgeNumByContinent[continent] / 5))
+			maxEdges = mMax(2, mCeil(coastEdgeNumByContinent[continent] / 10))
 		else
-			maxEdges = mCeil(mSqrt(#continent) * 0.75)
+			maxEdges = mMax(2, mCeil(mSqrt(#continent) * 0.75))
 		end
-		EchoDebug(maxEdges .. " maximum range edges", coastEdgeNumByContinent[continent], #continent)
+		-- EchoDebug(maxEdges .. " maximum range edges", coastEdgeNumByContinent[continent], #continent)
 		local passSubPolyCount = 0
 		local rangeSubPolyCount = 0
 		repeat
@@ -5227,7 +5227,7 @@ function Space:PickMountainRanges()
 			interiorHexCountEstimate = interiorHexCountEstimate - range.estimate
 			interiorHexCountEstimate = interiorHexCountEstimate + range.mountainHexCount
 		end
-		EchoDebug(range.typeString .. " range of " .. #range.edges .. " edges, " .. range.area .. " hexes, and " .. range.mountainHexCount .. " mountains")
+		EchoDebug(range.typeString .. " range of " .. #range.edges .. " edges (of " .. maxEdges ..  " maximum), " .. range.area .. " hexes, and " .. range.mountainHexCount .. " mountains")
 		tInsert(self.mountainRanges, range)
 	end
 	EchoDebug(interiorCount .. " interior range edges with " .. interiorHexCountEstimate .. " hexes", coastCount .. " coastal range edges with " .. coastHexCountEstimate .. " hexes", hexCountEstimate .. " total mountain hexes")
@@ -6768,7 +6768,7 @@ function Space:GetHillyness()
 	if self.totalRegionHills < self.hillRegionArea then
 		hillyness = mMax(20, hillyness)
 	end
-	EchoDebug(hillyness, self.hillRegionArea - self.totalRegionHills)
+	-- EchoDebug(hillyness, self.hillRegionArea - self.totalRegionHills)
 	return hillyness
 end
 
