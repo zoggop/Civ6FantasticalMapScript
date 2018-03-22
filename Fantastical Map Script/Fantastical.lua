@@ -1058,11 +1058,11 @@ local function SetConstants()
 	-- for route in GameInfo.Routes() do
 	-- 	EchoDebug(route.Name, route.Index, route.RouteType)
 	-- end
-	for k, v in pairs(TerrainBuilder) do
-		if type(v) == "function" then
-			EchoDebug("TerrainBuilder." .. k)
-		end
-	end
+	-- for k, v in pairs(TerrainBuilder) do
+	-- 	if type(v) == "function" then
+	-- 		EchoDebug("TerrainBuilder." .. k)
+	-- 	end
+	-- end
 
 	featureNone = g_FEATURE_NONE
 	featureForest = g_FEATURE_FOREST
@@ -2663,7 +2663,7 @@ Space = class(function(a)
 	a.mountainRangeMaxEdges = 4 -- how many polygon edges long can a mountain range be
 	a.coastRangeRatio = 0.33 -- what ratio of the total mountain ranges should be coastal
 	a.mountainPassSubPolygonRatio = 0.1 -- what portion of a mountain range's subpolygons are passes (not mountains)
-	a.mountainRatio = 0.25 -- how much of the land to be mountain tiles
+	a.mountainRatio = 0.06 -- how much of the land to be mountain tiles
 	a.mountainClumpRatio = 0.1 -- of the area prescribed by mountainRatio, what part will come from one-subpolygon clumps, including tiny islands
 	a.mountainRegionRatio = 0.1 -- of the area prescribed by mountainRatio, what part will come from inside regions
 	a.coastalPolygonChance = 1 -- out of ten, how often do water polygons become coastal?
@@ -2741,7 +2741,7 @@ end
 function Space:SetOptions(optDict)
 	local keySetByOption = {}
 	for optionNumber, option in ipairs(optDict) do
-		local optionChoice = Map.GetCustomOption(optionNumber)
+		local optionChoice = MapConfiguration.GetValue(string.lower(string.gsub(option.name, " ", "_")))
 		if option.values[optionChoice].values == "keys" then
 			if option.values[optionChoice].randomKeys then
 				optionChoice = tGetRandom(option.values[optionChoice].randomKeys)
@@ -5157,9 +5157,23 @@ function Space:PickMountainRanges()
 				tInsert(range.subPolygons, subPolygon)
 				local coreEst = 0
 				for ih, hex in pairs(subPolygon.hexes) do
-					if hex.subEdges[subEdge] then
-						coreEst = coreEst + 1
-						range.isCoreHex[hex] = subEdge
+					if coastRange then
+						-- coast ranges have more mountains away from coastal edge
+						if not hex.subEdges[subEdge] then
+							for d, nhex in pairs(hex:Neighbors()) do
+								if nhex.subPolygon ~= subPolygon and nhex.subPolygon.superPolygon.continent then
+									coreEst = coreEst + 1
+									range.isCoreHex[hex] = true
+									break
+								end
+							end
+						end
+					else
+						-- interior ranges have more mountains at polygon-polygon edge
+						if hex.subEdges[subEdge] then
+							coreEst = coreEst + 1
+							range.isCoreHex[hex] = true
+						end
 					end
 				end
 				local nonCoreEst = #subPolygon.hexes - coreEst
@@ -6927,8 +6941,8 @@ function GetMapInitData(worldSize)
 	local wrapX = true
 	local wrapY = false
 
-	-- if MapConfiguration.GetValue("landmass_type") > 15 then
-	if 1 == 0 then -- don't use this until we have a landmass_type option
+	if MapConfiguration.GetValue("landmass_type") > 15 then
+	-- if 1 == 0 then -- don't use this until we have a landmass_type option
 		wrapX = false
 		local grid_area = grid_width * grid_height
 		-- DO NOT generate random numbers with TerrainBuilder in this method.
@@ -6965,7 +6979,7 @@ function GeneratePlotTypes()
 	SetConstants()
     mySpace = Space()
     mySpace:GetPlayerTeamInfo()
-    -- mySpace:SetOptions(OptionDictionary)
+    mySpace:SetOptions(OptionDictionary)
     mySpace:Compute()
 	print("Shifting globe to accomodate continents (Fantastical) ...")
 	mySpace:ShiftGlobe()
