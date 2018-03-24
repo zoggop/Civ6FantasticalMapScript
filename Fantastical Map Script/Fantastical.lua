@@ -6921,22 +6921,19 @@ function GetMapInitData(worldSize)
 	-- This function can reset map grid sizes and world wrap settings.
 
 	print("Running Fantastical");
-	print(worldSize)
-	if worldSize then return end
 
-	local sizes = {
-		[GameInfo.Worlds.WORLDSIZE_DUEL.ID] = {40, 24},
-		[GameInfo.Worlds.WORLDSIZE_TINY.ID] = {56, 36},
-		[GameInfo.Worlds.WORLDSIZE_SMALL.ID] = {66, 42},
-		[GameInfo.Worlds.WORLDSIZE_STANDARD.ID] = {80, 52},
-		[GameInfo.Worlds.WORLDSIZE_LARGE.ID] = {104, 64},
-		[GameInfo.Worlds.WORLDSIZE_HUGE.ID] = {128, 80},
-	}
+	local grid_width, grid_height
 
-	-- Set grid size based on user input.
-	local grid_size = sizes[worldSize]
-	local grid_width = grid_size[1]
-	local grid_height = grid_size[2]
+	for m in GameInfo.Maps() do
+		if m.Hash == worldSize then
+			grid_width = m.GridWidth
+			grid_height = m.GridHeight
+			EchoDebug("map size found", worldSize, grid_width .. "x" .. grid_height)
+			break
+		end
+	end
+
+	if not grid_width then return end
 
 	local wrapX = true
 	local wrapY = false
