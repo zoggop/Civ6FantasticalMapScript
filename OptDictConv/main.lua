@@ -1,35 +1,10 @@
 local OptionDictionary = {
-	{ name = "Landmass Type", keys = { "wrapX", "oceanNumber", "majorContinentNumber", "islandNumber", "tinyIslandTarget", "coastalPolygonChance", "inlandSeaContinentRatio", "inlandSeasMax", "lakeMinRatio", "astronomyBlobNumber", "astronomyBlobMinPolygons", "astronomyBlobMaxPolygons", "astronomyBlobsMustConnectToOcean" }, default = 9,
+	{ name = "Landmass Type", keys = { "wrapX", "oceanNumber", "majorContinentNumber", "islandNumber", "tinyIslandTarget", "coastalPolygonChance", "astronomyBlobNumber", "astronomyBlobMinPolygons", "astronomyBlobMaxPolygons", "astronomyBlobsMustConnectToOcean" }, default = 5,
 	values = {
 			[1] = { name = "Land All Around", values = {
 				oceanNumber = -1,
-				inlandSeasMax = 0,
-				lakeMinRatio = 0,
 			}},
-			[2] = { name = "Lakes", values = {
-				oceanNumber = -1,
-				inlandSeaContinentRatio = 0.015,
-				inlandSeasMax = 2,
-				lakeMinRatio = 0.02,
-			}},
-			[3] = { name = "Inland Seas", values = {
-				oceanNumber = -1,
-				tinyIslandTarget = 5,
-				inlandSeaContinentRatio = 0.04,
-				inlandSeasMax = 3,
-				lakeMinRatio = 0.015,
-			}},
-			[4] = { name = "Inland Sea", values = {
-				oceanNumber = -1,
-				tinyIslandTarget = 5,
-				inlandSeaContinentRatio = 0.4,
-			}},
-			[5] = { name = "Low Seas", values = {
-				oceanNumber = 0,
-				majorContinentNumber = 3,
-				inlandSeasMax = 0,
-			}},
-			[6] = { name = "Archipelago", values = {
+			[2] = { name = "Archipelago", values = {
 				oceanNumber = 0,
 				majorContinentNumber = 0,
 				coastalPolygonChance = 2,
@@ -39,7 +14,7 @@ local OptionDictionary = {
 				astronomyBlobMinPolygons = 1,
 				astronomyBlobMaxPolygons = 3,
 			}},
-			[7] = { name = "Pangaea", values = {
+			[3] = { name = "Pangaea", values = {
 				oceanNumber = 1,
 				majorContinentNumber = 1,
 				islandNumber = 2,
@@ -49,109 +24,73 @@ local OptionDictionary = {
 				astronomyBlobMaxPolygons = 7,
 				astronomyBlobsMustConnectToOcean = 	true,
 			}},
-			[8] = { name = "Alpha Centaurish", values = {
+			[4] = { name = "Alpha Centaurish", values = {
 				oceanNumber = 1,
 				majorContinentNumber = 3,
-				inlandSeaContinentRatio = 0.03,
 			}},
-			[9] = { name = "Two Continents", values = {
+			[5] = { name = "Two Continents", values = {
 				-- all defaults
 			}},
-			[10] = { name = "Earthish", values = {
+			[6] = { name = "Earthish", values = {
 				majorContinentNumber = 5,
 				islandNumber = 4,
 			}},
-			[11] = { name = "Earthseaish", values = {
+			[7] = { name = "Earthseaish", values = {
 				oceanNumber = 3,
 				majorContinentNumber = 9,
 				coastalPolygonChance = 2,
 				islandNumber = 10,
 				tinyIslandTarget = 11,
 			}},
-			[12] = { name = "Lonely Oceans", values = {
+			[8] = { name = "Lonely Oceans", values = {
 				oceanNumber = 0,
 				majorContinentNumber = 0,
 				islandNumber = 20,
 				tinyIslandTarget = 14,
 				astronomyBlobNumber = 5,
 			}},
-			[13] = { name = "Every Civilization a Continent", values = {
+			[9] = { name = "Every Civilization a Continent", values = {
 				oceanNumber = 0,
 				majorContinentNumber = ".iNumCivs",
 				islandNumber = 0,
 				tinyIslandTarget = ".iNumCivsDouble",
 			}},
-			[14] = { name = "Every Civilization an Ocean", values = {
-				oceanNumber = 0,
-				majorContinentNumber = ".iNumCivs",
-				islandNumber = 0,
-				tinyIslandTarget = ".iNumCivs",
-				astronomyBlobNumber = ".iNumCivs",
-				astronomyBlobMinPolygons = ".astronomyBlobEstimatePerCiv",
-				astronomyBlobMaxPolygons = ".astronomyBlobEstimatePerCiv",
-				astronomyBlobsAtMaxDistFromOceans = true,
-			}},
-			-- [13] = { name = "Random Globe", values = "keys", randomKeys = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14} },
-			[15] = { name = "Random Globe", values = "values",
-				lowValues = { true, -1, 1, 1, 1, 1, 0.01, 0, 0.001, 0, 1, 1, false },
-				highValues = { true, 3, 8, 9, 13, 3, 0.3, 3, 0.02, 3, 10, 20, true }
-			},
-			[16] = { name = "Dry Land", values = {
+			[10] = { name = "Random Globe", values = "keys", randomKeys = {1, 2, 3, 4, 5, 6, 7, 8, 9} },
+			-- [10] = { name = "Random Globe", values = "values",
+				-- lowValues = { true, -1, 1, 1, 1, 1, 0, 1, 1, false },
+				-- highValues = { true, 3, 8, 9, 13, 3, 3, 10, 20, true }
+			-- },
+			[11] = { name = "Dry Land", values = {
 				wrapX = false,
 				oceanNumber = -1,
-				inlandSeasMax = 0,
-				lakeMinRatio = 0,
 			}},
-			[17] = { name = "Landlocked Lakes", values = {
-				wrapX = false,
-				oceanNumber = -1,
-				inlandSeaContinentRatio = 0.015,
-				inlandSeasMax = 2,
-				lakeMinRatio = 0.02,
-			}},
-			[18] = { name = "Landlocked Seas", values = {
-				wrapX = false,
-				oceanNumber = -1,
-				inlandSeaContinentRatio = 0.04,
-				inlandSeasMax = 3,
-				lakeMinRatio = 0.015,
-			}},
-			[19] = { name = "Landlocked Sea", values = {
-				wrapX = false,
-				oceanNumber = -1,
-				inlandSeaContinentRatio = 0.4,
-			}},
-			[20] = { name = "Estuary", values = {
+			[12] = { name = "Estuary", values = {
 				wrapX = false,
 				oceanNumber = 0,
 				majorContinentNumber = 3,
-				inlandSeasMax = 0,
 			}},
-			[21] = { name = "Coastline", values = {
+			[13] = { name = "Coastline", values = {
 				wrapX = false,
 				oceanNumber = 1,
 				majorContinentNumber = 1,
 				coastalPolygonChance = 2,
 				islandNumber = 1,
-				inlandSeasMax = 0,
 			}},
-			[22] = { name = "Coast", values = {
+			[14] = { name = "Coast", values = {
 				wrapX = false,
 				oceanNumber = 2,
 				majorContinentNumber = 1,
 				coastalPolygonChance = 2,
 				islandNumber = 1,
-				inlandSeasMax = 0,
 			}},
-			[23] = { name = "Peninsula", values = {
+			[15] = { name = "Peninsula", values = {
 				wrapX = false,
 				oceanNumber = 3,
 				majorContinentNumber = 1,
 				coastalPolygonChance = 2,
 				islandNumber = 2,
-				inlandSeasMax = 0,
 			}},
-			[24] = { name = "Continent", values = {
+			[16] = { name = "Continent", values = {
 				wrapX = false,
 				oceanNumber = 4,
 				majorContinentNumber = 1,
@@ -162,7 +101,7 @@ local OptionDictionary = {
 				astronomyBlobMaxPolygons = 7,
 				astronomyBlobsMustConnectToOcean = true,
 			}},
-			[25] = { name = "Island Chain", values = {
+			[17] = { name = "Island Chain", values = {
 				wrapX = false,
 				oceanNumber = 4,
 				majorContinentNumber = 7,
@@ -170,19 +109,19 @@ local OptionDictionary = {
 				islandNumber = 10,
 				astronomyBlobNumber = 2,
 			}},
-			[26] = { name = "Random Realm", values = "keys", randomKeys = {16, 17, 18, 19, 20, 21, 22, 23, 24, 25} },
+			[18] = { name = "Random Realm", values = "keys", randomKeys = {11, 12, 13, 14, 15, 16, 17} },
 		}
 	},
-	-- { name = "Inland Water Bodies", keys = { "inlandSeasMax", "inlandSeaContinentRatio", "lakeMinRatio" }, default = 2,
-	-- values = {
-	-- 		[1] = { name = "None", values = {0, 0, 0} },
-	-- 		[2] = { name = "Some Lakes", values = {1, 0.015, 0.0065} },
-	-- 		[3] = { name = "Many Lakes", values = {1, 0.025, 0.02} },
-	-- 		[4] = { name = "Seas", values = {3, 0.04, 0.01} },
-	-- 		[5] = { name = "One Big Sea", values = {1, 0.4, 0.0065} },
-	-- 		[6] = { name = "Random", values = "keys" },
-	-- 	}
-	-- },
+	{ name = "Inland Water Bodies", keys = { "inlandSeasMax", "inlandSeaContinentRatio", "lakeMinRatio" }, default = 2,
+	values = {
+			[1] = { name = "None", values = {0, 0, 0} },
+			[2] = { name = "Some Lakes", values = {1, 0.02, 0.0065} },
+			[3] = { name = "Many Lakes", values = {2, 0.015, 0.02} },
+			[4] = { name = "Seas", values = {3, 0.04, 0.01} },
+			[5] = { name = "One Big Sea", values = {1, 0.4, 0.0065} },
+			[6] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.1, 0.02} },
+		}
+	},
 	{ name = "Land at Poles", keys = { "polarMaxLandRatio" }, default = 1,
 	values = {
 			[1] = { name = "Yes", values = {0.4} },
@@ -242,19 +181,27 @@ local OptionDictionary = {
 			[8] = { name = "Random", values = "values", lowValues = {3}, highValues = {96} },
 		}
 	},
-	{ name = "Doomsday Age", keys = { "falloutEnabled", "contaminatedWater", "contaminatedSoil", "postApocalyptic", "ancientCitiesCount" }, default = 1,
+	{ name = "Ancient Roads", keys = { "ancientCitiesCount" }, default = 1,
 	values = {
-			[1] = { name = "Not Yet (No Ruins or Roads)", values = {false, false, false, false, 0} },
-			[2] = { name = "Legend (Ruins & Roads)", values = {false, false, false, false, 4} },
-			[3] = { name = "History (Fallout around Ruins)", values = {false, false, false, true, 4} },
-			[4] = { name = "Memory (More Fallout)", values = {true, false, false, true, 4} },
-			[5] = { name = "A Long While (Fallout in Mountains)", values = {true, false, true, true, 4} },
-			[6] = { name = "A While (Fallout in Rivers)", values = {true, true, false, true, 4} },
-			[7] = { name = "Yesterday (Fallout Everywhere)", values = {true, true, true, true, 4} },
-			[8] = { name = "Random", values = "keys" },
+			[1] = { name = "None", values = {0} },
+			[2] = { name = "Some", values = {4} },
+			[3] = { name = "Many", values = {8} },
 		}
 	},
+	-- { name = "Doomsday Age", keys = { "falloutEnabled", "contaminatedWater", "contaminatedSoil", "postApocalyptic", "ancientCitiesCount" }, default = 1,
+	-- values = {
+	-- 		[1] = { name = "Not Yet (No Ruins or Roads)", values = {false, false, false, false, 0} },
+	-- 		[2] = { name = "Legend (Ruins & Roads)", values = {false, false, false, false, 4} },
+	-- 		[3] = { name = "History (Fallout around Ruins)", values = {false, false, false, true, 4} },
+	-- 		[4] = { name = "Memory (More Fallout)", values = {true, false, false, true, 4} },
+	-- 		[5] = { name = "A Long While (Fallout in Mountains)", values = {true, false, true, true, 4} },
+	-- 		[6] = { name = "A While (Fallout in Rivers)", values = {true, true, false, true, 4} },
+	-- 		[7] = { name = "Yesterday (Fallout Everywhere)", values = {true, true, true, true, 4} },
+	-- 		[8] = { name = "Random", values = "keys" },
+	-- 	}
+	-- },
 }
+
 
 local function RowToXML(row, noNewLines)
 	local seperator = "\n"

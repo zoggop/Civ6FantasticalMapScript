@@ -49,7 +49,7 @@
 		<Row
 			ConfigurationGroup="Map"
 			ConfigurationId="landmass_type"
-			DefaultValue="9"
+			DefaultValue="5"
 			Description=""
 			Domain="FNTSTCLDomain_Landmass_Type"
 			GroupId="MapOptions"
@@ -59,6 +59,21 @@
 			Name="Landmass Type"
 			ParameterId="FNTSTCL_Landmass_Type"
 			SortIndex="310"
+		/>
+
+		<Row
+			ConfigurationGroup="Map"
+			ConfigurationId="inland_water_bodies"
+			DefaultValue="2"
+			Description=""
+			Domain="FNTSTCLDomain_Inland_Water_Bodies"
+			GroupId="MapOptions"
+			Hash="0"
+			Key1="Map"
+			Key2="Fantastical.lua"
+			Name="Inland Water Bodies"
+			ParameterId="FNTSTCL_Inland_Water_Bodies"
+			SortIndex="320"
 		/>
 
 		<Row
@@ -73,7 +88,7 @@
 			Key2="Fantastical.lua"
 			Name="Land at Poles"
 			ParameterId="FNTSTCL_Land_at_Poles"
-			SortIndex="320"
+			SortIndex="330"
 		/>
 
 		<Row
@@ -88,7 +103,7 @@
 			Key2="Fantastical.lua"
 			Name="Climate Realism"
 			ParameterId="FNTSTCL_Climate_Realism"
-			SortIndex="330"
+			SortIndex="340"
 		/>
 
 		<Row
@@ -103,7 +118,7 @@
 			Key2="Fantastical.lua"
 			Name="Granularity"
 			ParameterId="FNTSTCL_Granularity"
-			SortIndex="340"
+			SortIndex="350"
 		/>
 
 		<Row
@@ -118,7 +133,7 @@
 			Key2="Fantastical.lua"
 			Name="World Age"
 			ParameterId="FNTSTCL_World_Age"
-			SortIndex="350"
+			SortIndex="360"
 		/>
 
 		<Row
@@ -133,7 +148,7 @@
 			Key2="Fantastical.lua"
 			Name="Temperature"
 			ParameterId="FNTSTCL_Temperature"
-			SortIndex="360"
+			SortIndex="370"
 		/>
 
 		<Row
@@ -148,22 +163,22 @@
 			Key2="Fantastical.lua"
 			Name="Rainfall"
 			ParameterId="FNTSTCL_Rainfall"
-			SortIndex="370"
+			SortIndex="380"
 		/>
 
 		<Row
 			ConfigurationGroup="Map"
-			ConfigurationId="doomsday_age"
+			ConfigurationId="ancient_roads"
 			DefaultValue="1"
 			Description=""
-			Domain="FNTSTCLDomain_Doomsday_Age"
+			Domain="FNTSTCLDomain_Ancient_Roads"
 			GroupId="MapOptions"
 			Hash="0"
 			Key1="Map"
 			Key2="Fantastical.lua"
-			Name="Doomsday Age"
-			ParameterId="FNTSTCL_Doomsday_Age"
-			SortIndex="380"
+			Name="Ancient Roads"
+			ParameterId="FNTSTCL_Ancient_Roads"
+			SortIndex="390"
 		/>
 
 	</Parameters>
@@ -181,31 +196,30 @@
 		<!-- Fantastical options: -->
 		
 		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Land All Around" SortIndex="10" Value="1" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Lakes" SortIndex="11" Value="2" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Inland Seas" SortIndex="12" Value="3" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Inland Sea" SortIndex="13" Value="4" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Low Seas" SortIndex="14" Value="5" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Archipelago" SortIndex="15" Value="6" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Pangaea" SortIndex="16" Value="7" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Alpha Centaurish" SortIndex="17" Value="8" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Two Continents" SortIndex="18" Value="9" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Earthish" SortIndex="19" Value="10" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Earthseaish" SortIndex="20" Value="11" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Lonely Oceans" SortIndex="21" Value="12" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Every Civilization a Continent" SortIndex="22" Value="13" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Every Civilization an Ocean" SortIndex="23" Value="14" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Random Globe" SortIndex="24" Value="15" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Dry Land" SortIndex="25" Value="16" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Landlocked Lakes" SortIndex="26" Value="17" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Landlocked Seas" SortIndex="27" Value="18" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Landlocked Sea" SortIndex="28" Value="19" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Estuary" SortIndex="29" Value="20" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Coastline" SortIndex="30" Value="21" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Coast" SortIndex="31" Value="22" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Peninsula" SortIndex="32" Value="23" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Continent" SortIndex="33" Value="24" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Island Chain" SortIndex="34" Value="25" />
-		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Random Realm" SortIndex="35" Value="26" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Archipelago" SortIndex="11" Value="2" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Pangaea" SortIndex="12" Value="3" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Alpha Centaurish" SortIndex="13" Value="4" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Two Continents" SortIndex="14" Value="5" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Earthish" SortIndex="15" Value="6" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Earthseaish" SortIndex="16" Value="7" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Lonely Oceans" SortIndex="17" Value="8" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Every Civilization a Continent" SortIndex="18" Value="9" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Random Globe" SortIndex="19" Value="10" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Dry Land" SortIndex="20" Value="11" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Estuary" SortIndex="21" Value="12" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Coastline" SortIndex="22" Value="13" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Coast" SortIndex="23" Value="14" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Peninsula" SortIndex="24" Value="15" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Continent" SortIndex="25" Value="16" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Island Chain" SortIndex="26" Value="17" />
+		<Row Description="" Domain="FNTSTCLDomain_Landmass_Type" Name="Random Realm" SortIndex="27" Value="18" />
+
+		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="None" SortIndex="10" Value="1" />
+		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Some Lakes" SortIndex="11" Value="2" />
+		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Many Lakes" SortIndex="12" Value="3" />
+		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Seas" SortIndex="13" Value="4" />
+		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="One Big Sea" SortIndex="14" Value="5" />
+		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Random" SortIndex="15" Value="6" />
 
 		<Row Description="" Domain="FNTSTCLDomain_Land_at_Poles" Name="Yes" SortIndex="10" Value="1" />
 		<Row Description="" Domain="FNTSTCLDomain_Land_at_Poles" Name="No" SortIndex="11" Value="2" />
@@ -248,14 +262,9 @@
 		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Arboria" SortIndex="16" Value="7" />
 		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Random" SortIndex="17" Value="8" />
 
-		<Row Description="" Domain="FNTSTCLDomain_Doomsday_Age" Name="Not Yet (No Ruins or Roads)" SortIndex="10" Value="1" />
-		<Row Description="" Domain="FNTSTCLDomain_Doomsday_Age" Name="Legend (Ruins & Roads)" SortIndex="11" Value="2" />
-		<Row Description="" Domain="FNTSTCLDomain_Doomsday_Age" Name="History (Fallout around Ruins)" SortIndex="12" Value="3" />
-		<Row Description="" Domain="FNTSTCLDomain_Doomsday_Age" Name="Memory (More Fallout)" SortIndex="13" Value="4" />
-		<Row Description="" Domain="FNTSTCLDomain_Doomsday_Age" Name="A Long While (Fallout in Mountains)" SortIndex="14" Value="5" />
-		<Row Description="" Domain="FNTSTCLDomain_Doomsday_Age" Name="A While (Fallout in Rivers)" SortIndex="15" Value="6" />
-		<Row Description="" Domain="FNTSTCLDomain_Doomsday_Age" Name="Yesterday (Fallout Everywhere)" SortIndex="16" Value="7" />
-		<Row Description="" Domain="FNTSTCLDomain_Doomsday_Age" Name="Random" SortIndex="17" Value="8" />
+		<Row Description="" Domain="FNTSTCLDomain_Ancient_Roads" Name="None" SortIndex="10" Value="1" />
+		<Row Description="" Domain="FNTSTCLDomain_Ancient_Roads" Name="Some" SortIndex="11" Value="2" />
+		<Row Description="" Domain="FNTSTCLDomain_Ancient_Roads" Name="Many" SortIndex="12" Value="3" />
 		
 	</DomainValues>
 </GameInfo>
