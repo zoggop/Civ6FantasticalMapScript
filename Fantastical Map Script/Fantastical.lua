@@ -1573,6 +1573,7 @@ function Hex:SetTerrain()
 		EchoDebug(self:Report())
 	end
 	TerrainBuilder.SetTerrainType(self.plot, terrainType)
+	return terrainType
 end
 
 function Hex:SetFeature()
@@ -3807,8 +3808,8 @@ end
 function Space:SetTerrains()
 	local terrainTypes = {}
 	for i, hex in pairs(self.hexes) do
-		hex:SetTerrain()
-		terrainTypes[hex:GetPlotIndex()] = hex.terrainTypes
+		local terrainType = hex:SetTerrain()
+		terrainTypes[hex:GetPlotIndex()] = terrainType
 	end
 	return terrainTypes
 end
@@ -6691,6 +6692,22 @@ function Space:DisperseFakeLatitude()
 	end
 end
 
+function Space:AddCliffs()
+	for i, hex in pairs(self.hexes) do
+		if hex.plotType == g_PLOT_TYPE_HILLS and 
+		hex:Near("plotType", g_PLOT_TYPE_OCEAN) and
+		not hex:Near("featureType", g_FEATURE_ICE) and
+		not IsAdjacentToRiver(hex.plot:GetX(), hex.plot:GetY()) then
+			local area = hex.plot:GetArea()
+			if (area:GetPlotCount() > 1) then
+				-- EchoDebug("cliff", hex:Locate())
+				hex.cliff = true
+				SetCliff(nil, hex.plot:GetX(), hex.plot:GetY());
+			end
+		end
+	end
+end
+
 function Space:AddTrickSnow()
 	for y = 0, self.h, self.h do
 		for x = 0, self.w do
@@ -6999,6 +7016,11 @@ function AddRivers()
 	mySpace:SetRivers()
 end
 
+function AddCliffs()
+	print("Adding cliffs");
+	mySpace:AddCliffs()
+end
+
 function AddLakes()
 	print("Adding No Lakes (lakes have already been added) (Fantastical)")
 end
@@ -7047,14 +7069,14 @@ function GenerateMap()
 	local mountainPercent = mCeil(((mySpace.mountainCount or 0) / totalDry) * 100)
 	EchoDebug(mountainPercent, hillPercent)
 
-	AreaBuilder.Recalculate();
-
 	AddFeatures()
 	AddRivers()
-	AddRoutes()
 
-	print("Adding cliffs");
-	AddCliffs(plotTypes, terrainTypes);
+	AreaBuilder.Recalculate();
+
+	AddCliffs()
+
+	AddRoutes()
 
 	mySpace:AddTrickSnow() -- because the natural wonder generator is deeply stupid and assumes snow at map top and bottom
 
