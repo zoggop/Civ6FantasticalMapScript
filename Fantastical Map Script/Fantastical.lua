@@ -779,7 +779,7 @@ local OptionDictionary = {
 			[5] = { name = "Wet", values = {57} },
 			[6] = { name = "Very Wet", values = {67} },
 			[7] = { name = "Arboria", values = {84} },
-			[8] = { name = "Random", values = "values", lowValues = {3}, highValues = {96} },
+			[8] = { name = "Random", values = "values", lowValues = {3}, highValues = {84} },
 		}
 	},
 	{ name = "Ancient Roads", keys = { "ancientCitiesCount" }, default = 1,
