@@ -1009,6 +1009,16 @@ local function SetConstants()
 	-- 		EchoDebug("TerrainBuilder." .. k)
 	-- 	end
 	-- end
+	for k, v in pairs(AreaBuilder) do
+		-- if type(v) == "function" then
+			EchoDebug(type(v), "AreaBuilder." .. k)
+		-- end
+	end
+	for k, v in pairs(StartPositioner) do
+		-- if type(v) == "function" then
+			EchoDebug(type(v), "StartPositioner." .. k)
+		-- end
+	end
 
 	featureNone = g_FEATURE_NONE
 	featureForest = g_FEATURE_FOREST
@@ -2250,8 +2260,8 @@ end)
 function Region:GiveLatitude()
 	if self.latitude then return end
 	self.representativePolygon = tGetRandom(self.polygons)
-	self.latitude = self.representativePolygon.latitude
 	self.minLatitude, self.maxLatitude = self.representativePolygon.minLatitude, self.representativePolygon.maxLatitude
+	local latTot = 0
 	for i, polygon in pairs(self.polygons) do
 		if polygon.minLatitude < self.minLatitude then
 			self.minLatitude = polygon.minLatitude
@@ -2259,7 +2269,10 @@ function Region:GiveLatitude()
 		if polygon.maxLatitude > self.maxLatitude then
 			self.maxLatitude = polygon.maxLatitude
 		end
+		latTot = latTot + polygon.latitude
 	end
+	-- self.latitude = self.representativePolygon.latitude
+	self.latitude = latTot / #self.polygons
 end
 
 function Region:GiveParameters()
@@ -2269,8 +2282,9 @@ function Region:GiveParameters()
 			self.blockFeatures[featureType] = mRandom(1, 100) > feature.metaPercent
 		end
 	end
-	-- get latitude (real or fake)
-	self:GiveLatitude()
+	if self.space.useMapLatitudes then
+		self:GiveLatitude()
+	end
 	self.hillyness = self.space:GetHillyness()
 	-- self.mountainous = mRandom() < 1 - (self.space.totalMountains / self.space.mountainArea)
 	self.mountainous = self.space.totalMountains / self.space.mountainArea < 0.99
@@ -5320,10 +5334,9 @@ function Space:PickRegions()
 					polygon = nil
 				end
 			until #polygonBuffer == 0
-			local region
 			if polygon ~= nil then
 				local backlog = {}
-				region = Region(self)
+				local region = Region(self)
 				polygon.region = region
 				tInsert(region.polygons, polygon)
 				region.area = region.area + #polygon.hexes
@@ -5358,12 +5371,10 @@ function Space:PickRegions()
 						tInsert(backlog, c)
 					end
 				until #region.polygons == size or region.area > self.polygonMaxArea / 2 or #region.polygons == #continent
-			end
-			if region then
-				tInsert(self.regions, region)
-				regionHexCount = regionHexCount + region.area
-			else
-				EchoDebug("nil region")
+				if region then
+					tInsert(self.regions, region)
+					regionHexCount = regionHexCount + region.area
+				end
 			end
 		end
 	end
@@ -5470,14 +5481,40 @@ end
 
 function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 	local voronoiBuffer = tDuplicate(climateVoronoi)
-	local regionBuffer = tDuplicate(self.regions)
-	while #regionBuffer ~= 0 do
-		local region = tRemoveRandom(regionBuffer)
+	local haveRegion = {}
+	local regionBuffer = {}
+	if self.useMapLatitudes then
+		-- add polar polygons first
+		local poleSource = self.edgeYPolygons
+		if not self.wrapX then
+			if realmHemisphere == 1 then
+				poleSource = self.topYPolygons
+			else
+				poleSource = self.bottomYPolygons
+			end
+		end
+		local poleBuffer = tDuplicate(poleSource)
+		while #poleBuffer ~= 0 do
+			local polygon = tRemoveRandom(poleBuffer)
+			if polygon.region and not haveRegion[polygon.region] then
+				haveRegion[polygon.region] = true
+				tInsert(regionBuffer, polygon.region)
+			end
+		end
+	end
+	local regBuf = tDuplicate(self.regions)
+	while #regBuf ~= 0 do
+		local region = tRemoveRandom(regBuf)
+		if not haveRegion[region] then
+			haveRegion[region] = true
+			tInsert(regionBuffer, region)
+		end
+	end
+	for i, region in pairs(regionBuffer) do
 		if self.useMapLatitudes then
 			region:GiveLatitude()
 			local temp = self:GetTemperature(region.latitude)
 			local rain = self:GetRainfall(region.latitude)
-			-- print("latitude: " .. region.latitude, "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain)
 			local bestDist, bestPoint, bestIndex
 			for ii, point in pairs(voronoiBuffer) do
 				local dt = mAbs(temp - point.temp)
@@ -5490,14 +5527,15 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 				end
 			end
 			region.point = bestPoint
+			print("latitude: " .. region.latitude, "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "voronoi t: " .. bestPoint.temp, "voronoi r: " .. bestPoint.rain)
 			if #voronoiBuffer == 0 then
-				-- print("ran out of voronoi, refilling buffer...")
+				print("ran out of voronoi, refilling buffer...")
 				voronoiBuffer = tDuplicate(climateVoronoi)
 			end
 			tRemove(voronoiBuffer, bestIndex)
 		else
 			if #voronoiBuffer == 0 then
-				-- print("ran out of voronoi, refilling buffer...")
+				print("ran out of voronoi, refilling buffer...")
 				voronoiBuffer = tDuplicate(climateVoronoi)
 			end
 			region.point = tRemoveRandom(voronoiBuffer)
@@ -7047,14 +7085,40 @@ function GenerateMap()
 	}
 	local resGen = ResourceGenerator.Create(args);
 
+	-- gather fertility data to set min civ fertility
+	-- if min civ fertility is set too high, the game will crash
+	local fertMax, fertMin
+	local fertTot = 0
+	local tot = 0
+	for i = 0, (mySpace.iW * mySpace.iH) - 1, 1 do
+		local pPlot = Map.GetPlotByIndex(i)
+		local tType = pPlot:GetTerrainType()
+		local fertility = StartPositioner.GetPlotFertility(i, -1)
+		local wet = tType == g_TERRAIN_TYPE_OCEAN or tType == g_TERRAIN_TYPE_COAST
+		if tType ~= g_TERRAIN_TYPE_OCEAN then
+			if not fertMin or fertility < fertMin then
+				fertMin = fertility
+			end
+			if not fertMax or fertility > fertMax then
+				fertMax = fertility
+			end
+			fertTot = fertTot + fertility
+			tot = tot + 1
+		end
+	end
+	local fertAvg = fertTot / tot
+	local fertMult = fertAvg / 4.5
+	print("fertility: " .. fertMin .. " / " .. fertAvg .. " / " .. fertMax)
+	print("fertility avg fraction of 4.5 normal: " .. fertMult)
+
 	print("Creating start plot database.");
 	-- START_MIN_Y and START_MAX_Y is the percent of the map ignored for major civs' starting positions.
 	local args = {
-		MIN_MAJOR_CIV_FERTILITY = 300,
-		MIN_MINOR_CIV_FERTILITY = 50, 
+		MIN_MAJOR_CIV_FERTILITY = mFloor(fertMult * 300), -- 300,
+		MIN_MINOR_CIV_FERTILITY = mFloor(fertMult * 50), -- 50, 
 		MIN_BARBARIAN_FERTILITY = 1,
-		START_MIN_Y = 15,
-		START_MAX_Y = 15,
+		START_MIN_Y = 0, -- 15,
+		START_MAX_Y = 0, -- 15,
 		START_CONFIG = startConfig,
 		LAND = true,
 	};
