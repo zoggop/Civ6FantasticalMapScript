@@ -1,6 +1,6 @@
-- coastal ranges' core hexes should be adjoining interior subpolygons, not adjoining ocean
-
 ---
+
+- coastal ranges' core hexes should be adjoining interior subpolygons, not adjoining ocean
 
 - mountains and hills can be controlled more easily
 

@@ -179,6 +179,13 @@ local function tDuplicate(sourceTable)
 	return duplicate
 end
 
+local function tShuffle(tbl)
+	for i = #tbl, 1, -1 do
+		local j = mRandom(1, i)
+		tbl[i], tbl[j] = tbl[j], tbl[i]
+	end
+end
+
 local function diceRoll(dice, maximum, invert)
 	if invert == nil then invert = false end
 	if maximum == nil then maximum = 1.0 end
@@ -605,7 +612,14 @@ local OptionDictionary = {
 			[1] = { name = "Land All Around", values = {
 				oceanNumber = -1,
 			}},
-			[2] = { name = "Archipelago", values = {
+			[2] = { name = "Low Seas", values = {
+				oceanNumber = 0,
+				majorContinentNumber = 3,
+				astronomyBlobNumber = 1,
+				astronomyBlobMinPolygons = 1,
+				astronomyBlobMaxPolygons = 1,
+			}},
+			[3] = { name = "Archipelago", values = {
 				oceanNumber = 0,
 				majorContinentNumber = 0,
 				coastalPolygonChance = 2,
@@ -615,7 +629,7 @@ local OptionDictionary = {
 				astronomyBlobMinPolygons = 1,
 				astronomyBlobMaxPolygons = 3,
 			}},
-			[3] = { name = "Pangaea", values = {
+			[4] = { name = "Pangaea", values = {
 				oceanNumber = 1,
 				majorContinentNumber = 1,
 				islandNumber = 2,
@@ -625,73 +639,73 @@ local OptionDictionary = {
 				astronomyBlobMaxPolygons = 7,
 				astronomyBlobsMustConnectToOcean = 	true,
 			}},
-			[4] = { name = "Alpha Centaurish", values = {
+			[5] = { name = "Alpha Centaurish", values = {
 				oceanNumber = 1,
 				majorContinentNumber = 3,
 			}},
-			[5] = { name = "Two Continents", values = {
+			[6] = { name = "Two Continents", values = {
 				-- all defaults
 			}},
-			[6] = { name = "Earthish", values = {
+			[7] = { name = "Earthish", values = {
 				majorContinentNumber = 5,
 				islandNumber = 4,
 			}},
-			[7] = { name = "Earthseaish", values = {
+			[8] = { name = "Earthseaish", values = {
 				oceanNumber = 3,
 				majorContinentNumber = 9,
 				coastalPolygonChance = 2,
 				islandNumber = 10,
 				tinyIslandTarget = 11,
 			}},
-			[8] = { name = "Lonely Oceans", values = {
+			[9] = { name = "Lonely Oceans", values = {
 				oceanNumber = 0,
 				majorContinentNumber = 0,
 				islandNumber = 20,
 				tinyIslandTarget = 14,
 				astronomyBlobNumber = 5,
 			}},
-			[9] = { name = "Every Civilization a Continent", values = {
+			[10] = { name = "Every Civilization a Continent", values = {
 				oceanNumber = 0,
 				majorContinentNumber = ".iNumCivs",
 				islandNumber = 0,
 				tinyIslandTarget = ".iNumCivsDouble",
 			}},
-			[10] = { name = "Random Globe", values = "keys", randomKeys = {1, 2, 3, 4, 5, 6, 7, 8, 9} },
+			[11] = { name = "Random Globe", values = "keys", randomKeys = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} },
 			-- [10] = { name = "Random Globe", values = "values",
 				-- lowValues = { true, -1, 1, 1, 1, 1, 0, 1, 1, false },
 				-- highValues = { true, 3, 8, 9, 13, 3, 3, 10, 20, true }
 			-- },
-			[11] = { name = "Dry Land", values = {
+			[12] = { name = "Dry Land", values = {
 				wrapX = false,
 				oceanNumber = -1,
 			}},
-			[12] = { name = "Estuary", values = {
+			[13] = { name = "Estuary", values = {
 				wrapX = false,
 				oceanNumber = 0,
 				majorContinentNumber = 3,
 			}},
-			[13] = { name = "Coastline", values = {
+			[14] = { name = "Coastline", values = {
 				wrapX = false,
 				oceanNumber = 1,
 				majorContinentNumber = 1,
 				coastalPolygonChance = 2,
 				islandNumber = 1,
 			}},
-			[14] = { name = "Coast", values = {
+			[15] = { name = "Coast", values = {
 				wrapX = false,
 				oceanNumber = 2,
 				majorContinentNumber = 1,
 				coastalPolygonChance = 2,
 				islandNumber = 1,
 			}},
-			[15] = { name = "Peninsula", values = {
+			[16] = { name = "Peninsula", values = {
 				wrapX = false,
 				oceanNumber = 3,
 				majorContinentNumber = 1,
 				coastalPolygonChance = 2,
 				islandNumber = 2,
 			}},
-			[16] = { name = "Continent", values = {
+			[17] = { name = "Continent", values = {
 				wrapX = false,
 				oceanNumber = 4,
 				majorContinentNumber = 1,
@@ -702,7 +716,7 @@ local OptionDictionary = {
 				astronomyBlobMaxPolygons = 7,
 				astronomyBlobsMustConnectToOcean = true,
 			}},
-			[17] = { name = "Island Chain", values = {
+			[18] = { name = "Island Chain", values = {
 				wrapX = false,
 				oceanNumber = 4,
 				majorContinentNumber = 7,
@@ -710,7 +724,7 @@ local OptionDictionary = {
 				islandNumber = 10,
 				astronomyBlobNumber = 2,
 			}},
-			[18] = { name = "Random Realm", values = "keys", randomKeys = {11, 12, 13, 14, 15, 16, 17} },
+			[18] = { name = "Random Realm", values = "keys", randomKeys = {12, 13, 14, 15, 16, 17, 18} },
 		}
 	},
 	{ name = "Inland Water Bodies", keys = { "inlandSeasMax", "inlandSeaContinentRatio", "lakeMinRatio" }, default = 2,
@@ -2619,6 +2633,7 @@ Space = class(function(a)
 	a.regionSizeMin = 1 -- least number of polygons a region can have
 	a.regionSizeMax = 3 -- most number of polygons a region can have (but most will be limited by their area, which must not exceed half the largest polygon's area)
 	a.climateVoronoiRelaxations = 3 -- number of lloyd relaxations for a region's temperature/rainfall. higher number means less region internal variation
+	a.climateAssignRainExponent = 0.33 -- curve of how much rain lessens in importance towards the poles in assigning climate voronoi to regions. 1 means no curve, 0.1 means the rain matters the normal amount until a very small portion of the pole
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
 	a.riverForkRatio = 0.33 -- how much of the river area should be reserved for forks
 	a.mountainRangeMaxEdges = 4 -- how many polygon edges long can a mountain range be
@@ -5480,6 +5495,7 @@ function Space:CreateClimateVoronoi(number, relaxations)
 end
 
 function Space:AssignClimateVoronoiToRegions(climateVoronoi)
+	self.climateAssignRainExponentNinety = 90 ^ self.climateAssignRainExponent
 	local voronoiBuffer = tDuplicate(climateVoronoi)
 	local haveRegion = {}
 	local regionBuffer = {}
@@ -5516,10 +5532,12 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 			local temp = self:GetTemperature(region.latitude)
 			local rain = self:GetRainfall(region.latitude)
 			local bestDist, bestPoint, bestIndex
+			local rainWeight = ((90 - region.latitude) ^ self.climateAssignRainExponent) / self.climateAssignRainExponentNinety
+			local tempWeight = 2 - rainWeight
 			for ii, point in pairs(voronoiBuffer) do
 				local dt = mAbs(temp - point.temp)
 				local dr = mAbs(rain - point.rain)
-				local dist = (dt * dt) + (dr * dr * ((90 - region.latitude) / 90))
+				local dist = (dt * dt * tempWeight) + (dr * dr * rainWeight)
 				if not bestDist or dist < bestDist then
 					bestDist = dist
 					bestPoint = point
@@ -5527,7 +5545,7 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 				end
 			end
 			region.point = bestPoint
-			print("latitude: " .. region.latitude, "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "voronoi t: " .. bestPoint.temp, "voronoi r: " .. bestPoint.rain)
+			print("latitude: " .. region.latitude, "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "vt: " .. mCeil(bestPoint.temp), "vr: " .. mCeil(bestPoint.rain), "tempWeight: " .. tempWeight, "rainWeight: " .. rainWeight)
 			if #voronoiBuffer == 0 then
 				print("ran out of voronoi, refilling buffer...")
 				voronoiBuffer = tDuplicate(climateVoronoi)
@@ -6940,7 +6958,7 @@ function GetMapInitData(worldSize)
 	local wrapX = true
 	local wrapY = false
 
-	if MapConfiguration.GetValue("landmass_type") > 10 then
+	if MapConfiguration.GetValue("landmass_type") > 11 then
 		wrapX = false
 		local grid_area = grid_width * grid_height
 		-- DO NOT generate random numbers with TerrainBuilder in this method.
@@ -7087,18 +7105,14 @@ function GenerateMap()
 
 	-- gather fertility data to set min civ fertility
 	-- if min civ fertility is set too high, the game will crash
-	local fertMax, fertMin
+	local fertMax
 	local fertTot = 0
 	local tot = 0
 	for i = 0, (mySpace.iW * mySpace.iH) - 1, 1 do
 		local pPlot = Map.GetPlotByIndex(i)
 		local tType = pPlot:GetTerrainType()
 		local fertility = StartPositioner.GetPlotFertility(i, -1)
-		local wet = tType == g_TERRAIN_TYPE_OCEAN or tType == g_TERRAIN_TYPE_COAST
-		if tType ~= g_TERRAIN_TYPE_OCEAN then
-			if not fertMin or fertility < fertMin then
-				fertMin = fertility
-			end
+		if tType ~= g_TERRAIN_TYPE_OCEAN and tType ~= g_TERRAIN_TYPE_COAST then
 			if not fertMax or fertility > fertMax then
 				fertMax = fertility
 			end
@@ -7107,9 +7121,9 @@ function GenerateMap()
 		end
 	end
 	local fertAvg = fertTot / tot
-	local fertMult = fertAvg / 4.5
-	print("fertility: " .. fertMin .. " / " .. fertAvg .. " / " .. fertMax)
-	print("fertility avg fraction of 4.5 normal: " .. fertMult)
+	local fertMult = fertAvg / 4.7
+	print("land fertility avg: " .. fertAvg, "fertility max: " .. fertMax)
+	print("land fertility avg fraction of 4.7 normal: " .. fertMult)
 
 	print("Creating start plot database.");
 	-- START_MIN_Y and START_MAX_Y is the percent of the map ignored for major civs' starting positions.
