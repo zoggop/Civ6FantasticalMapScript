@@ -3778,8 +3778,10 @@ function Space:RemoveBadlyPlacedNaturalWonders()
 	if #removedWonders == 0 then return end
 	-- find new places for removed wonders
 	local hexBuffer = tDuplicate(self.hexes)
-	while #hexBuffer > 0 do
-		local hex = tRemoveRandom(hexBuffer)
+	tShuffle(hexBuffer)
+	-- while #hexBuffer > 0 do
+		-- local hex = tRemoveRandom(hexBuffer)
+	for i, hex in ipairs(hexBuffer) do
 		for wi = #removedWonders, 1, -1 do
 			local featureType = removedWonders[wi]
 			if hex:PlaceNaturalWonderPossibly(featureType) then
@@ -3958,14 +3960,11 @@ function Space:InitSubPolygons()
 			tInsert(XYs, {x=x, y=y})
 		end
 	end
-	local xyBuffer = tDuplicate(XYs)
 	for i = 1, self.subPolygonCount do
-		local xy = tRemoveRandom(xyBuffer)
+		local xy = tRemoveRandom(XYs)
 		local subPolygon = Polygon(self, xy.x, xy.y)
 		tInsert(self.subPolygons, subPolygon)
-		if #xyBuffer == 0 then
-			break
-		end
+		if #XYs == 0 then break end
 	end
 end
 
@@ -5769,15 +5768,14 @@ function Space:FindInlandSeas()
 	local biggestContinents = {}
 	for i, continent in pairs(self.continents) do
 		if #continent > 3 then
-			biggestContinents[continent] = #continent
+			tInsert(biggestContinents, continent)
 		end
 	end
 	local n = mCeil(self.majorContinentNumber * 0.6)
 	local polys = {}
 	local i = 1
-	tSort(biggestContinents, function (a, b) return a > b end)
-	for continent, size in pairs(biggestContinents) do
-		EchoDebug(size)
+	tSort(biggestContinents, function (a, b) return #a > #b end)
+	for i, continent in ipairs(biggestContinents) do
 		for i, polygon in pairs(continent) do
 			tInsert(polys, polygon)
 		end
@@ -5785,7 +5783,6 @@ function Space:FindInlandSeas()
 		if i > n then break end
 	end
 	EchoDebug(n .. " biggest continents", #polys .. " polygons")
-	-- local polys = tDuplicate(self.polygons)
 	tShuffle(polys)
 	for i, polygon in ipairs(polys) do
 		if #self.inlandSeas >= self.inlandSeasMax then
