@@ -5766,9 +5766,31 @@ function Space:PatchContinents()
 end
 
 function Space:FindInlandSeas()
-	local polys = tDuplicate(self.polygons)
-	while #polys > 0 and #self.inlandSeas < self.inlandSeasMax do
-		local polygon = tRemoveRandom(polys)
+	local biggestContinents = {}
+	for i, continent in pairs(self.continents) do
+		if #continent > 3 then
+			biggestContinents[continent] = #continent
+		end
+	end
+	local n = mCeil(self.majorContinentNumber * 0.6)
+	local polys = {}
+	local i = 1
+	tSort(biggestContinents, function (a, b) return a > b end)
+	for continent, size in pairs(biggestContinents) do
+		EchoDebug(size)
+		for i, polygon in pairs(continent) do
+			tInsert(polys, polygon)
+		end
+		i = i + 1
+		if i > n then break end
+	end
+	EchoDebug(n .. " biggest continents", #polys .. " polygons")
+	-- local polys = tDuplicate(self.polygons)
+	tShuffle(polys)
+	for i, polygon in ipairs(polys) do
+		if #self.inlandSeas >= self.inlandSeasMax then
+			break
+		end
 		local sea = polygon:FloodFillSea()
 		if sea then
 			sea.size = #sea.polygons
