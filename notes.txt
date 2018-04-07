@@ -1,3 +1,7 @@
+- add per-continent limits to simultaneous growth algo, so that if one continent fails to grow, the others don't get too large
+
+- add per-continent coastOrContinent limits to simultaneous growth
+
 ---
 
 - coastal ranges' core hexes should be adjoining interior subpolygons, not adjoining ocean

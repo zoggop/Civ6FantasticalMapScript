@@ -607,130 +607,183 @@ end
 ------------------------------------------------------------------------------
 
 local OptionDictionary = {
-	{ name = "Landmass Type", keys = { "wrapX", "oceanNumber", "majorContinentNumber", "islandNumber", "tinyIslandTarget", "coastalPolygonChance", "astronomyBlobNumber", "astronomyBlobMinPolygons", "astronomyBlobMaxPolygons", "astronomyBlobsMustConnectToOcean" }, default = 9,
+	-- { name = "Landmass Type", keys = { "wrapX", "oceanNumber", "majorContinentNumber", "islandNumber", "tinyIslandTarget", "coastalPolygonChance", "astronomyBlobNumber", "astronomyBlobMinPolygons", "astronomyBlobMaxPolygons", "astronomyBlobsMustConnectToOcean" }, default = 6,
+	-- values = {
+	-- 		[1] = { name = "Land All Around", values = {
+	-- 			oceanNumber = -1,
+	-- 		}},
+	-- 		[2] = { name = "Low Seas", values = {
+	-- 			oceanNumber = 0,
+	-- 			majorContinentNumber = 3,
+	-- 			astronomyBlobNumber = 1,
+	-- 			astronomyBlobMinPolygons = 1,
+	-- 			astronomyBlobMaxPolygons = 1,
+	-- 		}},
+	-- 		[3] = { name = "Archipelago", values = {
+	-- 			oceanNumber = 0,
+	-- 			majorContinentNumber = 0,
+	-- 			coastalPolygonChance = 2,
+	-- 			islandNumber = 24,
+	-- 			tinyIslandTarget = 16,
+	-- 			astronomyBlobNumber = 2,
+	-- 			astronomyBlobMinPolygons = 1,
+	-- 			astronomyBlobMaxPolygons = 3,
+	-- 		}},
+	-- 		[4] = { name = "Pangaea", values = {
+	-- 			oceanNumber = 1,
+	-- 			majorContinentNumber = 1,
+	-- 			islandNumber = 2,
+	-- 			tinyIslandTarget = 5,
+	-- 			astronomyBlobNumber = 1,
+	-- 			astronomyBlobMinPolygons = 3,
+	-- 			astronomyBlobMaxPolygons = 7,
+	-- 			astronomyBlobsMustConnectToOcean = 	true,
+	-- 		}},
+	-- 		[5] = { name = "Alpha Centaurish", values = {
+	-- 			oceanNumber = 1,
+	-- 			majorContinentNumber = 3,
+	-- 		}},
+	-- 		[6] = { name = "Two Continents", values = {
+	-- 			-- all defaults
+	-- 		}},
+	-- 		[7] = { name = "Earthish", values = {
+	-- 			majorContinentNumber = 5,
+	-- 			islandNumber = 4,
+	-- 		}},
+	-- 		[8] = { name = "Earthseaish", values = {
+	-- 			oceanNumber = 3,
+	-- 			majorContinentNumber = 9,
+	-- 			coastalPolygonChance = 2,
+	-- 			islandNumber = 10,
+	-- 			tinyIslandTarget = 11,
+	-- 		}},
+	-- 		[9] = { name = "Lonely Oceans", values = {
+	-- 			oceanNumber = 0,
+	-- 			majorContinentNumber = 0,
+	-- 			islandNumber = 20,
+	-- 			tinyIslandTarget = 14,
+	-- 			astronomyBlobNumber = 5,
+	-- 		}},
+	-- 		[10] = { name = "Every Civilization a Continent", values = {
+	-- 			oceanNumber = 0,
+	-- 			majorContinentNumber = ".iNumCivs",
+	-- 			islandNumber = 0,
+	-- 			tinyIslandTarget = ".iNumCivsDouble",
+	-- 		}},
+	-- 		[11] = { name = "Random Globe", values = "keys", randomKeys = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} },
+	-- 		-- [10] = { name = "Random Globe", values = "values",
+	-- 			-- lowValues = { true, -1, 1, 1, 1, 1, 0, 1, 1, false },
+	-- 			-- highValues = { true, 3, 8, 9, 13, 3, 3, 10, 20, true }
+	-- 		-- },
+	-- 		[12] = { name = "Dry Land", values = {
+	-- 			wrapX = false,
+	-- 			oceanNumber = -1,
+	-- 		}},
+	-- 		[13] = { name = "Estuary", values = {
+	-- 			wrapX = false,
+	-- 			oceanNumber = 0,
+	-- 			majorContinentNumber = 3,
+	-- 		}},
+	-- 		[14] = { name = "Coastline", values = {
+	-- 			wrapX = false,
+	-- 			oceanNumber = 1,
+	-- 			majorContinentNumber = 1,
+	-- 			coastalPolygonChance = 2,
+	-- 			islandNumber = 1,
+	-- 		}},
+	-- 		[15] = { name = "Coast", values = {
+	-- 			wrapX = false,
+	-- 			oceanNumber = 2,
+	-- 			majorContinentNumber = 1,
+	-- 			coastalPolygonChance = 2,
+	-- 			islandNumber = 1,
+	-- 		}},
+	-- 		[16] = { name = "Peninsula", values = {
+	-- 			wrapX = false,
+	-- 			oceanNumber = 3,
+	-- 			majorContinentNumber = 1,
+	-- 			coastalPolygonChance = 2,
+	-- 			islandNumber = 2,
+	-- 		}},
+	-- 		[17] = { name = "Continent", values = {
+	-- 			wrapX = false,
+	-- 			oceanNumber = 4,
+	-- 			majorContinentNumber = 1,
+	-- 			coastalPolygonChance = 3,
+	-- 			islandNumber = 2,
+	-- 			astronomyBlobNumber = 1,
+	-- 			astronomyBlobMinPolygons = 3,
+	-- 			astronomyBlobMaxPolygons = 7,
+	-- 			astronomyBlobsMustConnectToOcean = true,
+	-- 		}},
+	-- 		[18] = { name = "Island Chain", values = {
+	-- 			wrapX = false,
+	-- 			oceanNumber = 4,
+	-- 			majorContinentNumber = 7,
+	-- 			coastalPolygonChance = 2,
+	-- 			islandNumber = 10,
+	-- 			astronomyBlobNumber = 2,
+	-- 		}},
+	-- 		[19] = { name = "Random Realm", values = "keys", randomKeys = {12, 13, 14, 15, 16, 17, 18} },
+	-- 	}
+	-- },
+	{ name = "Wrapping", keys = { "wrapX" }, default = 1,
 	values = {
-			[1] = { name = "Land All Around", values = {
-				oceanNumber = -1,
-			}},
-			[2] = { name = "Low Seas", values = {
-				oceanNumber = 0,
-				majorContinentNumber = 3,
-				astronomyBlobNumber = 1,
-				astronomyBlobMinPolygons = 1,
-				astronomyBlobMaxPolygons = 1,
-			}},
-			[3] = { name = "Archipelago", values = {
-				oceanNumber = 0,
-				majorContinentNumber = 0,
-				coastalPolygonChance = 2,
-				islandNumber = 24,
-				tinyIslandTarget = 16,
-				astronomyBlobNumber = 2,
-				astronomyBlobMinPolygons = 1,
-				astronomyBlobMaxPolygons = 3,
-			}},
-			[4] = { name = "Pangaea", values = {
-				oceanNumber = 1,
-				majorContinentNumber = 1,
-				islandNumber = 2,
-				tinyIslandTarget = 5,
-				astronomyBlobNumber = 1,
-				astronomyBlobMinPolygons = 3,
-				astronomyBlobMaxPolygons = 7,
-				astronomyBlobsMustConnectToOcean = 	true,
-			}},
-			[5] = { name = "Alpha Centaurish", values = {
-				oceanNumber = 1,
-				majorContinentNumber = 3,
-			}},
-			[6] = { name = "Two Continents", values = {
-				-- all defaults
-			}},
-			[7] = { name = "Earthish", values = {
-				majorContinentNumber = 5,
-				islandNumber = 4,
-			}},
-			[8] = { name = "Earthseaish", values = {
-				oceanNumber = 3,
-				majorContinentNumber = 9,
-				coastalPolygonChance = 2,
-				islandNumber = 10,
-				tinyIslandTarget = 11,
-			}},
-			[9] = { name = "Lonely Oceans", values = {
-				oceanNumber = 0,
-				majorContinentNumber = 0,
-				islandNumber = 20,
-				tinyIslandTarget = 14,
-				astronomyBlobNumber = 5,
-			}},
-			[10] = { name = "Every Civilization a Continent", values = {
-				oceanNumber = 0,
-				majorContinentNumber = ".iNumCivs",
-				islandNumber = 0,
-				tinyIslandTarget = ".iNumCivsDouble",
-			}},
-			[11] = { name = "Random Globe", values = "keys", randomKeys = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} },
-			-- [10] = { name = "Random Globe", values = "values",
-				-- lowValues = { true, -1, 1, 1, 1, 1, 0, 1, 1, false },
-				-- highValues = { true, 3, 8, 9, 13, 3, 3, 10, 20, true }
-			-- },
-			[12] = { name = "Dry Land", values = {
-				wrapX = false,
-				oceanNumber = -1,
-			}},
-			[13] = { name = "Estuary", values = {
-				wrapX = false,
-				oceanNumber = 0,
-				majorContinentNumber = 3,
-			}},
-			[14] = { name = "Coastline", values = {
-				wrapX = false,
-				oceanNumber = 1,
-				majorContinentNumber = 1,
-				coastalPolygonChance = 2,
-				islandNumber = 1,
-			}},
-			[15] = { name = "Coast", values = {
-				wrapX = false,
-				oceanNumber = 2,
-				majorContinentNumber = 1,
-				coastalPolygonChance = 2,
-				islandNumber = 1,
-			}},
-			[16] = { name = "Peninsula", values = {
-				wrapX = false,
-				oceanNumber = 3,
-				majorContinentNumber = 1,
-				coastalPolygonChance = 2,
-				islandNumber = 2,
-			}},
-			[17] = { name = "Continent", values = {
-				wrapX = false,
-				oceanNumber = 4,
-				majorContinentNumber = 1,
-				coastalPolygonChance = 3,
-				islandNumber = 2,
-				astronomyBlobNumber = 1,
-				astronomyBlobMinPolygons = 3,
-				astronomyBlobMaxPolygons = 7,
-				astronomyBlobsMustConnectToOcean = true,
-			}},
-			[18] = { name = "Island Chain", values = {
-				wrapX = false,
-				oceanNumber = 4,
-				majorContinentNumber = 7,
-				coastalPolygonChance = 2,
-				islandNumber = 10,
-				astronomyBlobNumber = 2,
-			}},
-			[18] = { name = "Random Realm", values = "keys", randomKeys = {12, 13, 14, 15, 16, 17, 18} },
+			[1] = { name = "On", values = {true} },
+			[2] = { name = "Off", values = {false} },
+ 		}
+	},
+	{ name = "Ocean Rifts", keys = { "oceanNumber" }, default = 4,
+	values = {
+			[1] = { name = "Dry World", values = {-1} },
+			[2] = { name = "None", values = {0} },
+			[3] = { name = "One", values = {1} },
+			[4] = { name = "Two", values = {2} },
+			[5] = { name = "Three", values = {3} },
+			[6] = { name = "Four", values = {4} },
+			[7] = { name = "Five", values = {oceanNumber=0, astronomyBlobNumber=5, astronomyBlobMinPolygons=12, astronomyBlobMaxPolygons=18} },
+			[8] = { name = "Random", values = "keys" },
+		}
+	},
+	{ name = "Continents", keys = { "majorContinentNumber" }, default = 3,
+	values = {
+			[1] = { name = "Only Islands", values = {0} },
+			[2] = { name = "One", values = {1} },
+			[3] = { name = "Two", values = {2} },
+			[4] = { name = "Three", values = {3} },
+			[5] = { name = "Four", values = {4} },
+			[6] = { name = "Five", values = {5} },
+			[7] = { name = "Six", values = {6} },
+			[8] = { name = "Seven", values = {7} },
+			[9] = { name = "Eight", values = {8} },
+			[10] = { name = "Random", values = "keys" },
+		}
+	},
+	{ name = "Islands", keys = { "islandNumber", "tinyIslandTarget" }, default = 3,
+	values = {
+			[1] = { name = "None", values = {0, 0} },
+			[2] = { name = "Few", values = {2, 3} },
+			[3] = { name = "Some", values = {4, 7} },
+			[4] = { name = "Many", values = {6, 13} },
+			[5] = { name = "Tons", values = {8, 21} },
+			[6] = { name = "No Continents", values = {16, 33} },
+			[7] = { name = "Random", values = "values", lowValues = {0, 0}, highValues = {9, 15} },
+		}
+	},
+	{ name = "Sea Level", keys = { "openWaterRatio", "coastalExpansionPercent", "coastalPolygonChance", "astronomyBlobsMustConnectToOcean", "astronomyBlobNumber", "astronomyBlobMinPolygons", "astronomyBlobMaxPolygons" }, default = 3,
+	values = {
+			[1] = { name = "Very Shallow", values = {0.00, 85, 3, true, 0} },
+			[2] = { name = "Shallow", values = {0.05, 75, 2, true, 0} },
+			[3] = { name = "Fair", values = {0.1, 67, 1, true, 1, 1, 1} },
+			[4] = { name = "Deep", values = {0.15, 60, 1, true, 2, 1, 1} },
+			[5] = { name = "Very Deep", values = {0.2, 50, 0, false, 2, 2, 4} },
+			[6] = { name = "Random", values = "keys" },
 		}
 	},
 	{ name = "Inland Water Bodies", keys = { "inlandSeasMax", "inlandSeaContinentRatio", "lakeMinRatio" }, default = 2,
 	values = {
 			[1] = { name = "None", values = {0, 0, 0} },
-			[2] = { name = "Some Lakes", values = {1, 0.02, 0.0065} },
+			[2] = { name = "Some Lakes", values = {1, 0.015, 0.0065} },
 			[3] = { name = "Many Lakes", values = {2, 0.015, 0.02} },
 			[4] = { name = "Seas", values = {3, 0.04, 0.01} },
 			[5] = { name = "One Big Sea", values = {1, 0.4, 0.0065} },
@@ -751,14 +804,12 @@ local OptionDictionary = {
 			[3] = { name = "Random", values = "keys" },
  		}
 	},
-	{ name = "Granularity", keys = { "polygonCount" }, default = 3,
+	{ name = "Granularity", keys = { "polygonCount" }, default = 2,
 	values = {
-			[1] = { name = "Very Low", values = {100} },
-			[2] = { name = "Low", values = {150} },
-			[3] = { name = "Fair", values = {200} },
-			[4] = { name = "High", values = {250} },
-			[5] = { name = "Very High", values = {300} },
-			[6] = { name = "Random", values = "values", lowValues = {100}, highValues = {300} },
+			[1] = { name = "Low", values = {100} },
+			[2] = { name = "Fair", values = {200} },
+			[3] = { name = "High", values = {300} },
+			[4] = { name = "Random", values = "values", lowValues = {100}, highValues = {300} },
 		}
 	},
 	{ name = "World Age", keys = { "mountainRatio" }, default = 4,
@@ -2047,7 +2098,7 @@ function Polygon:PickTinyIslands()
 	if not self.space.wrapX and self.oceanIndex and (self.edgeX or self.edgeY) then
 		return
 	end
-	if #self.space.tinyIslandSubPolygons >= self.space.tinyIslandTarget and not self.oceanIndex and not self.loneCoastal then
+	if #self.space.tinyIslandSubPolygons >= self.space.tinyIslandTarget then -- and not self.oceanIndex and not self.loneCoastal then
 		return
 	end
 	local subPolyBuffer = tDuplicate(self.subPolygons)
@@ -2755,9 +2806,12 @@ function Space:SetOptions(optDict)
 				if type(value) == "string" and string.sub(value, 1, 1) == "." then
 					value = self[string.sub(value, 2)]
 				end
-				EchoDebug(option.name, option.values[optionChoice].name, key, value)
-				self[key] = value
-				keySetByOption[key] = true
+				if not keySetByOption[key] then
+					-- options set first take precedence
+					self[key] = value
+					keySetByOption[key] = true
+					EchoDebug(option.name, option.values[optionChoice].name, key, value)
+				end
 			end
 		else
 			-- each value is listed in order of the option's listed keys
@@ -2770,9 +2824,12 @@ function Space:SetOptions(optDict)
 				elseif type(val) == "string" and string.sub(val, 1, 1) == "." then
 					val = self[string.sub(val, 2)]
 				end
-				self[key] = val
-				keySetByOption[key] = true
-				EchoDebug(option.name, option.values[optionChoice].name, key, val)
+				if not keySetByOption[key] then
+					-- options set first take precedence
+					self[key] = val
+					keySetByOption[key] = true
+					EchoDebug(option.name, option.values[optionChoice].name, key, val)
+				end
 			end
 		end
 	end
@@ -3349,7 +3406,8 @@ function Space:UnblockIce()
 		local targetContinent, leastDist, aBestPoly, bBestPoly
 		for ii, tContinent in pairs(landmasses) do
 			if tContinent ~= continent and not connected[continent][tContinent] then
-				local dist, aPoly, bPoly = self:ContinentDistance(continent, tContinent)
+				-- use the farthest polygons on the nearest continents
+				local dist, nearestAPoly, nearestBPoly, aPoly, bPoly = self:ContinentDistance(continent, tContinent)
 				if not leastDist or dist < leastDist then
 					leastDist = dist
 					targetContinent = tContinent
@@ -3405,6 +3463,7 @@ end
 
 function Space:ContinentDistance(aContinent, bContinent, downToTheHex)
 	local leastDist, aBestPoly, bBestPoly
+	local mostDist, aWorstPoly, bWorstPoly
 	for i, aPolygon in pairs(aContinent) do
 		for ii, bPolygon in pairs(bContinent) do
 			local dist = aPolygon:DistanceToPolygon(bPolygon)
@@ -3413,10 +3472,15 @@ function Space:ContinentDistance(aContinent, bContinent, downToTheHex)
 				aBestPoly = aPolygon
 				bBestPoly = bPolygon
 			end
+			if not mostDist or dist > mostDist then
+				mostDist = dist
+				aWorstPoly = aPolygon
+				aWorstPoly = bPolygon
+			end
 		end
 	end
 	if downToTheHex and leastDist then
-		local leastHexDist, aBestHex, bBestHex
+		local leastHexDist, aBestHex, bBestHex, mostHexDist, aWorstHex, bWorstHex
 		for i, aHex in pairs(aBestPoly.hexes) do
 			for ii, bHex in pairs(bBestPoly.hexes) do
 				local dist = aHex:Distance(bHex)
@@ -3425,11 +3489,16 @@ function Space:ContinentDistance(aContinent, bContinent, downToTheHex)
 					aBestHex = aHex
 					bBestHex = bHex
 				end
+				if not mostHexDist or dist > mostHexDist then
+					mostHexDist = dist
+					aWorstHex = aHex
+					bWorstHex = bHex
+				end
 			end
 		end
-		return leastHexDist, aBestPoly, bBestPoly, aBestHex, bBestHex
+		return leastHexDist, aBestHex, bBestHex, aWorstHex, bWorstHex
 	else
-		return leastDist, aBestPoly, bBestPoly
+		return leastDist, aBestPoly, bBestPoly, aWorstPoly, bWorstPoly
 	end
 end
 
@@ -3458,7 +3527,11 @@ function Space:PathThroughIce(originHex, targetHex, maxI)
 			end
 			if nhex.plotType ~= plotMountain and not onPath[nhex] and (not self.useMapLatitudes or not self.wrapX or (nhex.y ~= 0 and nhex.y ~= self.h)) then
 				-- local dist = targetHex:Distance(nhex)
-				local dist = self:EucDistance(targetHex.x, targetHex.y, nhex.x, nhex.y) -- creates less linear shapes
+				local dist = self:EucDistance(targetHex.x, targetHex.y, nhex.x, nhex.y) -- creates less linear shapes than HexDistance
+				if nhex.plotType == plotLand or nhex.plotType == plotHills then
+					-- this might result in slightly more ship-navegable maps
+					dist = dist + 1
+				end
 				if nhex.featureType == featureIce then
 					dist = dist + 1
 				end
@@ -4808,16 +4881,21 @@ function Space:GrowContinentSeeds(seedPolygons, coastOrContinentLimit, astronomy
 	local seeds = {}
 	local islandChance = islandNumber / #seedPolygons
 	local islandsToPlace = islandNumber
+	local nonIslandPolygons = polygonLimit - (islandNumber * 2)
+	local continentPolygonLimit = nonIslandPolygons / (#seedPolygons - islandNumber)
 	for i = 1, #seedPolygons do
 		local polygon = seedPolygons[i]
 		local seed = {}
 		seed.goodSideThisContinent = 0
+		seed.ccc = 1
 		seed.filledContinentArea = #polygon.hexes
 		seed.continent = { polygon }
 		seed.polygon = polygon
 		if (i > 1 or islandNumber >= #seedPolygons) and islandsToPlace > 0 and (mRandom() < islandChance or i > #seedPolygons - islandsToPlace) then
 			seed.maxPolygons = mRandom(1, 3)
 			islandsToPlace = islandsToPlace - 1
+		else
+			seed.maxPolygons = continentPolygonLimit
 		end
 		tInsert(seeds, seed)
 	end
@@ -4842,16 +4920,18 @@ function Space:GrowContinentSeeds(seedPolygons, coastOrContinentLimit, astronomy
 			if not coastOrContinent[polygon] then
 				coastOrContinent[polygon] = true
 				coastOrContinentCount = coastOrContinentCount + 1
+				seed.ccc = seed.ccc + 1
 			end
 			for ni, neighbor in pairs(polygon.neighbors) do
 				if not coastOrContinent[neighbor] then
 					coastOrContinent[neighbor] = true
 					coastOrContinentCount = coastOrContinentCount + 1
+					seed.ccc = seed.ccc + 1
 				end
 			end
 			polygon.continent = continent
 			local polarWanted = polarPolygonCount < self.maxPolarPolygons[astronomyIndex]
-			local goodSideWanted = not seed.maxPolygons and self.putTheContinentOnMyGoodSide[astronomyIndex] and seed.goodSideThisContinent < self.putTheContinentOnMyGoodSide[astronomyIndex]
+			local goodSideWanted = seed.maxPolygons > 3 and self.putTheContinentOnMyGoodSide[astronomyIndex] and seed.goodSideThisContinent < self.putTheContinentOnMyGoodSide[astronomyIndex]
 			local candidates = {}
 			local polarCandidates = {}
 			local goodSideCandidates = {}
@@ -4918,7 +4998,7 @@ function Space:GrowContinentSeeds(seedPolygons, coastOrContinentLimit, astronomy
 					candidate = tRemoveRandom(candidates)
 				end
 			end
-			if not candidate or (seed.maxPolygons and #seed.continent >= seed.maxPolygons) or filledPolygons >= polygonLimit or coastOrContinentCount >= coastOrContinentLimit then
+			if not candidate or (seed.maxPolygons and #seed.continent >= seed.maxPolygons) or (seed.maxCCC and seed.ccc >= seed.maxCCC) or filledPolygons >= polygonLimit or coastOrContinentCount >= coastOrContinentLimit then
 				tInsert(grownSeeds, seed)
 				tRemove(seeds, i)
 			else
@@ -5027,12 +5107,15 @@ function Space:PickContinentsInBasin(astronomyIndex, islandNumber)
 	tSort(sizes)
 	for i = #sizes, 1, -1 do
 		local size = sizes[i]
-		seedPolygons = self:GetContinentSeeds(polygonBuffer, 1)
-		if #seedPolygons ~= 0 then
-			self:GrowContinentSeeds(seedPolygons, coastOrContinentLimit, astronomyIndex, 0, size)
-		else
-			break
-		end
+		-- repeat
+			local grownSize = 0
+			seedPolygons = self:GetContinentSeeds(polygonBuffer, 1)
+			if #seedPolygons ~= 0 then
+				local grownSeeds, coastOrContinentCount, filledPolygons, filledArea = self:GrowContinentSeeds(seedPolygons, coastOrContinentLimit, astronomyIndex, 0, size)
+				grownSize = filledPolygons
+			end
+		-- until #seedPolygons == 0 or grownSize > size * 0.33
+		if #seedPolygons == 0 then break end
 	end
 end
 
@@ -6958,7 +7041,8 @@ function GetMapInitData(worldSize)
 	local wrapX = true
 	local wrapY = false
 
-	if MapConfiguration.GetValue("landmass_type") > 11 then
+	-- if MapConfiguration.GetValue("landmass_type") > 11 then
+	if MapConfiguration.GetValue("wrapping") == 2 then
 		wrapX = false
 		local grid_area = grid_width * grid_height
 		-- DO NOT generate random numbers with TerrainBuilder in this method.
