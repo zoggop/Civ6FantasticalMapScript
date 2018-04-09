@@ -214,7 +214,7 @@
 		<Row
 			ConfigurationGroup="Map"
 			ConfigurationId="rainfall"
-			DefaultValue="4"
+			DefaultValue="5"
 			Description=""
 			Domain="FNTSTCLDomain_Rainfall"
 			GroupId="MapOptions"
@@ -257,7 +257,7 @@
 		
 		<Row Description="" Domain="FNTSTCLDomain_Wrapping" Name="On" SortIndex="10" Value="1" />
 		<Row Description="" Domain="FNTSTCLDomain_Wrapping" Name="Off" SortIndex="11" Value="2" />
-		
+
 		<Row Description="" Domain="FNTSTCLDomain_Ocean_Rifts" Name="Dry World" SortIndex="10" Value="1" />
 		<Row Description="" Domain="FNTSTCLDomain_Ocean_Rifts" Name="None" SortIndex="11" Value="2" />
 		<Row Description="" Domain="FNTSTCLDomain_Ocean_Rifts" Name="One" SortIndex="12" Value="3" />
@@ -283,14 +283,14 @@
 		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="Some" SortIndex="12" Value="3" />
 		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="Many" SortIndex="13" Value="4" />
 		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="Tons" SortIndex="14" Value="5" />
-		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="No Continents" SortIndex="15" Value="6" />
+		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="Ridiculous" SortIndex="15" Value="6" />
 		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="Random" SortIndex="16" Value="7" />
 
-		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Very Shallow" SortIndex="10" Value="1" />
-		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Shallow" SortIndex="11" Value="2" />
-		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Fair" SortIndex="12" Value="3" />
-		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Deep" SortIndex="13" Value="4" />
-		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Very Deep" SortIndex="14" Value="5" />
+		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Very Low" SortIndex="10" Value="1" />
+		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Low" SortIndex="11" Value="2" />
+		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Standard" SortIndex="12" Value="3" />
+		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="High" SortIndex="13" Value="4" />
+		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Very High" SortIndex="14" Value="5" />
 		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Random" SortIndex="15" Value="6" />
 
 		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="None" SortIndex="10" Value="1" />
@@ -309,35 +309,37 @@
 		<Row Description="" Domain="FNTSTCLDomain_Climate_Realism" Name="Random" SortIndex="12" Value="3" />
 
 		<Row Description="" Domain="FNTSTCLDomain_Granularity" Name="Low" SortIndex="10" Value="1" />
-		<Row Description="" Domain="FNTSTCLDomain_Granularity" Name="Fair" SortIndex="11" Value="2" />
+		<Row Description="" Domain="FNTSTCLDomain_Granularity" Name="Standard" SortIndex="11" Value="2" />
 		<Row Description="" Domain="FNTSTCLDomain_Granularity" Name="High" SortIndex="12" Value="3" />
 		<Row Description="" Domain="FNTSTCLDomain_Granularity" Name="Random" SortIndex="13" Value="4" />
 
-		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="1 Billion Years" SortIndex="10" Value="1" />
-		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="2 Billion Years" SortIndex="11" Value="2" />
-		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="3 Billion Years" SortIndex="12" Value="3" />
-		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="4 Billion Years" SortIndex="13" Value="4" />
-		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="5 Billion Years" SortIndex="14" Value="5" />
-		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="6 Billion Years" SortIndex="15" Value="6" />
+		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="Newest" SortIndex="10" Value="1" />
+		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="Newer" SortIndex="11" Value="2" />
+		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="New" SortIndex="12" Value="3" />
+		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="Standard" SortIndex="13" Value="4" />
+		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="Old" SortIndex="14" Value="5" />
+		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="Older" SortIndex="15" Value="6" />
 		<Row Description="" Domain="FNTSTCLDomain_World_Age" Name="Random" SortIndex="16" Value="7" />
 
 		<Row Description="" Domain="FNTSTCLDomain_Temperature" Name="Snowball" SortIndex="10" Value="1" />
 		<Row Description="" Domain="FNTSTCLDomain_Temperature" Name="Ice Age" SortIndex="11" Value="2" />
-		<Row Description="" Domain="FNTSTCLDomain_Temperature" Name="Cool" SortIndex="12" Value="3" />
-		<Row Description="" Domain="FNTSTCLDomain_Temperature" Name="Temperate" SortIndex="13" Value="4" />
+		<Row Description="" Domain="FNTSTCLDomain_Temperature" Name="Cold" SortIndex="12" Value="3" />
+		<Row Description="" Domain="FNTSTCLDomain_Temperature" Name="Standard" SortIndex="13" Value="4" />
 		<Row Description="" Domain="FNTSTCLDomain_Temperature" Name="Warm" SortIndex="14" Value="5" />
 		<Row Description="" Domain="FNTSTCLDomain_Temperature" Name="Hot" SortIndex="15" Value="6" />
 		<Row Description="" Domain="FNTSTCLDomain_Temperature" Name="Jurassic" SortIndex="16" Value="7" />
 		<Row Description="" Domain="FNTSTCLDomain_Temperature" Name="Random" SortIndex="17" Value="8" />
 
 		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Arrakis" SortIndex="10" Value="1" />
-		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Very Arid" SortIndex="11" Value="2" />
+		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Parched" SortIndex="11" Value="2" />
 		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Arid" SortIndex="12" Value="3" />
-		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Normal" SortIndex="13" Value="4" />
-		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Wet" SortIndex="14" Value="5" />
-		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Very Wet" SortIndex="15" Value="6" />
-		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Arboria" SortIndex="16" Value="7" />
-		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Random" SortIndex="17" Value="8" />
+		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Dryish" SortIndex="13" Value="4" />
+		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Standard" SortIndex="14" Value="5" />
+		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Damp" SortIndex="15" Value="6" />
+		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Wet" SortIndex="16" Value="7" />
+		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Drenched" SortIndex="17" Value="8" />
+		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Arboria" SortIndex="18" Value="9" />
+		<Row Description="" Domain="FNTSTCLDomain_Rainfall" Name="Random" SortIndex="19" Value="10" />
 
 		<Row Description="" Domain="FNTSTCLDomain_Ancient_Roads" Name="None" SortIndex="10" Value="1" />
 		<Row Description="" Domain="FNTSTCLDomain_Ancient_Roads" Name="Some" SortIndex="11" Value="2" />

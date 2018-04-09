@@ -1,8 +1,10 @@
-- add per-continent limits to simultaneous growth algo, so that if one continent fails to grow, the others don't get too large
+- add ability to set maxIslandSize (instead of always 3 polygons)
 
-- add per-continent coastOrContinent limits to simultaneous growth
+- might want to bring back number of islands as a fraction of possible land
 
 ---
+
+- add per-continent limits to simultaneous growth algo, so that if one continent fails to grow, the others don't get too large
 
 - coastal ranges' core hexes should be adjoining interior subpolygons, not adjoining ocean
 

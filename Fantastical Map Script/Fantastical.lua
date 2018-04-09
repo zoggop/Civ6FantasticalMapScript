@@ -764,27 +764,27 @@ local OptionDictionary = {
 			[1] = { name = "None", values = {0, 0} },
 			[2] = { name = "Few", values = {2, 3} },
 			[3] = { name = "Some", values = {4, 7} },
-			[4] = { name = "Many", values = {6, 13} },
-			[5] = { name = "Tons", values = {8, 21} },
-			[6] = { name = "No Continents", values = {16, 33} },
-			[7] = { name = "Random", values = "values", lowValues = {0, 0}, highValues = {9, 15} },
+			[4] = { name = "Many", values = {8, 13} },
+			[5] = { name = "Tons", values = {16, 21} },
+			[6] = { name = "Ridiculous", values = {32, 33} },
+			[7] = { name = "Random", values = "keys" },
 		}
 	},
 	{ name = "Sea Level", keys = { "openWaterRatio", "coastalExpansionPercent", "coastalPolygonChance", "astronomyBlobsMustConnectToOcean", "astronomyBlobNumber", "astronomyBlobMinPolygons", "astronomyBlobMaxPolygons" }, default = 3,
 	values = {
-			[1] = { name = "Very Shallow", values = {0.00, 85, 3, true, 0} },
-			[2] = { name = "Shallow", values = {0.05, 75, 2, true, 0} },
-			[3] = { name = "Fair", values = {0.1, 67, 1, true, 1, 1, 1} },
-			[4] = { name = "Deep", values = {0.15, 60, 1, true, 2, 1, 1} },
-			[5] = { name = "Very Deep", values = {0.2, 50, 0, false, 2, 2, 4} },
+			[1] = { name = "Very Low", values = {0.00, 85, 3, true, 0} },
+			[2] = { name = "Low", values = {0.05, 75, 2, true, 0} },
+			[3] = { name = "Standard", values = {0.1, 67, 1, true, 1, 1, 1} },
+			[4] = { name = "High", values = {0.15, 60, 1, true, 2, 1, 1} },
+			[5] = { name = "Very High", values = {0.2, 50, 0, false, 2, 2, 4} },
 			[6] = { name = "Random", values = "keys" },
 		}
 	},
 	{ name = "Inland Water Bodies", keys = { "inlandSeasMax", "inlandSeaContinentRatio", "lakeMinRatio" }, default = 2,
 	values = {
 			[1] = { name = "None", values = {0, 0, 0} },
-			[2] = { name = "Some Lakes", values = {1, 0.015, 0.0065} },
-			[3] = { name = "Many Lakes", values = {2, 0.015, 0.02} },
+			[2] = { name = "Some Lakes", values = {1, 0.01, 0.0065} },
+			[3] = { name = "Many Lakes", values = {2, 0.01, 0.02} },
 			[4] = { name = "Seas", values = {3, 0.04, 0.01} },
 			[5] = { name = "One Big Sea", values = {1, 0.4, 0.0065} },
 			[6] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.1, 0.02} },
@@ -807,44 +807,46 @@ local OptionDictionary = {
 	{ name = "Granularity", keys = { "polygonCount" }, default = 2,
 	values = {
 			[1] = { name = "Low", values = {100} },
-			[2] = { name = "Fair", values = {200} },
+			[2] = { name = "Standard", values = {200} },
 			[3] = { name = "High", values = {300} },
 			[4] = { name = "Random", values = "values", lowValues = {100}, highValues = {300} },
 		}
 	},
 	{ name = "World Age", keys = { "mountainRatio" }, default = 4,
 	values = {
-			[1] = { name = "1 Billion Years", values = {0.25} },
-			[2] = { name = "2 Billion Years", values = {0.17} },
-			[3] = { name = "3 Billion Years", values = {0.1} },
-			[4] = { name = "4 Billion Years", values = {0.06} },
-			[5] = { name = "5 Billion Years", values = {0.03} },
-			[6] = { name = "6 Billion Years", values = {0.005} },
+			[1] = { name = "Newest", values = {0.25} },
+			[2] = { name = "Newer", values = {0.17} },
+			[3] = { name = "New", values = {0.1} },
+			[4] = { name = "Standard", values = {0.06} },
+			[5] = { name = "Old", values = {0.03} },
+			[6] = { name = "Older", values = {0.005} },
 			[7] = { name = "Random", values = "keys" },
 		}
 	},
 	{ name = "Temperature", keys = { "polarExponent", "temperatureMin", "temperatureMax", "freezingTemperature" }, default = 4,
 	values = {
-			[1] = { name = "Snowball", values = {1.8, 0, 13, 16} },
-			[2] = { name = "Ice Age", values = {1.6, 0, 33} },
-			[3] = { name = "Cool", values = {1.4, 0, 71} },
-			[4] = { name = "Temperate", values = {1.2, 0, 99} },
-			[5] = { name = "Warm", values = {1.1, 6, 99} },
-			[6] = { name = "Hot", values = {0.9, 26, 99} },
-			[7] = { name = "Jurassic", values = {0.7, 50, 99} },
+			[1] = { name = "Snowball", values = {1.8, 0, 15, 16} },
+			[2] = { name = "Ice Age", values = {1.6, 0, 39} },
+			[3] = { name = "Cold", values = {1.4, 0, 67} },
+			[4] = { name = "Standard", values = {1.2, 0, 99} },
+			[5] = { name = "Warm", values = {1.1, 10, 99} },
+			[6] = { name = "Hot", values = {0.9, 30, 99} },
+			[7] = { name = "Jurassic", values = {0.7, 43, 99} },
 			[8] = { name = "Random", values = "keys" },
 		}
 	},
-	{ name = "Rainfall", keys = { "rainfallMidpoint" }, default = 4,
+	{ name = "Rainfall", keys = { "rainfallMidpoint" }, default = 5,
 	values = {
-			[1] = { name = "Arrakis", values = {3} },
-			[2] = { name = "Very Arid", values = {28} },
-			[3] = { name = "Arid", values = {38} },
-			[4] = { name = "Normal", values = {49.5} },
-			[5] = { name = "Wet", values = {57} },
-			[6] = { name = "Very Wet", values = {67} },
-			[7] = { name = "Arboria", values = {84} },
-			[8] = { name = "Random", values = "values", lowValues = {3}, highValues = {84} },
+			[1] = { name = "Arrakis", values = {2} },
+			[2] = { name = "Parched", values = {15} },
+			[3] = { name = "Arid", values = {31} },
+			[4] = { name = "Dryish", values = {40} },
+			[5] = { name = "Standard", values = {49.5} },
+			[6] = { name = "Damp", values = {56} },
+			[7] = { name = "Wet", values = {66} },
+			[8] = { name = "Drenched", values = {82} },
+			[9] = { name = "Arboria", values = {92} },
+			[10] = { name = "Random", values = "keys" },
 		}
 	},
 	{ name = "Ancient Roads", keys = { "ancientCitiesCount" }, default = 1,
@@ -3475,7 +3477,7 @@ function Space:ContinentDistance(aContinent, bContinent, downToTheHex)
 			if not mostDist or dist > mostDist then
 				mostDist = dist
 				aWorstPoly = aPolygon
-				aWorstPoly = bPolygon
+				bWorstPoly = bPolygon
 			end
 		end
 	end
@@ -3779,9 +3781,8 @@ function Space:RemoveBadlyPlacedNaturalWonders()
 	-- find new places for removed wonders
 	local hexBuffer = tDuplicate(self.hexes)
 	tShuffle(hexBuffer)
-	-- while #hexBuffer > 0 do
-		-- local hex = tRemoveRandom(hexBuffer)
 	for i, hex in ipairs(hexBuffer) do
+		if #removedWonders == 0 then break end
 		for wi = #removedWonders, 1, -1 do
 			local featureType = removedWonders[wi]
 			if hex:PlaceNaturalWonderPossibly(featureType) then
