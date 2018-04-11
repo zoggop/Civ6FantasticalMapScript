@@ -1547,7 +1547,7 @@ function Hex:SetTerrain()
 end
 
 function Hex:SetFeature()
-	-- if self.polygon.oceanIndex then self.featureType = featureIce end -- uncomment to debug ocean rifts
+	if self.polygon.oceanIndex then self.featureType = featureIce end -- uncomment to debug ocean rifts
 	-- if self.polygon.astronomyBlob then self.featureType = featureReef end -- uncomment to debug astronomy blobs
 	-- if self.polygon.astronomyIndex < 100 then self.featureType = featureReef end -- uncomment to debug astronomy basins
 	if self.plot == nil then
@@ -4475,7 +4475,7 @@ function Space:PickOceansRectangle()
 				y, ty = y1, y2
 				aOcean, bOcean = self.bottomXPolygons, self.topXPolygons
 			end
-			EchoDebug("creating rift from " .. x or 0 .. "," .. y or 0 .. " to " .. tx or self.w .. "," .. ty or self.h)
+			EchoDebug("creating rift from " .. (x or 0) .. "," .. (y or 0) .. " to " .. (tx or self.w) .. "," .. (ty or self.h))
 			local ocean = self:PickOceanToOcean(aOcean, bOcean, x, y, tx, ty)
 			EchoDebug("ocean of " .. #ocean .. " polygons")
 			if ocean and #ocean ~= 0 then
