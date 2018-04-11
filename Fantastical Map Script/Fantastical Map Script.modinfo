@@ -13,6 +13,9 @@ It is possible to enable Climate Realism, but it's no Planet Simulator or Perfec
 [url=https://raw.githubusercontent.com/eronoobos/Civ6FantasticalMapScript/master/Fantastical.lua]Lua File[/url]</Description>
     <Teaser>Maps with not much bearing on reality.</Teaser>
     <Authors>eronoobos</Authors>
+    <AffectsSavedGames>0</AffectsSavedGames>
+    <EnabledByDefault>0</EnabledByDefault>
+    <EnabledAtStartup>0</EnabledAtStartup>
   </Properties>
   <Settings>
     <Custom id="Fantastical_Config">

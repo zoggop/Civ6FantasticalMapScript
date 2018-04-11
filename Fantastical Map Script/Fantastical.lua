@@ -607,147 +607,39 @@ end
 ------------------------------------------------------------------------------
 
 local OptionDictionary = {
-	-- { name = "Landmass Type", keys = { "wrapX", "oceanNumber", "majorContinentNumber", "islandNumber", "tinyIslandTarget", "coastalPolygonChance", "astronomyBlobNumber", "astronomyBlobMinPolygons", "astronomyBlobMaxPolygons", "astronomyBlobsMustConnectToOcean" }, default = 6,
-	-- values = {
-	-- 		[1] = { name = "Land All Around", values = {
-	-- 			oceanNumber = -1,
-	-- 		}},
-	-- 		[2] = { name = "Low Seas", values = {
-	-- 			oceanNumber = 0,
-	-- 			majorContinentNumber = 3,
-	-- 			astronomyBlobNumber = 1,
-	-- 			astronomyBlobMinPolygons = 1,
-	-- 			astronomyBlobMaxPolygons = 1,
-	-- 		}},
-	-- 		[3] = { name = "Archipelago", values = {
-	-- 			oceanNumber = 0,
-	-- 			majorContinentNumber = 0,
-	-- 			coastalPolygonChance = 2,
-	-- 			islandNumber = 24,
-	-- 			tinyIslandTarget = 16,
-	-- 			astronomyBlobNumber = 2,
-	-- 			astronomyBlobMinPolygons = 1,
-	-- 			astronomyBlobMaxPolygons = 3,
-	-- 		}},
-	-- 		[4] = { name = "Pangaea", values = {
-	-- 			oceanNumber = 1,
-	-- 			majorContinentNumber = 1,
-	-- 			islandNumber = 2,
-	-- 			tinyIslandTarget = 5,
-	-- 			astronomyBlobNumber = 1,
-	-- 			astronomyBlobMinPolygons = 3,
-	-- 			astronomyBlobMaxPolygons = 7,
-	-- 			astronomyBlobsMustConnectToOcean = 	true,
-	-- 		}},
-	-- 		[5] = { name = "Alpha Centaurish", values = {
-	-- 			oceanNumber = 1,
-	-- 			majorContinentNumber = 3,
-	-- 		}},
-	-- 		[6] = { name = "Two Continents", values = {
-	-- 			-- all defaults
-	-- 		}},
-	-- 		[7] = { name = "Earthish", values = {
-	-- 			majorContinentNumber = 5,
-	-- 			islandNumber = 4,
-	-- 		}},
-	-- 		[8] = { name = "Earthseaish", values = {
-	-- 			oceanNumber = 3,
-	-- 			majorContinentNumber = 9,
-	-- 			coastalPolygonChance = 2,
-	-- 			islandNumber = 10,
-	-- 			tinyIslandTarget = 11,
-	-- 		}},
-	-- 		[9] = { name = "Lonely Oceans", values = {
-	-- 			oceanNumber = 0,
-	-- 			majorContinentNumber = 0,
-	-- 			islandNumber = 20,
-	-- 			tinyIslandTarget = 14,
-	-- 			astronomyBlobNumber = 5,
-	-- 		}},
-	-- 		[10] = { name = "Every Civilization a Continent", values = {
-	-- 			oceanNumber = 0,
-	-- 			majorContinentNumber = ".iNumCivs",
-	-- 			islandNumber = 0,
-	-- 			tinyIslandTarget = ".iNumCivsDouble",
-	-- 		}},
-	-- 		[11] = { name = "Random Globe", values = "keys", randomKeys = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} },
-	-- 		-- [10] = { name = "Random Globe", values = "values",
-	-- 			-- lowValues = { true, -1, 1, 1, 1, 1, 0, 1, 1, false },
-	-- 			-- highValues = { true, 3, 8, 9, 13, 3, 3, 10, 20, true }
-	-- 		-- },
-	-- 		[12] = { name = "Dry Land", values = {
-	-- 			wrapX = false,
-	-- 			oceanNumber = -1,
-	-- 		}},
-	-- 		[13] = { name = "Estuary", values = {
-	-- 			wrapX = false,
-	-- 			oceanNumber = 0,
-	-- 			majorContinentNumber = 3,
-	-- 		}},
-	-- 		[14] = { name = "Coastline", values = {
-	-- 			wrapX = false,
-	-- 			oceanNumber = 1,
-	-- 			majorContinentNumber = 1,
-	-- 			coastalPolygonChance = 2,
-	-- 			islandNumber = 1,
-	-- 		}},
-	-- 		[15] = { name = "Coast", values = {
-	-- 			wrapX = false,
-	-- 			oceanNumber = 2,
-	-- 			majorContinentNumber = 1,
-	-- 			coastalPolygonChance = 2,
-	-- 			islandNumber = 1,
-	-- 		}},
-	-- 		[16] = { name = "Peninsula", values = {
-	-- 			wrapX = false,
-	-- 			oceanNumber = 3,
-	-- 			majorContinentNumber = 1,
-	-- 			coastalPolygonChance = 2,
-	-- 			islandNumber = 2,
-	-- 		}},
-	-- 		[17] = { name = "Continent", values = {
-	-- 			wrapX = false,
-	-- 			oceanNumber = 4,
-	-- 			majorContinentNumber = 1,
-	-- 			coastalPolygonChance = 3,
-	-- 			islandNumber = 2,
-	-- 			astronomyBlobNumber = 1,
-	-- 			astronomyBlobMinPolygons = 3,
-	-- 			astronomyBlobMaxPolygons = 7,
-	-- 			astronomyBlobsMustConnectToOcean = true,
-	-- 		}},
-	-- 		[18] = { name = "Island Chain", values = {
-	-- 			wrapX = false,
-	-- 			oceanNumber = 4,
-	-- 			majorContinentNumber = 7,
-	-- 			coastalPolygonChance = 2,
-	-- 			islandNumber = 10,
-	-- 			astronomyBlobNumber = 2,
-	-- 		}},
-	-- 		[19] = { name = "Random Realm", values = "keys", randomKeys = {12, 13, 14, 15, 16, 17, 18} },
-	-- 	}
-	-- },
 	{ name = "Wrapping", keys = { "wrapX" }, default = 1,
 	values = {
-			[1] = { name = "On", values = {true} },
-			[2] = { name = "Off", values = {false} },
+			[1] = { name = "On", values = {true},
+				description = "A globe, or, more technically, a cylinder that wraps East-West."},
+			[2] = { name = "Off", values = {false},
+				description = "No wrapping, a random aspect ratio, and if the climate is realistic, only one pole." },
  		}
 	},
 	{ name = "Ocean Rifts", keys = { "oceanNumber" }, default = 4,
 	values = {
-			[1] = { name = "Dry World", values = {-1} },
-			[2] = { name = "None", values = {0} },
-			[3] = { name = "One", values = {1} },
-			[4] = { name = "Two", values = {2} },
-			[5] = { name = "Three", values = {3} },
-			[6] = { name = "Four", values = {4} },
-			[7] = { name = "Five", values = {5} },
-			[8] = { name = "Random", values = "keys" },
+			[1] = { name = "All Land", values = {-1},
+				description = "The map is all one continent, and the only bodies of water are inland seas and lakes." },
+			[2] = { name = "None", values = {0},
+				description = "No ocean rifts. The map will tend to be navegable via coastal waters." },
+			[3] = { name = "One", values = {1},
+				description = "One ocean rift. A wrapping map will not be circumnavegable along coastal waters. A non-wrapping map will have an ocean on one of its sides." },
+			[4] = { name = "Two", values = {2},
+				description = "Two ocean rifts. A wrapping map will have two groups of landmasses seperated by ocean tiles. A non-wrapping map will have an ocean on two of its sides." },
+			[5] = { name = "Three", values = {3},
+				description = "Three ocean rifts. A wrapping map will have three groups of landmasses seperated by ocean tiles. A non-wrapping map will be a peninsula." },
+			[6] = { name = "Four", values = {4},
+				description = "Four ocean rifts. A wrapping map will have five groups of landmasses seperated by ocean tiles. A non-wrapping map will be landmasses in the center surrounded entirely by ocean." },
+			[7] = { name = "Five", values = {5},
+				description = "Five ocean rifts. A wrapping map will have seven groups of landmasses seperated by ocean tiles. A non-wrapping map will be bounded by ocean with an ocean rift through the center." },
+			[8] = { name = "Six", values = {6},
+				description = "Six ocean rifts. A wrapping map will have seven groups of landmasses seperated by ocean tiles. A non-wrapping map will be bounded by ocean with two ocean rifts crisscrossing the center." },
+			[9] = { name = "Random", values = "keys",
+				description = "A random number of ocean rifts." },
 		}
 	},
 	{ name = "Continents", keys = { "majorContinentNumber" }, default = 3,
 	values = {
-			[1] = { name = "Only Islands", values = {0} },
+			[1] = { name = "None", values = {0} },
 			[2] = { name = "One", values = {1} },
 			[3] = { name = "Two", values = {2} },
 			[4] = { name = "Three", values = {3} },
@@ -891,18 +783,6 @@ local OptionDictionary = {
 				description = "Ancient roads connect the ruins of eight cities." },
 		}
 	},
-	-- { name = "Doomsday Age", keys = { "falloutEnabled", "contaminatedWater", "contaminatedSoil", "postApocalyptic", "ancientCitiesCount" }, default = 1,
-	-- values = {
-	-- 		[1] = { name = "Not Yet (No Ruins or Roads)", values = {false, false, false, false, 0} },
-	-- 		[2] = { name = "Legend (Ruins & Roads)", values = {false, false, false, false, 4} },
-	-- 		[3] = { name = "History (Fallout around Ruins)", values = {false, false, false, true, 4} },
-	-- 		[4] = { name = "Memory (More Fallout)", values = {true, false, false, true, 4} },
-	-- 		[5] = { name = "A Long While (Fallout in Mountains)", values = {true, false, true, true, 4} },
-	-- 		[6] = { name = "A While (Fallout in Rivers)", values = {true, true, false, true, 4} },
-	-- 		[7] = { name = "Yesterday (Fallout Everywhere)", values = {true, true, true, true, 4} },
-	-- 		[8] = { name = "Random", values = "keys" },
-	-- 	}
-	-- },
 }
 
 local function DatabaseQuery(sqlStatement)
@@ -4550,25 +4430,13 @@ function Space:PickOceansRectangle()
 			local aOcean, bOcean
 			if useX then
 				x = mRandom(0, self.w)
-				if x < 0.33 * self.w then
-					tx = mRandom(mCeil(0.33 * self.w), self.w)
-				elseif x > 0.67 * self.w then
-					tx = mRandom(0, mCeil(0.67 * self.w))
-				else
-					tx = mRandom(0, self.w)
-				end
+				tx = self.w - x
 				local pseudoOceans = { self.topYPolygons, self.bottomYPolygons }
 				aOcean = tRemoveRandom(pseudoOceans)
 				bOcean = pseudoOceans[1]
 			else
 				y = mRandom(0, self.h)
-				if y < 0.33 * self.h then
-					ty = mRandom(mCeil(0.33 * self.h), self.h)
-				elseif y > 0.67 * self.h then
-					ty = mRandom(0, mCeil(0.67 * self.h))
-				else
-					ty = mRandom(0, self.h)
-				end
+				ty = self.h - y
 				local pseudoOceans = { self.topXPolygons, self.bottomXPolygons }
 				aOcean = tRemoveRandom(pseudoOceans)
 				bOcean = pseudoOceans[1]
