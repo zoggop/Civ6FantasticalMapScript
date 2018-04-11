@@ -1,3 +1,5 @@
+- fix 5 ocean rift behaviour for realm maps
+
 - add ability to set maxIslandSize (instead of always 3 polygons)
 
 - might want to bring back number of islands as a fraction of possible land

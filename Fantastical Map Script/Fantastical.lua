@@ -741,7 +741,7 @@ local OptionDictionary = {
 			[4] = { name = "Two", values = {2} },
 			[5] = { name = "Three", values = {3} },
 			[6] = { name = "Four", values = {4} },
-			[7] = { name = "Five", values = {oceanNumber=0, astronomyBlobNumber=5, astronomyBlobMinPolygons=12, astronomyBlobMaxPolygons=18} },
+			[7] = { name = "Five", values = {5} },
 			[8] = { name = "Random", values = "keys" },
 		}
 	},
@@ -799,61 +799,96 @@ local OptionDictionary = {
 	},
 	{ name = "Climate Realism", keys = { "useMapLatitudes" }, default = 1,
 	values = {
-			[1] = { name = "Off", values = {false} },
-			[2] = { name = "On", values = {true} },
-			[3] = { name = "Random", values = "keys" },
+			[1] = { name = "Off", values = {false},
+				description = "Climate does not follow latitudes. Nothing prevents poles from being hot and equator from being cold, or snow occuring next to tropical rainforest." },
+			[2] = { name = "On", values = {true},
+				description = "Climate follows latitudes, like a standard map." },
+			[3] = { name = "Random", values = "keys",
+				description = "Flip a coin to decide if the climate follows latitudes." },
  		}
 	},
 	{ name = "Granularity", keys = { "polygonCount" }, default = 2,
 	values = {
-			[1] = { name = "Low", values = {100} },
-			[2] = { name = "Standard", values = {200} },
-			[3] = { name = "High", values = {300} },
-			[4] = { name = "Random", values = "values", lowValues = {100}, highValues = {300} },
+			[1] = { name = "Low", values = {100},
+				description = "Larger climactic regions, wider ocean rifts, pointier continents, and fewer islands" },
+			[2] = { name = "Standard", values = {200},
+				description = "A balance between global nonuniformity and local nonuniformity." },
+			[3] = { name = "High", values = {300},
+				description = "Smaller climactic regions, skinnier ocean rifts, round and snaky continents, and more islands." },
+			[4] = { name = "Random", values = "values", lowValues = {100}, highValues = {300},
+				description = "A random polygonal density." },
 		}
 	},
 	{ name = "World Age", keys = { "mountainRatio" }, default = 4,
 	values = {
-			[1] = { name = "Newest", values = {0.25} },
-			[2] = { name = "Newer", values = {0.17} },
-			[3] = { name = "New", values = {0.1} },
-			[4] = { name = "Standard", values = {0.06} },
-			[5] = { name = "Old", values = {0.03} },
-			[6] = { name = "Older", values = {0.005} },
-			[7] = { name = "Random", values = "keys" },
+			[1] = { name = "Newest", values = {0.25},
+				description = "A quarter of the land is mountainous." },
+			[2] = { name = "Newer", values = {0.17},
+				description = "Large quantities of mountains and hills." },
+			[3] = { name = "New", values = {0.1},
+				description = "More mountains and hills." },
+			[4] = { name = "Standard", values = {0.06},
+				description = "Similar to Earth." },
+			[5] = { name = "Old", values = {0.03},
+				description = "Fewer mountains and hills." },
+			[6] = { name = "Older", values = {0.005},
+				description = "Almost no mountains or hills." },
+			[7] = { name = "Random", values = "keys",
+				description = "A random amount of mountains and hills." },
 		}
 	},
 	{ name = "Temperature", keys = { "polarExponent", "temperatureMin", "temperatureMax", "freezingTemperature" }, default = 4,
 	values = {
-			[1] = { name = "Snowball", values = {1.8, 0, 15, 16} },
-			[2] = { name = "Ice Age", values = {1.6, 0, 39} },
-			[3] = { name = "Cold", values = {1.4, 0, 67} },
-			[4] = { name = "Standard", values = {1.2, 0, 99} },
-			[5] = { name = "Warm", values = {1.1, 10, 99} },
-			[6] = { name = "Hot", values = {0.9, 30, 99} },
-			[7] = { name = "Jurassic", values = {0.7, 43, 99} },
-			[8] = { name = "Random", values = "keys" },
+			[1] = { name = "Snowball", values = {1.8, 0, 15, 16},
+				description = "No grassland, and very little plains. Ice sheets cover much of the oceans." },
+			[2] = { name = "Ice Age", values = {1.6, 0, 39},
+				description = "Very little grassland. Larger oceanic ice sheets than standard." },
+			[3] = { name = "Cold", values = {1.4, 0, 67}, 
+				description = "Less grassland than standard." },
+			[4] = { name = "Standard", values = {1.2, 0, 99},
+				description = "Similar to Earth." },
+			[5] = { name = "Warm", values = {1.1, 8, 99},
+				description = "Very little snow, and less tundra than standard." },
+			[6] = { name = "Hot", values = {0.9, 26, 99},
+				description = "No snow, and very little tundra." },
+			[7] = { name = "Jurassic", values = {0.7, 43, 99},
+				description = "No snow or tundra, and less plains than standard." },
+			[8] = { name = "Random", values = "keys",
+				description = "A random temperature." },
 		}
 	},
 	{ name = "Rainfall", keys = { "rainfallMidpoint" }, default = 5,
 	values = {
-			[1] = { name = "Arrakis", values = {2} },
-			[2] = { name = "Parched", values = {15} },
-			[3] = { name = "Arid", values = {31} },
-			[4] = { name = "Dryish", values = {40} },
-			[5] = { name = "Standard", values = {49.5} },
-			[6] = { name = "Damp", values = {56} },
-			[7] = { name = "Wet", values = {66} },
-			[8] = { name = "Drenched", values = {82} },
-			[9] = { name = "Arboria", values = {92} },
-			[10] = { name = "Random", values = "keys" },
+			[1] = { name = "Arrakis", values = {2},
+				description = "No forest, rainforest, grassland, or plains." },
+			[2] = { name = "Parched", values = {16},
+				description = "No forest, rainforest, or grassland." },
+			[3] = { name = "Treeless", values = {29},
+				description = "No forest or rainforest." },
+			[4] = { name = "Arid", values = {42},
+				description = "Less forest and rainforest." },
+			[5] = { name = "Standard", values = {49.5},
+				description = "Similar to Earth." },
+			[6] = { name = "Damp", values = {56},
+				description = "Less desert; more forest and rainforest." },
+			[7] = { name = "Wet", values = {62},
+				description = "No desert; more forest and rainforest." },
+			[8] = { name = "Drenched", values = {79},
+				description = "No desert; lots of forest and rainforest." },
+			[9] = { name = "Arboria", values = {92},
+				description = "Almost entirely forest and rainforest." },
+			[10] = { name = "Random", values = "keys",
+				description = "A random rainfall." },
 		}
 	},
 	{ name = "Ancient Roads", keys = { "ancientCitiesCount" }, default = 1,
 	values = {
-			[1] = { name = "None", values = {0} },
-			[2] = { name = "Some", values = {4} },
-			[3] = { name = "Many", values = {8} },
+			[1] = { name = "None", values = {0},
+				description = "No roads from previous civilizations." },
+			[2] = { name = "Some", values = {4},
+				description = "Ancient roads connect the ruins of four cities." },
+			[3] = { name = "Many", values = {8},
+				description = "Ancient roads connect the ruins of eight cities." },
 		}
 	},
 	-- { name = "Doomsday Age", keys = { "falloutEnabled", "contaminatedWater", "contaminatedSoil", "postApocalyptic", "ancientCitiesCount" }, default = 1,
@@ -1600,7 +1635,7 @@ function Hex:SetTerrain()
 end
 
 function Hex:SetFeature()
-	-- if self.polygon.oceanIndex then self.featureType = featureReef end -- uncomment to debug ocean rifts
+	-- if self.polygon.oceanIndex then self.featureType = featureIce end -- uncomment to debug ocean rifts
 	-- if self.polygon.astronomyBlob then self.featureType = featureReef end -- uncomment to debug astronomy blobs
 	-- if self.polygon.astronomyIndex < 100 then self.featureType = featureReef end -- uncomment to debug astronomy basins
 	if self.plot == nil then
@@ -1831,6 +1866,7 @@ function Polygon:Subdivide(divisionNumber, relaxations)
 	for i = 1, mMin(divisionNumber, #hexBuffer) do
 		local hex = tRemoveRandom(hexBuffer)
 		local polygon = Polygon(self.space, hex.x, hex.y)
+		polygon.superPolygon = self
 		subPolygons[i] = polygon
 	end
 	local iterations = 0
@@ -2009,19 +2045,19 @@ end
 function Polygon:CheckBottomTop(hex)
 	local x, y = hex.x, hex.y
 	local space = self.space
-	if y == 0 and self.y < space.halfHeight then
+	if not self.bottomY and y == 0 and self.y < space.halfHeight then
 		self.bottomY = true
 		if not self.superPolygon then tInsert(space.bottomYPolygons, self) end
 	end
-	if x == 0 and self.x < space.halfWidth then
+	if not self.bottomX and x == 0 and self.x < space.halfWidth then
 		self.bottomX = true
 		if not self.superPolygon then tInsert(space.bottomXPolygons, self) end
 	end
-	if y == space.h and self.y >= space.halfHeight then
+	if not self.topY and y == space.h and self.y >= space.halfHeight then
 		self.topY = true
 		if not self.superPolygon then tInsert(space.topYPolygons, self) end
 	end
-	if x == space.w and self.x >= space.halfWidth then
+	if not self.topX and x == space.w and self.x >= space.halfWidth then
 		self.topX = true
 		if not self.superPolygon then tInsert(space.topXPolygons, self) end
 	end
@@ -2034,13 +2070,17 @@ function Polygon:CheckBottomTop(hex)
 	if self.space.useMapLatitudes and self.space.polarExponent >= 1.0 and hex.latitude > 89 then
 		self.polar = true
 	end
-	self.edgeY = self.bottomY or self.topY
-	self.edgeX = self.bottomX or self.topX
-	if self.edgeY then
-		tInsert(space.edgeYPolygons, self)
+	if not self.edgeY then
+		self.edgeY = self.bottomY or self.topY
+		if self.edgeY then
+			tInsert(space.edgeYPolygons, self)
+		end
 	end
-	if self.edgeX then
-		tInsert(space.edgeXPolygons, self)
+	if not self.edgeX then
+		self.edgeX = self.bottomX or self.topX
+		if self.edgeX then
+			tInsert(space.edgeXPolygons, self)
+		end
 	end
 end
 
@@ -2671,8 +2711,8 @@ Space = class(function(a)
 	a.subPolygonRelaxations = 0 -- how many lloyd relaxations for subpolygons (higher number is greater polygon uniformity, also slower)
 	a.oceanNumber = 2 -- how many large ocean basins
 	a.astronomyBlobNumber = 0
-	a.astronomyBlobMinPolygons = 10
-	a.astronomyBlobMaxPolygons = 20
+	a.astronomyBlobMinPolygons = 12
+	a.astronomyBlobMaxPolygons = 18
 	a.astronomyBlobsMustConnectToOcean = false
 	a.majorContinentNumber = 2 -- how many large continents on the whole map
 	a.islandNumber = 4 -- how many 1-3-polygon islands on the whole map
@@ -3052,10 +3092,6 @@ function Space:Compute()
     self.xFakeLatitudeConversion = 180 / self.iW
     self.yFakeLatitudeConversion = 180 / self.iH
     -- self:DoCentuariIfActivated()
-    -- lake generation scales with global rainfall:
-    local rainfallScale = self.rainfallMidpoint / 49.5
-    self.lakeMinRatio = self.lakeMinRatio * rainfallScale
-	self.lakeynessMax = mFloor( self.lakeynessMax * rainfallScale )
 	EchoDebug(self.lakeMinRatio .. " minimum lake ratio", self.lakeynessMax .. " maximum region lakeyness")
 	if FeatureDictionary[featureForest] and FeatureDictionary[featureForest].metaPercent then
 		FeatureDictionary[featureForest].metaPercent = mMin(100, FeatureDictionary[featureForest].metaPercent * (rainfallScale ^ 2.2))
@@ -3077,10 +3113,9 @@ function Space:Compute()
 	end
 	self.rainfallMax = self.rainfallMidpoint + self.rainfallPlusMinus
 	self.rainfallMin = self.rainfallMidpoint - self.rainfallPlusMinus
-    -- need to adjust island chance so that bigger maps have about the same number of islands, and of the same relative size
-    self.minNonOceanPolygons = mCeil(self.polygonCount * 0.1)
-    if not self.wrapX and not self.wrapY then self.minNonOceanPolygons = mCeil(self.polygonCount * 0.67) end
-    self.nonOceanPolygons = self.polygonCount
+    self.minNonOceanPolygons = 0
+    -- self.minNonOceanPolygons = mCeil(self.polygonCount * 0.1)
+    -- if not self.wrapX and not self.wrapY then self.minNonOceanPolygons = mCeil(self.polygonCount * 0.67) end
     -- set fallout options
 	-- [featureFallout] = { temperature = {0, 100}, rainfall = {0, 100}, percent = 15, limitRatio = 0.75, hill = true },
 	-- if self.falloutEnabled then
@@ -3151,6 +3186,7 @@ function Space:Compute()
     self:FillPolygonHexes()
     EchoDebug("culling empty polygons...")
     self:CullPolygons(self.polygons)
+    self.nonOceanPolygons = #self.polygons
     self:GetPolygonSizes()
 	EchoDebug("smallest polygon: " .. self.polygonMinArea, "largest polygon: " .. self.polygonMaxArea)
     EchoDebug("finding polygon neighbors...")
@@ -4195,6 +4231,13 @@ function Space:PickOceans()
 	elseif not self.wrapX and not self.wrapY then
 		self:PickOceansRectangle()
 	elseif self.wrapX and not self.wrapY then
+		if self.oceanNumber > 3 then
+			-- self.astronomyBlobNumber = self.oceanNumber
+			-- self.oceanNumber = 0
+			-- self.astronomyBlobMinPolygons = mCeil(self.polygonCount / 25)
+			-- self.astronomyBlobMaxPolygons = mCeil(self.polygonCount / 15)
+			self.astronomyBlobNumber = 0
+		end
 		self:PickOceansCylinder()
 	elseif self.wrapY and not self.wrapX then
 		print("why have a vertically wrapped map?")
@@ -4227,8 +4270,8 @@ function Space:PickOceansCylinder()
 				EchoDebug("can't pick oceans from #" .. firstOcean .. " to #" .. secondOcean)
 				break
 			end
-			EchoDebug("picking ocean #" .. oceanIndex .. " from #" .. firstOcean .. " to #" .. secondOcean .. "...")
-			ocean = self:PickOceanToOcean(self.oceans[firstOcean], self.oceans[secondOcean], y, oceanIndex)
+			EchoDebug("picking ocean from #" .. firstOcean .. " to #" .. secondOcean .. "...")
+			ocean = self:PickOceanToOcean(self.oceans[firstOcean], self.oceans[secondOcean], nil, y)
 			firstOcean = (firstOcean + 1) % 4
 			if firstOcean == 0 then firstOcean = 1 end
 			secondOcean = (secondOcean + 1) % 4
@@ -4245,41 +4288,56 @@ function Space:PickOceansCylinder()
 	end
 end
 
-function Space:PickOceanToOcean(firstOcean, secondOcean, y, oceanIndex)
+function Space:PickOceanToOcean(firstOcean, secondOcean, x1, y1, x2, y2, oceanIndex)
+	x2 = x2 or x1
+	y2 = y2 or y1
+	oceanIndex = oceanIndex or #self.oceans + 1
 	local startPoly
-	local bPoly, bDist
-	for i, polygon in pairs(firstOcean) do
-		if y >= polygon.minY and y <= polygon.maxY then
-			startPoly = polygon
-			break
-		else
-			local dist = mAbs(polygon.y - y)
-			if not bDist or dist < bDist then
-				bPoly = polygon
-				bDist = dist
+	if x1 or y1 then
+		local bPoly, bDist
+		for i, polygon in pairs(firstOcean) do
+			if (not x1 or (x1 >= polygon.minX and x1 <= polygon.maxX)) and (not y1 or (y1 >= polygon.minY and y1 <= polygon.maxY)) then
+				startPoly = polygon
+				break
+			else
+				local dist = 0
+				if y1 then dist = dist + mAbs(polygon.y - y1) end
+				if x1 then dist = dist + mAbs(polygon.x - x1) end
+				if not bDist or dist < bDist then
+					bPoly = polygon
+					bDist = dist
+				end
 			end
 		end
+		startPoly = startPoly or bPoly
+	else
+		startPoly = tGetRandom(firstOcean)
 	end
-	startPoly = startPoly or bPoly
 	if not startPoly then
 		EchoDebug("no starting polygon found")
 		return
 	end
 	local targetPoly
-	bPoly, bDist = nil, nil
-	for i, polygon in pairs(secondOcean) do
-		if y >= polygon.minY and y <= polygon.maxY then
-			targetPoly = polygon
-			break
-		else
-			local dist = mAbs(polygon.y - y)
-			if not bDist or dist < bDist then
-				bPoly = polygon
-				bDist = dist
+	if x2 or y2 then
+		local bPoly, bDist
+		for i, polygon in pairs(secondOcean) do
+			if (not x2 or (x2 >= polygon.minX and x2 <= polygon.maxX)) and (not y2 or (y2 >= polygon.minY and y2 <= polygon.maxY)) then
+				targetPoly = polygon
+				break
+			else
+				local dist = 0
+				if y2 then dist = dist + mAbs(polygon.y - y2) end
+				if x2 then dist = dist + mAbs(polygon.x - x2) end
+				if not bDist or dist < bDist then
+					bPoly = polygon
+					bDist = dist
+				end
 			end
 		end
+		targetPoly = targetPoly or bPoly
+	else
+		targetPoly = tGetRandom(secondOcean)
 	end
-	targetPoly = targetPoly or bPoly
 	if not targetPoly then
 		EchoDebug("no target polygon found")
 		return
@@ -4288,9 +4346,10 @@ function Space:PickOceanToOcean(firstOcean, secondOcean, y, oceanIndex)
 	local ocean = {}
 	local chosen = {}
 	local iterations = 0
-	EchoDebug(self.nonOceanPolygons, self.minNonOceanPolygons)
-	while self.nonOceanPolygons > self.minNonOceanPolygons and iterations < 100 do
+	-- EchoDebug(oceanIndex)
+	while iterations < 100 do -- and self.nonOceanPolygons > self.minNonOceanPolygons
 		chosen[polygon] = true
+		-- EchoDebug(polygon.x, polygon.y, tostring(polygon.oceanIndex))
 		if not polygon.oceanIndex then
 			polygon.oceanIndex = oceanIndex
 			tInsert(ocean, polygon)
@@ -4305,10 +4364,12 @@ function Space:PickOceanToOcean(firstOcean, secondOcean, y, oceanIndex)
 		local bestDist
 		local neighsByDist = {}
 		local betterNeighs = {}
-		local myDist = self:HexDistance(polygon.x, polygon.y, targetPoly.x, targetPoly.y)
+		-- local myDist = self:HexDistance(polygon.x, polygon.y, targetPoly.x, targetPoly.y)
+		local myDist = mCeil(self:ContinentDistance({polygon}, {targetPoly}, true))
 		for ni, neighbor in pairs(polygon.neighbors) do
 			if not chosen[neighbor] then
-				local dist = self:HexDistance(neighbor.x, neighbor.y, targetPoly.x, targetPoly.y)
+				-- local dist = self:HexDistance(neighbor.x, neighbor.y, targetPoly.x, targetPoly.y)
+				local dist = mCeil(self:ContinentDistance({neighbor}, {targetPoly}, true))
 				neighsByDist[dist] = neighsByDist[dist] or {}
 				tInsert(neighsByDist[dist], neighbor)
 				if not bestDist or dist < bestDist then
@@ -4320,7 +4381,7 @@ function Space:PickOceanToOcean(firstOcean, secondOcean, y, oceanIndex)
 				end
 			end
 		end
-		if #betterNeighs == 0 then
+		if not bestDist and #betterNeighs == 0 then
 			EchoDebug("no neighbors closer to target, stopping ocean #" .. oceanIndex .. " at " .. iterations .. " iterations")
 			break
 		end
@@ -4467,7 +4528,9 @@ function Space:PickOceansRectangle()
 			end
 		end
 		local ocean = {}
+		-- EchoDebug(bottomTopCriterion)
 		for i, polygon in pairs(self[bottomTopCriterion]) do
+			-- EchoDebug(polygon.x, polygon.y, polygon)
 			if not polygon.oceanIndex then
 				polygon.oceanIndex = oceanIndex
 				tInsert(ocean, polygon)
@@ -4476,6 +4539,49 @@ function Space:PickOceansRectangle()
 			end
 		end
 		tInsert(self.oceans, ocean)
+	end
+	if self.oceanNumber > 4 then
+		self.astronomyBlobNumber = 0
+		local attempts = 0
+		local useX = self.w > self.h
+		while attempts < self.oceanNumber - 4 do
+			local x, tx
+			local y, ty
+			local aOcean, bOcean
+			if useX then
+				x = mRandom(0, self.w)
+				if x < 0.33 * self.w then
+					tx = mRandom(mCeil(0.33 * self.w), self.w)
+				elseif x > 0.67 * self.w then
+					tx = mRandom(0, mCeil(0.67 * self.w))
+				else
+					tx = mRandom(0, self.w)
+				end
+				local pseudoOceans = { self.topYPolygons, self.bottomYPolygons }
+				aOcean = tRemoveRandom(pseudoOceans)
+				bOcean = pseudoOceans[1]
+			else
+				y = mRandom(0, self.h)
+				if y < 0.33 * self.h then
+					ty = mRandom(mCeil(0.33 * self.h), self.h)
+				elseif y > 0.67 * self.h then
+					ty = mRandom(0, mCeil(0.67 * self.h))
+				else
+					ty = mRandom(0, self.h)
+				end
+				local pseudoOceans = { self.topXPolygons, self.bottomXPolygons }
+				aOcean = tRemoveRandom(pseudoOceans)
+				bOcean = pseudoOceans[1]
+			end
+			EchoDebug("connecting " .. tostring(x) .. "," .. tostring(y) .. " to " .. tostring(tx) .. "," .. tostring(ty))
+			local ocean = self:PickOceanToOcean(aOcean, bOcean, x, y, tx, ty)
+			EchoDebug("ocean of " .. #ocean .. " polygons")
+			if ocean and #ocean ~= 0 then
+				tInsert(self.oceans, ocean)
+			end
+			attempts = attempts + 1
+			useX = not useX
+		end
 	end
 end
 
