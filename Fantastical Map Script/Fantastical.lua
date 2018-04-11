@@ -1547,7 +1547,7 @@ function Hex:SetTerrain()
 end
 
 function Hex:SetFeature()
-	if self.polygon.oceanIndex then self.featureType = featureIce end -- uncomment to debug ocean rifts
+	-- if self.polygon.oceanIndex then self.featureType = featureIce end -- uncomment to debug ocean rifts
 	-- if self.polygon.astronomyBlob then self.featureType = featureReef end -- uncomment to debug astronomy blobs
 	-- if self.polygon.astronomyIndex < 100 then self.featureType = featureReef end -- uncomment to debug astronomy basins
 	if self.plot == nil then
