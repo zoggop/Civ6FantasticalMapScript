@@ -261,49 +261,49 @@
 		<Row Description="The map is all one continent, and the only bodies of water are inland seas and lakes." Domain="FNTSTCLDomain_Ocean_Rifts" Name="All Land" SortIndex="10" Value="1" />
 		<Row Description="No ocean rifts. The map will tend to be navegable via coastal waters." Domain="FNTSTCLDomain_Ocean_Rifts" Name="None" SortIndex="11" Value="2" />
 		<Row Description="One ocean rift. A wrapping map will not be circumnavegable along coastal waters. A non-wrapping map will have an ocean on one of its sides." Domain="FNTSTCLDomain_Ocean_Rifts" Name="One" SortIndex="12" Value="3" />
-		<Row Description="Two ocean rifts. A wrapping map will have two groups of landmasses seperated by ocean tiles. A non-wrapping map will have an ocean on two of its sides." Domain="FNTSTCLDomain_Ocean_Rifts" Name="Two" SortIndex="13" Value="4" />
-		<Row Description="Three ocean rifts. A wrapping map will have three groups of landmasses seperated by ocean tiles. A non-wrapping map will be a peninsula." Domain="FNTSTCLDomain_Ocean_Rifts" Name="Three" SortIndex="14" Value="5" />
-		<Row Description="Four ocean rifts. A wrapping map will have five groups of landmasses seperated by ocean tiles. A non-wrapping map will be landmasses in the center surrounded entirely by ocean." Domain="FNTSTCLDomain_Ocean_Rifts" Name="Four" SortIndex="15" Value="6" />
-		<Row Description="Five ocean rifts. A wrapping map will have seven groups of landmasses seperated by ocean tiles. A non-wrapping map will be bounded by ocean with an ocean rift through the center." Domain="FNTSTCLDomain_Ocean_Rifts" Name="Five" SortIndex="16" Value="7" />
-		<Row Description="Six ocean rifts. A wrapping map will have seven groups of landmasses seperated by ocean tiles. A non-wrapping map will be bounded by ocean with two ocean rifts crisscrossing the center." Domain="FNTSTCLDomain_Ocean_Rifts" Name="Six" SortIndex="17" Value="8" />
+		<Row Description="Two ocean rifts. A wrapping map will have two groups of landmasses separated by ocean tiles. A non-wrapping map will have an ocean on two adjacent sides." Domain="FNTSTCLDomain_Ocean_Rifts" Name="Two" SortIndex="13" Value="4" />
+		<Row Description="Three ocean rifts. A wrapping map will have three groups of landmasses separated by ocean tiles. A non-wrapping map will be a peninsula." Domain="FNTSTCLDomain_Ocean_Rifts" Name="Three" SortIndex="14" Value="5" />
+		<Row Description="Four ocean rifts. A wrapping map will have five groups of landmasses separated by ocean tiles. A non-wrapping map will be landmasses in the center surrounded entirely by ocean." Domain="FNTSTCLDomain_Ocean_Rifts" Name="Four" SortIndex="15" Value="6" />
+		<Row Description="Five ocean rifts. A wrapping map will have seven groups of landmasses separated by ocean tiles. A non-wrapping map will be bounded by ocean with an ocean rift through the center." Domain="FNTSTCLDomain_Ocean_Rifts" Name="Five" SortIndex="16" Value="7" />
+		<Row Description="Six ocean rifts. A wrapping map will have nine groups of landmasses separated by ocean tiles. A non-wrapping map will be bounded by ocean with two ocean rifts crisscrossing the center." Domain="FNTSTCLDomain_Ocean_Rifts" Name="Six" SortIndex="17" Value="8" />
 		<Row Description="A random number of ocean rifts." Domain="FNTSTCLDomain_Ocean_Rifts" Name="Random" SortIndex="18" Value="9" />
 
-		<Row Description="" Domain="FNTSTCLDomain_Continents" Name="None" SortIndex="10" Value="1" />
-		<Row Description="" Domain="FNTSTCLDomain_Continents" Name="One" SortIndex="11" Value="2" />
-		<Row Description="" Domain="FNTSTCLDomain_Continents" Name="Two" SortIndex="12" Value="3" />
-		<Row Description="" Domain="FNTSTCLDomain_Continents" Name="Three" SortIndex="13" Value="4" />
-		<Row Description="" Domain="FNTSTCLDomain_Continents" Name="Four" SortIndex="14" Value="5" />
-		<Row Description="" Domain="FNTSTCLDomain_Continents" Name="Five" SortIndex="15" Value="6" />
-		<Row Description="" Domain="FNTSTCLDomain_Continents" Name="Six" SortIndex="16" Value="7" />
-		<Row Description="" Domain="FNTSTCLDomain_Continents" Name="Seven" SortIndex="17" Value="8" />
-		<Row Description="" Domain="FNTSTCLDomain_Continents" Name="Eight" SortIndex="18" Value="9" />
-		<Row Description="" Domain="FNTSTCLDomain_Continents" Name="Random" SortIndex="19" Value="10" />
+		<Row Description="No continents. Islands will be the only landmasses." Domain="FNTSTCLDomain_Continents" Name="None" SortIndex="10" Value="1" />
+		<Row Description="One continent." Domain="FNTSTCLDomain_Continents" Name="One" SortIndex="11" Value="2" />
+		<Row Description="Two continents." Domain="FNTSTCLDomain_Continents" Name="Two" SortIndex="12" Value="3" />
+		<Row Description="Three continents." Domain="FNTSTCLDomain_Continents" Name="Three" SortIndex="13" Value="4" />
+		<Row Description="Four continents." Domain="FNTSTCLDomain_Continents" Name="Four" SortIndex="14" Value="5" />
+		<Row Description="Five continents." Domain="FNTSTCLDomain_Continents" Name="Five" SortIndex="15" Value="6" />
+		<Row Description="Six continents." Domain="FNTSTCLDomain_Continents" Name="Six" SortIndex="16" Value="7" />
+		<Row Description="Seven continents." Domain="FNTSTCLDomain_Continents" Name="Seven" SortIndex="17" Value="8" />
+		<Row Description="Eight continents." Domain="FNTSTCLDomain_Continents" Name="Eight" SortIndex="18" Value="9" />
+		<Row Description="A random number of continents." Domain="FNTSTCLDomain_Continents" Name="Random" SortIndex="19" Value="10" />
 
-		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="None" SortIndex="10" Value="1" />
-		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="Few" SortIndex="11" Value="2" />
-		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="Some" SortIndex="12" Value="3" />
-		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="Many" SortIndex="13" Value="4" />
-		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="Tons" SortIndex="14" Value="5" />
-		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="Ridiculous" SortIndex="15" Value="6" />
-		<Row Description="" Domain="FNTSTCLDomain_Islands" Name="Random" SortIndex="16" Value="7" />
+		<Row Description="No islands." Domain="FNTSTCLDomain_Islands" Name="None" SortIndex="10" Value="1" />
+		<Row Description="Two large islands and three small islands." Domain="FNTSTCLDomain_Islands" Name="Few" SortIndex="11" Value="2" />
+		<Row Description="Four large islands and seven small islands." Domain="FNTSTCLDomain_Islands" Name="Some" SortIndex="12" Value="3" />
+		<Row Description="Eight large islands and thirteen small islands." Domain="FNTSTCLDomain_Islands" Name="Many" SortIndex="13" Value="4" />
+		<Row Description="Sixteen large islands and twenty-one small islands." Domain="FNTSTCLDomain_Islands" Name="Tons" SortIndex="14" Value="5" />
+		<Row Description="Thirty-two large islands and thirty-three small islands." Domain="FNTSTCLDomain_Islands" Name="Ridiculous" SortIndex="15" Value="6" />
+		<Row Description="A random number of large and small islands." Domain="FNTSTCLDomain_Islands" Name="Random" SortIndex="16" Value="7" />
 
-		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Very Low" SortIndex="10" Value="1" />
-		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Low" SortIndex="11" Value="2" />
-		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Standard" SortIndex="12" Value="3" />
-		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="High" SortIndex="13" Value="4" />
-		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Very High" SortIndex="14" Value="5" />
-		<Row Description="" Domain="FNTSTCLDomain_Sea_Level" Name="Random" SortIndex="15" Value="6" />
+		<Row Description="Much more coast and land." Domain="FNTSTCLDomain_Sea_Level" Name="Very Low" SortIndex="10" Value="1" />
+		<Row Description="A little more coast and land." Domain="FNTSTCLDomain_Sea_Level" Name="Low" SortIndex="11" Value="2" />
+		<Row Description="An Earth-like amount of coast and land." Domain="FNTSTCLDomain_Sea_Level" Name="Standard" SortIndex="12" Value="3" />
+		<Row Description="A little less coast and land." Domain="FNTSTCLDomain_Sea_Level" Name="High" SortIndex="13" Value="4" />
+		<Row Description="Much less coast and land." Domain="FNTSTCLDomain_Sea_Level" Name="Very High" SortIndex="14" Value="5" />
+		<Row Description="A random sea level." Domain="FNTSTCLDomain_Sea_Level" Name="Random" SortIndex="15" Value="6" />
 
-		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="None" SortIndex="10" Value="1" />
-		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Some Lakes" SortIndex="11" Value="2" />
-		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Many Lakes" SortIndex="12" Value="3" />
-		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Seas" SortIndex="13" Value="4" />
-		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="One Big Sea" SortIndex="14" Value="5" />
-		<Row Description="" Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Random" SortIndex="15" Value="6" />
+		<Row Description="No lakes or inland seas." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="None" SortIndex="10" Value="1" />
+		<Row Description="A few small lakes and one large lake." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Some Lakes" SortIndex="11" Value="2" />
+		<Row Description="Quite a few small lakes, and two large lakes." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Many Lakes" SortIndex="12" Value="3" />
+		<Row Description="Three inland seas, and some small lakes." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Seas" SortIndex="13" Value="4" />
+		<Row Description="One very large inland sea, and a few small lakes." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="One Big Sea" SortIndex="14" Value="5" />
+		<Row Description="A random assortment of lakes and inland seas." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Random" SortIndex="15" Value="6" />
 
-		<Row Description="" Domain="FNTSTCLDomain_Land_at_Poles" Name="Yes" SortIndex="10" Value="1" />
-		<Row Description="" Domain="FNTSTCLDomain_Land_at_Poles" Name="No" SortIndex="11" Value="2" />
-		<Row Description="" Domain="FNTSTCLDomain_Land_at_Poles" Name="Random" SortIndex="12" Value="3" />
+		<Row Description="Landmasses can extend to the poles." Domain="FNTSTCLDomain_Land_at_Poles" Name="Yes" SortIndex="10" Value="1" />
+		<Row Description="Landmasses cannot extend to the poles." Domain="FNTSTCLDomain_Land_at_Poles" Name="No" SortIndex="11" Value="2" />
+		<Row Description="Flip a coin to decide if landmasses can extend to the poles." Domain="FNTSTCLDomain_Land_at_Poles" Name="Random" SortIndex="12" Value="3" />
 
 		<Row Description="Climate does not follow latitudes. Nothing prevents poles from being hot and equator from being cold, or snow occuring next to tropical rainforest." Domain="FNTSTCLDomain_Climate_Realism" Name="Off" SortIndex="10" Value="1" />
 		<Row Description="Climate follows latitudes, like a standard map." Domain="FNTSTCLDomain_Climate_Realism" Name="On" SortIndex="11" Value="2" />

@@ -624,69 +624,101 @@ local OptionDictionary = {
 			[3] = { name = "One", values = {1},
 				description = "One ocean rift. A wrapping map will not be circumnavegable along coastal waters. A non-wrapping map will have an ocean on one of its sides." },
 			[4] = { name = "Two", values = {2},
-				description = "Two ocean rifts. A wrapping map will have two groups of landmasses seperated by ocean tiles. A non-wrapping map will have an ocean on two of its sides." },
+				description = "Two ocean rifts. A wrapping map will have two groups of landmasses separated by ocean tiles. A non-wrapping map will have an ocean on two adjacent sides." },
 			[5] = { name = "Three", values = {3},
-				description = "Three ocean rifts. A wrapping map will have three groups of landmasses seperated by ocean tiles. A non-wrapping map will be a peninsula." },
+				description = "Three ocean rifts. A wrapping map will have three groups of landmasses separated by ocean tiles. A non-wrapping map will be a peninsula." },
 			[6] = { name = "Four", values = {4},
-				description = "Four ocean rifts. A wrapping map will have five groups of landmasses seperated by ocean tiles. A non-wrapping map will be landmasses in the center surrounded entirely by ocean." },
+				description = "Four ocean rifts. A wrapping map will have five groups of landmasses separated by ocean tiles. A non-wrapping map will be landmasses in the center surrounded entirely by ocean." },
 			[7] = { name = "Five", values = {5},
-				description = "Five ocean rifts. A wrapping map will have seven groups of landmasses seperated by ocean tiles. A non-wrapping map will be bounded by ocean with an ocean rift through the center." },
+				description = "Five ocean rifts. A wrapping map will have seven groups of landmasses separated by ocean tiles. A non-wrapping map will be bounded by ocean with an ocean rift through the center." },
 			[8] = { name = "Six", values = {6},
-				description = "Six ocean rifts. A wrapping map will have seven groups of landmasses seperated by ocean tiles. A non-wrapping map will be bounded by ocean with two ocean rifts crisscrossing the center." },
+				description = "Six ocean rifts. A wrapping map will have nine groups of landmasses separated by ocean tiles. A non-wrapping map will be bounded by ocean with two ocean rifts crisscrossing the center." },
 			[9] = { name = "Random", values = "keys",
 				description = "A random number of ocean rifts." },
 		}
 	},
 	{ name = "Continents", keys = { "majorContinentNumber" }, default = 3,
 	values = {
-			[1] = { name = "None", values = {0} },
-			[2] = { name = "One", values = {1} },
-			[3] = { name = "Two", values = {2} },
-			[4] = { name = "Three", values = {3} },
-			[5] = { name = "Four", values = {4} },
-			[6] = { name = "Five", values = {5} },
-			[7] = { name = "Six", values = {6} },
-			[8] = { name = "Seven", values = {7} },
-			[9] = { name = "Eight", values = {8} },
-			[10] = { name = "Random", values = "keys" },
+			[1] = { name = "None", values = {0},
+				description = "No continents. Islands will be the only landmasses." },
+			[2] = { name = "One", values = {1},
+				description = "One continent." },
+			[3] = { name = "Two", values = {2},
+				description = "Two continents." },
+			[4] = { name = "Three", values = {3},
+				description = "Three continents." },
+			[5] = { name = "Four", values = {4},
+				description = "Four continents." },
+			[6] = { name = "Five", values = {5},
+				description = "Five continents." },
+			[7] = { name = "Six", values = {6},
+				description = "Six continents." },
+			[8] = { name = "Seven", values = {7},
+				description = "Seven continents." },
+			[9] = { name = "Eight", values = {8},
+				description = "Eight continents." },
+			[10] = { name = "Random", values = "keys",
+				description = "A random number of continents." },
 		}
 	},
 	{ name = "Islands", keys = { "islandNumber", "tinyIslandTarget" }, default = 3,
 	values = {
-			[1] = { name = "None", values = {0, 0} },
-			[2] = { name = "Few", values = {2, 3} },
-			[3] = { name = "Some", values = {4, 7} },
-			[4] = { name = "Many", values = {8, 13} },
-			[5] = { name = "Tons", values = {16, 21} },
-			[6] = { name = "Ridiculous", values = {32, 33} },
-			[7] = { name = "Random", values = "keys" },
+			[1] = { name = "None", values = {0, 0},
+				description = "No islands." },
+			[2] = { name = "Few", values = {2, 3},
+				description = "Two large islands and three small islands." },
+			[3] = { name = "Some", values = {4, 7},
+				description = "Four large islands and seven small islands." },
+			[4] = { name = "Many", values = {8, 13},
+				description = "Eight large islands and thirteen small islands." },
+			[5] = { name = "Tons", values = {16, 21},
+				description = "Sixteen large islands and twenty-one small islands." },
+			[6] = { name = "Ridiculous", values = {32, 33},
+				description = "Thirty-two large islands and thirty-three small islands." },
+			[7] = { name = "Random", values = "keys",
+				description = "A random number of large and small islands." },
 		}
 	},
 	{ name = "Sea Level", keys = { "openWaterRatio", "coastalExpansionPercent", "coastalPolygonChance", "astronomyBlobsMustConnectToOcean", "astronomyBlobNumber", "astronomyBlobMinPolygons", "astronomyBlobMaxPolygons" }, default = 3,
 	values = {
-			[1] = { name = "Very Low", values = {0.00, 85, 3, true, 0} },
-			[2] = { name = "Low", values = {0.05, 75, 2, true, 0} },
-			[3] = { name = "Standard", values = {0.1, 67, 1, true, 1, 1, 1} },
-			[4] = { name = "High", values = {0.15, 60, 1, true, 2, 1, 1} },
-			[5] = { name = "Very High", values = {0.2, 50, 0, false, 2, 2, 4} },
-			[6] = { name = "Random", values = "keys" },
+			[1] = { name = "Very Low", values = {0.00, 85, 3, true, 0},
+				description = "Much more coast and land." },
+			[2] = { name = "Low", values = {0.05, 75, 2, true, 0},
+				description = "A little more coast and land." },
+			[3] = { name = "Standard", values = {0.1, 67, 1, true, 1, 1, 1},
+				description = "An Earth-like amount of coast and land." },
+			[4] = { name = "High", values = {0.15, 60, 1, true, 2, 1, 1},
+				description = "A little less coast and land." },
+			[5] = { name = "Very High", values = {0.2, 50, 0, false, 2, 2, 4},
+				description = "Much less coast and land." },
+			[6] = { name = "Random", values = "keys",
+				description = "A random sea level." },
 		}
 	},
 	{ name = "Inland Water Bodies", keys = { "inlandSeasMax", "inlandSeaContinentRatio", "lakeMinRatio" }, default = 2,
 	values = {
-			[1] = { name = "None", values = {0, 0, 0} },
-			[2] = { name = "Some Lakes", values = {1, 0.01, 0.0065} },
-			[3] = { name = "Many Lakes", values = {2, 0.01, 0.02} },
-			[4] = { name = "Seas", values = {3, 0.04, 0.01} },
-			[5] = { name = "One Big Sea", values = {1, 0.4, 0.0065} },
-			[6] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.1, 0.02} },
+			[1] = { name = "None", values = {0, 0, 0},
+				description = "No lakes or inland seas." },
+			[2] = { name = "Some Lakes", values = {1, 0.01, 0.0065},
+				description = "A few small lakes and one large lake." },
+			[3] = { name = "Many Lakes", values = {2, 0.01, 0.02},
+				description = "Quite a few small lakes, and two large lakes." },
+			[4] = { name = "Seas", values = {3, 0.04, 0.01},
+				description = "Three inland seas, and some small lakes." },
+			[5] = { name = "One Big Sea", values = {1, 0.4, 0.0065},
+				description = "One very large inland sea, and a few small lakes." },
+			[6] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.1, 0.02},
+				description = "A random assortment of lakes and inland seas." },
 		}
 	},
 	{ name = "Land at Poles", keys = { "polarMaxLandRatio" }, default = 1,
 	values = {
-			[1] = { name = "Yes", values = {0.4} },
-			[2] = { name = "No", values = {0} },
-			[3] = { name = "Random", values = "keys" },
+			[1] = { name = "Yes", values = {0.4},
+				description = "Landmasses can extend to the poles." },
+			[2] = { name = "No", values = {0},
+				description = "Landmasses cannot extend to the poles." },
+			[3] = { name = "Random", values = "keys",
+				description = "Flip a coin to decide if landmasses can extend to the poles." },
  		}
 	},
 	{ name = "Climate Realism", keys = { "useMapLatitudes" }, default = 1,
@@ -4424,24 +4456,26 @@ function Space:PickOceansRectangle()
 		self.astronomyBlobNumber = 0
 		local attempts = 0
 		local useX = self.w > self.h
+		local x1 = mRandom(0, self.w)
+		local y1
+		if x1 < 0.5 * self.w then
+			y1 = mRandom(mCeil(self.h * 0.5), self.h)
+		else
+			y1 = mRandom(0, mCeil(self.h * 0.5))
+		end
+		local x2 = self.w - x1
+		local y2 = self.h - y1
 		while attempts < self.oceanNumber - 4 do
-			local x, tx
-			local y, ty
+			local x, tx, y, ty
 			local aOcean, bOcean
 			if useX then
-				x = mRandom(0, self.w)
-				tx = self.w - x
-				local pseudoOceans = { self.topYPolygons, self.bottomYPolygons }
-				aOcean = tRemoveRandom(pseudoOceans)
-				bOcean = pseudoOceans[1]
+				x, tx = x1, x2
+				aOcean, bOcean = self.bottomYPolygons, self.topYPolygons
 			else
-				y = mRandom(0, self.h)
-				ty = self.h - y
-				local pseudoOceans = { self.topXPolygons, self.bottomXPolygons }
-				aOcean = tRemoveRandom(pseudoOceans)
-				bOcean = pseudoOceans[1]
+				y, ty = y1, y2
+				aOcean, bOcean = self.bottomXPolygons, self.topXPolygons
 			end
-			EchoDebug("connecting " .. tostring(x) .. "," .. tostring(y) .. " to " .. tostring(tx) .. "," .. tostring(ty))
+			EchoDebug("creating rift from " .. x or 0 .. "," .. y or 0 .. " to " .. tx or self.w .. "," .. ty or self.h)
 			local ocean = self:PickOceanToOcean(aOcean, bOcean, x, y, tx, ty)
 			EchoDebug("ocean of " .. #ocean .. " polygons")
 			if ocean and #ocean ~= 0 then
