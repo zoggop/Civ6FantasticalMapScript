@@ -695,20 +695,62 @@ local OptionDictionary = {
 				description = "A random sea level." },
 		}
 	},
-	{ name = "Inland Water Bodies", keys = { "inlandSeasMax", "inlandSeaContinentRatio", "lakeMinRatio" }, default = 2,
+	-- { name = "Inland Water Bodies", keys = { "inlandSeasMax", "inlandSeaContinentRatio", "lakeMinRatio" }, default = 2,
+	-- values = {
+	-- 		[1] = { name = "None", values = {0, 0, 0},
+	-- 			description = "No lakes or inland seas." },
+	-- 		[2] = { name = "Some Lakes", values = {1, 0.01, 0.0065},
+	-- 			description = "A few small lakes and one large lake." },
+	-- 		[3] = { name = "Many Lakes", values = {2, 0.01, 0.02},
+	-- 			description = "Quite a few small lakes, and two large lakes." },
+	-- 		[4] = { name = "Seas", values = {3, 0.04, 0.01},
+	-- 			description = "Three inland seas, and some small lakes." },
+	-- 		[5] = { name = "One Big Sea", values = {1, 0.4, 0.0065},
+	-- 			description = "One very large inland sea, and a few small lakes." },
+	-- 		[6] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.1, 0.02},
+	-- 			description = "A random assortment of lakes and inland seas." },
+	-- 	}
+	-- },
+	{ name = "Lakes", keys = { "lakeMinRatio" }, default = 3,
+	values = {
+			[1] = { name = "None", values = {0},
+				description = "No lakes." },
+			[2] = { name = "Few", values = {0.003},
+				description = "A few lakes." },
+			[3] = { name = "Some", values = {0.007},
+				description = "Some lakes." },
+			[4] = { name = "Many", values = {0.02},
+				description = "Many lakes." },
+			[5] = { name = "Tons", values = {0.05},
+				description = "Tons of lakes." },
+			[6] = { name = "Ridiculous", values = {0.1},
+				description = "A ridiculous number of lakes." },
+			[7] = { name = "As Many As Possible", values = {1.0},
+				description = "As many lakes as can fit." },
+			[8] = { name = "Random", values = "keys",
+				description = "A random amount of lakes." },
+		}
+	},
+	{ name = "Inland Seas", keys = { "inlandSeasMax", "inlandSeaContinentRatioMin", "inlandSeaContinentRatioMax" }, default = 2,
 	values = {
 			[1] = { name = "None", values = {0, 0, 0},
-				description = "No lakes or inland seas." },
-			[2] = { name = "Some Lakes", values = {1, 0.01, 0.0065},
-				description = "A few small lakes and one large lake." },
-			[3] = { name = "Many Lakes", values = {2, 0.01, 0.02},
-				description = "Quite a few small lakes, and two large lakes." },
-			[4] = { name = "Seas", values = {3, 0.04, 0.01},
-				description = "Three inland seas, and some small lakes." },
-			[5] = { name = "One Big Sea", values = {1, 0.4, 0.0065},
-				description = "One very large inland sea, and a few small lakes." },
-			[6] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.1, 0.02},
-				description = "A random assortment of lakes and inland seas." },
+				description = "No inland seas." },
+			[2] = { name = "One Small Sea", values = {1, 0.02, 0.03},
+				description = "One inland sea of roughly 3% of the continent's area." },
+			[3] = { name = "Two Small Seas", values = {2, 0.02, 0.03},
+				description = "Two inland seas of roughly 3% of the continent's area each." },
+			[4] = { name = "Three Small Seas", values = {3, 0.02, 0.03},
+				description = "Three inland seas of roughly 3% of the continent's area each." },
+			[5] = { name = "One Medium Sea", values = {1, 0.08, 0.1},
+				description = "One inland sea of roughly 10% of the continent's area." },
+			[6] = { name = "Two Medium Seas", values = {2, 0.08, 0.1},
+				description = "Two inland seas of roughly 10% of the continent's area each." },
+			[7] = { name = "Three Medium Seas", values = {3, 0.08, 0.1},
+				description = "Three inland seas of roughly 10% of the continent's area each." },
+			[8] = { name = "One Large Sea", values = {1, 0.35, 0.45},
+				description = "One inland sea of roughly half of the continent's area." },
+			[9] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.35, 0.45},
+				description = "A random assortment of inland seas." },
 		}
 	},
 	{ name = "Land at Poles", keys = { "polarMaxLandRatio" }, default = 1,
@@ -1889,7 +1931,9 @@ function Polygon:FloodFillSea(sea)
 			return
 		end
 	end
-	sea = sea or { polygons = {}, inland = true, astronomyIndex = self.astronomyIndex, continent = self.continent, maxPolygons = mCeil(#self.continent * self.space.inlandSeaContinentRatio) }
+	local minPolys = mCeil(self.space.inlandSeaContinentRatioMin * #self.continent)
+	local maxPolys = mCeil(self.space.inlandSeaContinentRatioMax * #self.continent)
+	sea = sea or { polygons = {}, inland = true, astronomyIndex = self.astronomyIndex, continent = self.continent, maxPolygons = mRandom(minPolys, maxPolys) }
 	self.sea = sea
 	tInsert(sea.polygons, self)
 	for i, neighbor in pairs(self.neighbors) do
@@ -2314,7 +2358,10 @@ function Region:GiveParameters()
 	end
 	self.lakey = #self.space.lakeSubPolygons < self.space.minLakes
 	self.lakeyness = 0
-	if self.lakey then self.lakeyness = mRandom(self.space.lakeynessMin, self.space.lakeynessMax) end
+	if self.lakey then
+		self.lakeyness = 100 * (1 - (#self.space.lakeSubPolygons / self.space.minLakes))
+		EchoDebug("lakeyness: " .. self.lakeyness, "lake deficit: " .. self.space.minLakes - #self.space.lakeSubPolygons)
+	end
 	self.marshy = self.space.marshHexCount < self.space.marshMinHexes
 	self.marshyness = 0
 	if self.marshy then self.marshyness = mRandom(self.space.marshynessMin, self.space.marshynessMax) end
@@ -2357,10 +2404,13 @@ function Region:CreateCollection()
 	local collection = {}
 	self.totalSize = 0
 	local hasPolar = false
+	local lakeNumber = mCeil((self.lakeyness / 100) * #subPoints)
+	local lakeI = #subPoints - lakeNumber
 	for i, subPoint in pairs(subPoints) do
 		local elements = {}
 		local polar
-		local lake = i > 1 and mRandom(1, 100) < self.lakeyness
+		-- local lake = i > 1 and mRandom(1, 100) < self.lakeyness
+		local lake = i > 1 and i > lakeI
 		local subSize = mMin(self.space:GetSubCollectionSize(), #subPoint.pixels)
 		local subPixelBuffer = tDuplicate(subPoint.pixels)
 		for ii = 1, subSize do
@@ -2657,12 +2707,11 @@ Space = class(function(a)
 	a.temperatureMax = 99 -- highest temperature possible (plus or minus temperatureMaxDeviation)
 	-- all lake variables scale with global rainfall in Compute()
 	a.lakeMinRatio = 0.0065 -- below this fraction of filled subpolygos that are lakes will cause a region to become lakey
-	a.lakeynessMin = 5 -- in those lake regions, what's the minimum percentage of water in their collection
-	a.lakeynessMax = 50 -- in those lake regions, what's the maximum percentage of water in their collection
 	a.marshynessMin = 5
 	a.marshynessMax = 33
 	a.marshMinHexRatio = 0.015
-	a.inlandSeaContinentRatio = 0.02 -- maximum size of each inland sea as a fraction of the polygons of the continent they're inside
+	a.inlandSeaContinentRatioMin = 0.02 -- -- minimum size of each inland sea as a fraction of the polygons of the continent they're inside
+	a.inlandSeaContinentRatioMax = 0.02 -- maximum size of each inland sea as a fraction of the polygons of the continent they're inside
 	a.inlandSeasMax = 1 -- maximum number of inland seas
 	a.ancientCitiesCount = 0
 	a.falloutEnabled = false -- place fallout on the map?
@@ -3004,7 +3053,6 @@ function Space:Compute()
     self.xFakeLatitudeConversion = 180 / self.iW
     self.yFakeLatitudeConversion = 180 / self.iH
     -- self:DoCentuariIfActivated()
-	EchoDebug(self.lakeMinRatio .. " minimum lake ratio", self.lakeynessMax .. " maximum region lakeyness")
 	if FeatureDictionary[featureForest] and FeatureDictionary[featureForest].metaPercent then
 		FeatureDictionary[featureForest].metaPercent = mMin(100, FeatureDictionary[featureForest].metaPercent * (rainfallScale ^ 2.2))
 		EchoDebug("forest metapercent: " .. FeatureDictionary[featureForest].metaPercent)
@@ -7248,7 +7296,7 @@ function GenerateMap()
 		START_CONFIG = startConfig,
 		LAND = true,
 	};
-	local start_plot_database = AssignStartingPlots.Create(args)
+	-- local start_plot_database = AssignStartingPlots.Create(args)
 
-	local GoodyGen = AddGoodies(mySpace.iW, mySpace.iH);
+	-- local GoodyGen = AddGoodies(mySpace.iW, mySpace.iH);
 end

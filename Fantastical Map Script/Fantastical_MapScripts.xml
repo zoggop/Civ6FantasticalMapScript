@@ -123,17 +123,32 @@
 
 		<Row
 			ConfigurationGroup="Map"
-			ConfigurationId="inland_water_bodies"
-			DefaultValue="2"
+			ConfigurationId="lakes"
+			DefaultValue="3"
 			Description=""
-			Domain="FNTSTCLDomain_Inland_Water_Bodies"
+			Domain="FNTSTCLDomain_Lakes"
 			GroupId="MapOptions"
 			Hash="0"
 			Key1="Map"
 			Key2="Fantastical.lua"
-			Name="Inland Water Bodies"
-			ParameterId="FNTSTCL_Inland_Water_Bodies"
+			Name="Lakes"
+			ParameterId="FNTSTCL_Lakes"
 			SortIndex="360"
+		/>
+
+		<Row
+			ConfigurationGroup="Map"
+			ConfigurationId="inland_seas"
+			DefaultValue="2"
+			Description=""
+			Domain="FNTSTCLDomain_Inland_Seas"
+			GroupId="MapOptions"
+			Hash="0"
+			Key1="Map"
+			Key2="Fantastical.lua"
+			Name="Inland Seas"
+			ParameterId="FNTSTCL_Inland_Seas"
+			SortIndex="370"
 		/>
 
 		<Row
@@ -148,7 +163,7 @@
 			Key2="Fantastical.lua"
 			Name="Land at Poles"
 			ParameterId="FNTSTCL_Land_at_Poles"
-			SortIndex="370"
+			SortIndex="380"
 		/>
 
 		<Row
@@ -163,7 +178,7 @@
 			Key2="Fantastical.lua"
 			Name="Climate Realism"
 			ParameterId="FNTSTCL_Climate_Realism"
-			SortIndex="380"
+			SortIndex="390"
 		/>
 
 		<Row
@@ -178,7 +193,7 @@
 			Key2="Fantastical.lua"
 			Name="Granularity"
 			ParameterId="FNTSTCL_Granularity"
-			SortIndex="390"
+			SortIndex="400"
 		/>
 
 		<Row
@@ -193,7 +208,7 @@
 			Key2="Fantastical.lua"
 			Name="World Age"
 			ParameterId="FNTSTCL_World_Age"
-			SortIndex="400"
+			SortIndex="410"
 		/>
 
 		<Row
@@ -208,7 +223,7 @@
 			Key2="Fantastical.lua"
 			Name="Temperature"
 			ParameterId="FNTSTCL_Temperature"
-			SortIndex="410"
+			SortIndex="420"
 		/>
 
 		<Row
@@ -223,7 +238,7 @@
 			Key2="Fantastical.lua"
 			Name="Rainfall"
 			ParameterId="FNTSTCL_Rainfall"
-			SortIndex="420"
+			SortIndex="430"
 		/>
 
 		<Row
@@ -238,7 +253,7 @@
 			Key2="Fantastical.lua"
 			Name="Ancient Roads"
 			ParameterId="FNTSTCL_Ancient_Roads"
-			SortIndex="430"
+			SortIndex="440"
 		/>
 
 	</Parameters>
@@ -294,12 +309,24 @@
 		<Row Description="Much less coast and land." Domain="FNTSTCLDomain_Sea_Level" Name="Very High" SortIndex="14" Value="5" />
 		<Row Description="A random sea level." Domain="FNTSTCLDomain_Sea_Level" Name="Random" SortIndex="15" Value="6" />
 
-		<Row Description="No lakes or inland seas." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="None" SortIndex="10" Value="1" />
-		<Row Description="A few small lakes and one large lake." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Some Lakes" SortIndex="11" Value="2" />
-		<Row Description="Quite a few small lakes, and two large lakes." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Many Lakes" SortIndex="12" Value="3" />
-		<Row Description="Three inland seas, and some small lakes." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Seas" SortIndex="13" Value="4" />
-		<Row Description="One very large inland sea, and a few small lakes." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="One Big Sea" SortIndex="14" Value="5" />
-		<Row Description="A random assortment of lakes and inland seas." Domain="FNTSTCLDomain_Inland_Water_Bodies" Name="Random" SortIndex="15" Value="6" />
+		<Row Description="No lakes." Domain="FNTSTCLDomain_Lakes" Name="None" SortIndex="10" Value="1" />
+		<Row Description="A few lakes." Domain="FNTSTCLDomain_Lakes" Name="Few" SortIndex="11" Value="2" />
+		<Row Description="Some lakes." Domain="FNTSTCLDomain_Lakes" Name="Some" SortIndex="12" Value="3" />
+		<Row Description="Many lakes." Domain="FNTSTCLDomain_Lakes" Name="Many" SortIndex="13" Value="4" />
+		<Row Description="Tons of lakes." Domain="FNTSTCLDomain_Lakes" Name="Tons" SortIndex="14" Value="5" />
+		<Row Description="A ridiculous number of lakes." Domain="FNTSTCLDomain_Lakes" Name="Ridiculous" SortIndex="15" Value="6" />
+		<Row Description="As many lakes as can fit." Domain="FNTSTCLDomain_Lakes" Name="As Many As Possible" SortIndex="16" Value="7" />
+		<Row Description="A random amount of lakes." Domain="FNTSTCLDomain_Lakes" Name="Random" SortIndex="17" Value="8" />
+
+		<Row Description="No inland seas." Domain="FNTSTCLDomain_Inland_Seas" Name="None" SortIndex="10" Value="1" />
+		<Row Description="One inland sea of roughly 3% of the continent's area." Domain="FNTSTCLDomain_Inland_Seas" Name="One Small Sea" SortIndex="11" Value="2" />
+		<Row Description="Two inland seas of roughly 3% of the continent's area each." Domain="FNTSTCLDomain_Inland_Seas" Name="Two Small Seas" SortIndex="12" Value="3" />
+		<Row Description="Three inland seas of roughly 3% of the continent's area each." Domain="FNTSTCLDomain_Inland_Seas" Name="Three Small Seas" SortIndex="13" Value="4" />
+		<Row Description="One inland sea of roughly 10% of the continent's area." Domain="FNTSTCLDomain_Inland_Seas" Name="One Medium Sea" SortIndex="14" Value="5" />
+		<Row Description="Two inland seas of roughly 10% of the continent's area each." Domain="FNTSTCLDomain_Inland_Seas" Name="Two Medium Seas" SortIndex="15" Value="6" />
+		<Row Description="Three inland seas of roughly 10% of the continent's area each." Domain="FNTSTCLDomain_Inland_Seas" Name="Three Medium Seas" SortIndex="16" Value="7" />
+		<Row Description="One inland sea of roughly half of the continent's area." Domain="FNTSTCLDomain_Inland_Seas" Name="One Large Sea" SortIndex="17" Value="8" />
+		<Row Description="A random assortment of inland seas." Domain="FNTSTCLDomain_Inland_Seas" Name="Random" SortIndex="18" Value="9" />
 
 		<Row Description="Landmasses can extend to the poles." Domain="FNTSTCLDomain_Land_at_Poles" Name="Yes" SortIndex="10" Value="1" />
 		<Row Description="Landmasses cannot extend to the poles." Domain="FNTSTCLDomain_Land_at_Poles" Name="No" SortIndex="11" Value="2" />
