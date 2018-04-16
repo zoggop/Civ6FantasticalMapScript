@@ -610,7 +610,7 @@ local OptionDictionary = {
 	{ name = "Wrapping", keys = { "wrapX" }, default = 1,
 	values = {
 			[1] = { name = "On", values = {true},
-				description = "A globe, or, more technically, a cylinder that wraps East-West."},
+				description = "A globe (technically a cylinder) that wraps East-West."},
 			[2] = { name = "Off", values = {false},
 				description = "No wrapping, a random aspect ratio, and if the climate is realistic, only one pole." },
  		}
@@ -695,31 +695,15 @@ local OptionDictionary = {
 				description = "A random sea level." },
 		}
 	},
-	-- { name = "Inland Water Bodies", keys = { "inlandSeasMax", "inlandSeaContinentRatio", "lakeMinRatio" }, default = 2,
-	-- values = {
-	-- 		[1] = { name = "None", values = {0, 0, 0},
-	-- 			description = "No lakes or inland seas." },
-	-- 		[2] = { name = "Some Lakes", values = {1, 0.01, 0.0065},
-	-- 			description = "A few small lakes and one large lake." },
-	-- 		[3] = { name = "Many Lakes", values = {2, 0.01, 0.02},
-	-- 			description = "Quite a few small lakes, and two large lakes." },
-	-- 		[4] = { name = "Seas", values = {3, 0.04, 0.01},
-	-- 			description = "Three inland seas, and some small lakes." },
-	-- 		[5] = { name = "One Big Sea", values = {1, 0.4, 0.0065},
-	-- 			description = "One very large inland sea, and a few small lakes." },
-	-- 		[6] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.1, 0.02},
-	-- 			description = "A random assortment of lakes and inland seas." },
-	-- 	}
-	-- },
 	{ name = "Lakes", keys = { "lakeMinRatio" }, default = 3,
 	values = {
 			[1] = { name = "None", values = {0},
 				description = "No lakes." },
-			[2] = { name = "Few", values = {0.003},
+			[2] = { name = "Few", values = {0.005},
 				description = "A few lakes." },
-			[3] = { name = "Some", values = {0.007},
+			[3] = { name = "Some", values = {0.013},
 				description = "Some lakes." },
-			[4] = { name = "Many", values = {0.02},
+			[4] = { name = "Many", values = {0.025},
 				description = "Many lakes." },
 			[5] = { name = "Tons", values = {0.05},
 				description = "Tons of lakes." },
@@ -780,7 +764,7 @@ local OptionDictionary = {
 			[2] = { name = "Standard", values = {200},
 				description = "A balance between global nonuniformity and local nonuniformity." },
 			[3] = { name = "High", values = {300},
-				description = "Smaller climactic regions, skinnier ocean rifts, round and snaky continents, and more islands." },
+				description = "Smaller climactic regions, skinnier ocean rifts, rounder and snakier continents, and more islands." },
 			[4] = { name = "Random", values = "values", lowValues = {100}, highValues = {300},
 				description = "A random polygonal density." },
 		}
@@ -2359,7 +2343,7 @@ function Region:GiveParameters()
 	self.lakey = #self.space.lakeSubPolygons < self.space.minLakes
 	self.lakeyness = 0
 	if self.lakey then
-		self.lakeyness = 100 * (1 - (#self.space.lakeSubPolygons / self.space.minLakes))
+		self.lakeyness = mMin(self.space.lakeynessMax, 100 * (1 - (#self.space.lakeSubPolygons / self.space.minLakes)))
 		EchoDebug("lakeyness: " .. self.lakeyness, "lake deficit: " .. self.space.minLakes - #self.space.lakeSubPolygons)
 	end
 	self.marshy = self.space.marshHexCount < self.space.marshMinHexes
@@ -5755,6 +5739,7 @@ end
 
 function Space:FillRegions()
 	self.minLakes = mCeil(self.lakeMinRatio * self.filledSubPolygons)
+	self.lakeynessMax = mMin(100, mCeil((self.lakeMinRatio / 0.175) * 100))
 	self.marshMinHexes = mFloor(self.marshMinHexRatio * self.filledArea)
 	self.marshHexCount = 0
 	self.totalRegionHills = 0

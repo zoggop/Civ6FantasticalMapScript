@@ -45,7 +45,6 @@
 
 
 		<!-- Fantastical Map Options: -->
-
 		<Row
 			ConfigurationGroup="Map"
 			ConfigurationId="wrapping"
@@ -269,8 +268,7 @@
 
 
 		<!-- Fantastical options: -->
-		
-		<Row Description="A globe, or, more technically, a cylinder that wraps East-West." Domain="FNTSTCLDomain_Wrapping" Name="On" SortIndex="10" Value="1" />
+		<Row Description="A globe (technically a cylinder) that wraps East-West." Domain="FNTSTCLDomain_Wrapping" Name="On" SortIndex="10" Value="1" />
 		<Row Description="No wrapping, a random aspect ratio, and if the climate is realistic, only one pole." Domain="FNTSTCLDomain_Wrapping" Name="Off" SortIndex="11" Value="2" />
 
 		<Row Description="The map is all one continent, and the only bodies of water are inland seas and lakes." Domain="FNTSTCLDomain_Ocean_Rifts" Name="All Land" SortIndex="10" Value="1" />
@@ -338,7 +336,7 @@
 
 		<Row Description="Larger climactic regions, wider ocean rifts, pointier continents, and fewer islands" Domain="FNTSTCLDomain_Granularity" Name="Low" SortIndex="10" Value="1" />
 		<Row Description="A balance between global nonuniformity and local nonuniformity." Domain="FNTSTCLDomain_Granularity" Name="Standard" SortIndex="11" Value="2" />
-		<Row Description="Smaller climactic regions, skinnier ocean rifts, round and snaky continents, and more islands." Domain="FNTSTCLDomain_Granularity" Name="High" SortIndex="12" Value="3" />
+		<Row Description="Smaller climactic regions, skinnier ocean rifts, rounder and snakier continents, and more islands." Domain="FNTSTCLDomain_Granularity" Name="High" SortIndex="12" Value="3" />
 		<Row Description="A random polygonal density." Domain="FNTSTCLDomain_Granularity" Name="Random" SortIndex="13" Value="4" />
 
 		<Row Description="A quarter of the land is mountainous." Domain="FNTSTCLDomain_World_Age" Name="Newest" SortIndex="10" Value="1" />

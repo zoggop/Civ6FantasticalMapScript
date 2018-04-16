@@ -1,10 +1,10 @@
-- fix 5 ocean rift behaviour for realm maps
-
 - add ability to set maxIslandSize (instead of always 3 polygons)
 
 - might want to bring back number of islands as a fraction of possible land
 
 ---
+
+- fix 5 ocean rift behaviour for realm maps
 
 - add per-continent limits to simultaneous growth algo, so that if one continent fails to grow, the others don't get too large
 

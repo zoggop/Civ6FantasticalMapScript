@@ -2,7 +2,7 @@ local OptionDictionary = {
 	{ name = "Wrapping", keys = { "wrapX" }, default = 1,
 	values = {
 			[1] = { name = "On", values = {true},
-				description = "A globe, or, more technically, a cylinder that wraps East-West."},
+				description = "A globe (technically a cylinder) that wraps East-West."},
 			[2] = { name = "Off", values = {false},
 				description = "No wrapping, a random aspect ratio, and if the climate is realistic, only one pole." },
  		}
@@ -87,31 +87,15 @@ local OptionDictionary = {
 				description = "A random sea level." },
 		}
 	},
-	-- { name = "Inland Water Bodies", keys = { "inlandSeasMax", "inlandSeaContinentRatio", "lakeMinRatio" }, default = 2,
-	-- values = {
-	-- 		[1] = { name = "None", values = {0, 0, 0},
-	-- 			description = "No lakes or inland seas." },
-	-- 		[2] = { name = "Some Lakes", values = {1, 0.01, 0.0065},
-	-- 			description = "A few small lakes and one large lake." },
-	-- 		[3] = { name = "Many Lakes", values = {2, 0.01, 0.02},
-	-- 			description = "Quite a few small lakes, and two large lakes." },
-	-- 		[4] = { name = "Seas", values = {3, 0.04, 0.01},
-	-- 			description = "Three inland seas, and some small lakes." },
-	-- 		[5] = { name = "One Big Sea", values = {1, 0.4, 0.0065},
-	-- 			description = "One very large inland sea, and a few small lakes." },
-	-- 		[6] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.1, 0.02},
-	-- 			description = "A random assortment of lakes and inland seas." },
-	-- 	}
-	-- },
 	{ name = "Lakes", keys = { "lakeMinRatio" }, default = 3,
 	values = {
 			[1] = { name = "None", values = {0},
 				description = "No lakes." },
-			[2] = { name = "Few", values = {0.003},
+			[2] = { name = "Few", values = {0.005},
 				description = "A few lakes." },
-			[3] = { name = "Some", values = {0.007},
+			[3] = { name = "Some", values = {0.013},
 				description = "Some lakes." },
-			[4] = { name = "Many", values = {0.02},
+			[4] = { name = "Many", values = {0.025},
 				description = "Many lakes." },
 			[5] = { name = "Tons", values = {0.05},
 				description = "Tons of lakes." },
@@ -172,7 +156,7 @@ local OptionDictionary = {
 			[2] = { name = "Standard", values = {200},
 				description = "A balance between global nonuniformity and local nonuniformity." },
 			[3] = { name = "High", values = {300},
-				description = "Smaller climactic regions, skinnier ocean rifts, round and snaky continents, and more islands." },
+				description = "Smaller climactic regions, skinnier ocean rifts, rounder and snakier continents, and more islands." },
 			[4] = { name = "Random", values = "values", lowValues = {100}, highValues = {300},
 				description = "A random polygonal density." },
 		}
@@ -251,6 +235,76 @@ local OptionDictionary = {
 	},
 }
 
+local fileStartXML = [[<GameInfo>
+	<!-- Add the map script to the list of maps. -->
+	<Maps>
+		<Row File="Fantastical.lua" Name="Fantastical" SortIndex="8"
+			 Description="Weird lands and squiggly rivers unhindered by realism." />
+	</Maps>
+
+	<!-- User-selectable parameters for this map. -->
+	<Parameters>
+
+		<!-- Core Map options: -->
+		<!-- Map Size sort: 220 -->
+		<!-- Resources and Start refuse to obey sort indices...because they're shared by all map scripts? -->
+		<!-- SP Resources: Abundant -->
+		<Row ParameterId="Resources"
+		     Name="LOC_MAP_RESOURCES_NAME" Description="LOC_MAP_RESOURCES_DESCRIPTION"
+			 Domain="Resources" ConfigurationId="resources"
+			 SupportsLANMultiplayer="0" SupportsInternetMultiplayer="0" SupportsHotSeat="0"
+			 DefaultValue="3"
+			 SortIndex="230" Key1="Map" Key2="Fantastical.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+		<!-- MP Resources: Standard -->
+		<Row ParameterId="Resources"
+		     Name="LOC_MAP_RESOURCES_NAME" Description="LOC_MAP_RESOURCES_DESCRIPTION"
+			 Domain="Resources" ConfigurationId="resources"
+			 SupportsSinglePlayer="0"
+			 DefaultValue="2"
+			 SortIndex="230" Key1="Map" Key2="Fantastical.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+		<!-- SP Start: Standard -->
+		<Row ParameterId="StartPosition"
+		     Name="LOC_MAP_START_POSITION_NAME" Description="LOC_MAP_START_POSITION_DESCRIPTION"
+			 Domain="FNTSTCLDomain_StartPosition" ConfigurationId="start"
+			 SupportsLANMultiplayer="0" SupportsInternetMultiplayer="0" SupportsHotSeat="0"
+			 DefaultValue="2"
+			 SortIndex="240" Key1="Map" Key2="Fantastical.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+		<!-- MP Start: Balanced -->
+		<Row ParameterId="StartPosition"
+		     Name="LOC_MAP_START_POSITION_NAME" Description="LOC_MAP_START_POSITION_DESCRIPTION"
+			 Domain="FNTSTCLDomain_StartPosition" ConfigurationId="start"
+			 SupportsSinglePlayer="0"
+			 DefaultValue="1"
+			 SortIndex="240" Key1="Map" Key2="Fantastical.lua" ConfigurationGroup="Map" GroupId="MapOptions" Hash="0"/>
+
+
+		<!-- Fantastical Map Options: -->
+]]
+
+local paramEndXML = [[
+	</Parameters>
+
+	
+	<!-- Domain is the list of options in the dropdown -->
+	<DomainValues>
+		
+		<!-- Core options -->
+		<Row Domain="FNTSTCLDomain_StartPosition" Value="1" Name="LOC_MAP_START_POSITION_BALANCED_NAME"  Description="LOC_MAP_START_POSITION_BALANCED_DESCRIPTION"  SortIndex="10"/>
+		<Row Domain="FNTSTCLDomain_StartPosition" Value="2" Name="LOC_MAP_START_POSITION_STANDARD_NAME"  Description="LOC_MAP_START_POSITION_STANDARD_DESCRIPTION"  SortIndex="11"/>
+		<Row Domain="FNTSTCLDomain_StartPosition" Value="3" Name="LOC_MAP_START_POSITION_LEGENDARY_NAME" Description="LOC_MAP_START_POSITION_LEGENDARY_DESCRIPTION" SortIndex="12"/>
+
+
+		<!-- Fantastical options: -->
+]]
+
+local fileEndXML = [[
+		
+	</DomainValues>
+</GameInfo>]]
+
 local baseIndent = "\t\t"
 
 local function RowToXML(row, noNewLines)
@@ -280,7 +334,7 @@ end
 
 local function OptionDictionaryToXML(optDict)
 	local prefix = "FNTSTCL"
-	local xml = ""
+	local xml = fileStartXML
 	-- parameters first
 	for i, opt in ipairs(OptionDictionary) do
 		local underscoredName = string.gsub(opt.name, " ", "_")
@@ -302,6 +356,7 @@ local function OptionDictionaryToXML(optDict)
 		xml = xml .. RowToXML(row) .. "\n\n"
 		-- print(RowToXML(row))
 	end
+	xml = xml .. paramEndXML
 	-- then domain values
 	for i, opt in ipairs(OptionDictionary) do
 		local underscoredName = string.gsub(opt.name, " ", "_")
@@ -319,6 +374,7 @@ local function OptionDictionaryToXML(optDict)
 		end
 		xml = xml .. "\n"
 	end
+	xml = xml .. fileEndXML
 	return xml
 end
 
