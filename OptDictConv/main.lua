@@ -125,8 +125,10 @@ local OptionDictionary = {
 				description = "Three inland seas of roughly 10% of the continent's area each." },
 			[8] = { name = "One Large Sea", values = {1, 0.35, 0.45},
 				description = "One inland sea of roughly half of the continent's area." },
-			[9] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.35, 0.45},
-				description = "A random assortment of inland seas." },
+			[9] = { name = "Assortment", values = {3, 0.02, 0.16},
+				description = "An assortment of three inland seas of random sizes." },
+			[10] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.35, 0.45},
+				description = "A random assortment of inland seas or none at all." },
 		}
 	},
 	{ name = "Land at Poles", keys = { "polarMaxLandRatio" }, default = 1,
@@ -239,7 +241,7 @@ local fileStartXML = [[<GameInfo>
 	<!-- Add the map script to the list of maps. -->
 	<Maps>
 		<Row File="Fantastical.lua" Name="Fantastical" SortIndex="8"
-			 Description="Weird lands and squiggly rivers unhindered by realism." />
+			 Description="Surprising lands and squiggly rivers. Highly configurable and randomizable." />
 	</Maps>
 
 	<!-- User-selectable parameters for this map. -->

@@ -733,8 +733,10 @@ local OptionDictionary = {
 				description = "Three inland seas of roughly 10% of the continent's area each." },
 			[8] = { name = "One Large Sea", values = {1, 0.35, 0.45},
 				description = "One inland sea of roughly half of the continent's area." },
-			[9] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.35, 0.45},
-				description = "A random assortment of inland seas." },
+			[9] = { name = "Assortment", values = {3, 0.02, 0.16},
+				description = "An assortment of three inland seas of random sizes." },
+			[10] = { name = "Random", values = "values", lowValues = {0, 0, 0}, highValues = {3, 0.35, 0.45},
+				description = "A random assortment of inland seas or none at all." },
 		}
 	},
 	{ name = "Land at Poles", keys = { "polarMaxLandRatio" }, default = 1,
@@ -1041,23 +1043,17 @@ local function SetConstants()
 	-- for improvement in GameInfo.Improvements() do
 	-- 	EchoDebug(improvement.Name, improvement.Index, improvement.ImprovementType)
 	-- end
-	-- for route in GameInfo.Routes() do
-	-- 	EchoDebug(route.Name, route.Index, route.RouteType)
-	-- end
-	-- for k, v in pairs(TerrainBuilder) do
-	-- 	if type(v) == "function" then
-	-- 		EchoDebug("TerrainBuilder." .. k)
-	-- 	end
-	-- end
-	for k, v in pairs(AreaBuilder) do
-		-- if type(v) == "function" then
-			EchoDebug(type(v), "AreaBuilder." .. k)
-		-- end
-	end
-	for k, v in pairs(StartPositioner) do
-		-- if type(v) == "function" then
-			EchoDebug(type(v), "StartPositioner." .. k)
-		-- end
+	local ShowMeTheFunctions = {
+		UI = UI,
+	}
+	for showme, actual in pairs(ShowMeTheFunctions) do
+		if actual and type(actual) == "table" then
+			for k, v in pairs(actual) do
+				if type(v) == "function" then
+					EchoDebug(showme .. "." .. k)
+				end
+			end
+		end
 	end
 
 	featureNone = g_FEATURE_NONE
@@ -7205,9 +7201,6 @@ end
 
 -- ENTRY POINT:
 function GenerateMap()
-	-- local file = io.open("stuff.xml", "w")
-	-- file:write(OptionDictionaryToXML(OptionDictionary))
-	-- file:close()
 	print("Generating Fantastical Map...")
 	plotTypes = GeneratePlotTypes()
 	terrainTypes = GenerateTerrain()
