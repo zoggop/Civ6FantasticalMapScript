@@ -7110,7 +7110,7 @@ function GetMapInitData(worldSize)
 			-- Note: multiplayer games between different platforms might not work.
 			math.randomseed(mapSeed);
 			print("Map seed: " .. mapSeed)
-			grid_width = mCeil( mSqrt(grid_area) * ((math.random() * 0.67) + 0.67) )
+			grid_width = mCeil( mSqrt(grid_area) * ((math.random() * 0.5) + 0.75) )
 			grid_height = mCeil( grid_area / grid_width )
 		else
 			print("Map seed not yet available.");
