@@ -7274,7 +7274,7 @@ function GenerateMap()
 		START_CONFIG = startConfig,
 		LAND = true,
 	};
-	-- local start_plot_database = AssignStartingPlots.Create(args)
+	local start_plot_database = AssignStartingPlots.Create(args)
 
-	-- local GoodyGen = AddGoodies(mySpace.iW, mySpace.iH);
+	local GoodyGen = AddGoodies(mySpace.iW, mySpace.iH);
 end
