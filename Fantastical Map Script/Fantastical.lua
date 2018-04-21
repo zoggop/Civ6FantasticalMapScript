@@ -1,10 +1,10 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-2
+-- version 32-VI-3
 
 --------------------------------------------------------------
 if include == nil then
-	package.path = package.path..';C:\\Program Files (x86)\\Steam\\steamapps\\common\\Sid Meier\'s Civilization V\\Assets\\Gameplay\\Lua\\?.lua'
+	package.path = package.path..';C:\\Program Files (x86)\\Steam\\steamapps\\common\\Sid Meier\'s Civilization VI\\Base\\Assets\\Maps\\Utility\\?.lua'
 	include = require
 end
 include "math"
