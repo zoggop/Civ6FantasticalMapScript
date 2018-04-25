@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-3
+-- version 32-VI-4
 
 --------------------------------------------------------------
 if include == nil then
@@ -7263,11 +7263,16 @@ function GenerateMap()
 	print("land fertility avg: " .. fertAvg, "fertility max: " .. fertMax)
 	print("land fertility avg fraction of 4.7 normal: " .. fertMult)
 
+	local landPerCiv = mySpace.filledArea / mySpace.iNumCivs
+	local landPerCivNormRatio = landPerCiv / 190
+	fertMult = fertMult * mMin(1, landPerCivNormRatio)
+	print("land tiles per civ", landPerCiv, "land per civ ratio of norm", landPerCivNormRatio, "new fert mult", fertMult)
+
 	print("Creating start plot database.");
 	-- START_MIN_Y and START_MAX_Y is the percent of the map ignored for major civs' starting positions.
 	local args = {
-		MIN_MAJOR_CIV_FERTILITY = mFloor(fertMult * 300), -- 300,
-		MIN_MINOR_CIV_FERTILITY = mFloor(fertMult * 50), -- 50, 
+		MIN_MAJOR_CIV_FERTILITY = mFloor(fertMult * 300),
+		MIN_MINOR_CIV_FERTILITY = mFloor(fertMult * 50), 
 		MIN_BARBARIAN_FERTILITY = 1,
 		START_MIN_Y = 0, -- 15,
 		START_MAX_Y = 0, -- 15,
