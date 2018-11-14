@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-4
+-- version 32-VI-5
 
 --------------------------------------------------------------
 if include == nil then
@@ -7258,26 +7258,37 @@ function GenerateMap()
 			tot = tot + 1
 		end
 	end
+	local normalLandFertAvg = 4.7
+	local normalLandPerCiv = 190
 	local fertAvg = fertTot / tot
-	local fertMult = fertAvg / 4.7
+	local fertMult = fertAvg / normalLandFertAvg
 	print("land fertility avg: " .. fertAvg, "fertility max: " .. fertMax)
-	print("land fertility avg fraction of 4.7 normal: " .. fertMult)
+	print("land fertility avg ratio of" .. normalLandFertAvg .. " norm: " .. fertMult)
 
 	local landPerCiv = mySpace.filledArea / mySpace.iNumCivs
-	local landPerCivNormRatio = landPerCiv / 190
+	local landPerCivNormRatio = landPerCiv / normalLandPerCiv
 	fertMult = fertMult * mMin(1, landPerCivNormRatio)
-	print("land tiles per civ", landPerCiv, "land per civ ratio of norm", landPerCivNormRatio, "new fert mult", fertMult)
+	print("land tiles per civ", landPerCiv, "land per civ ratio of " .. normalLandPerCiv .. " norm", landPerCivNormRatio, "new fert mult", fertMult)
+	local minMajorCivFert = mFloor(fertMult * 150)
+	local minMinorCivFert = mFloor(fertMult * 50)
+	print("MIN_MAJOR_CIV_FERTILITY", minMajorCivFert)
+	print("MIN_MINOR_CIV_FERTILITY", minMinorCivFert)
+	local isLandMap = (MapConfiguration.GetValue("continents") == 2 and MapConfiguration.GetValue("ocean_rifts") < 7) or MapConfiguration.GetValue("ocean_rifts") == 1
+	local isWaterMap = MapConfiguration.GetValue("ocean_rifts") > 6 or (MapConfiguration.GetValue("ocean_rifts") > 1 and MapConfiguration.GetValue("continents") > 5)
+	print('LAND', tostring(isLandMap))
+	print('WATER', tostring(isWaterMap))
 
 	print("Creating start plot database.");
 	-- START_MIN_Y and START_MAX_Y is the percent of the map ignored for major civs' starting positions.
 	local args = {
-		MIN_MAJOR_CIV_FERTILITY = mFloor(fertMult * 300),
-		MIN_MINOR_CIV_FERTILITY = mFloor(fertMult * 50), 
+		MIN_MAJOR_CIV_FERTILITY = minMajorCivFert,
+		MIN_MINOR_CIV_FERTILITY = minMinorCivFert, 
 		MIN_BARBARIAN_FERTILITY = 1,
 		START_MIN_Y = 0, -- 15,
 		START_MAX_Y = 0, -- 15,
 		START_CONFIG = startConfig,
-		LAND = true,
+		LAND = isLandMap,
+		WATER = isWaterMap,
 	};
 	local start_plot_database = AssignStartingPlots.Create(args)
 
