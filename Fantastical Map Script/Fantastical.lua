@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-5
+-- version 32-VI-6
 
 --------------------------------------------------------------
 if include == nil then
@@ -20,16 +20,19 @@ include "ResourceGenerator"
 include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
-local debugEnabled = true
+local debugEnabled = false
+local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
 local firstDebugTimer
 
 local function StartDebugTimer()
+	if not debugTimerEnabled then return 0 end
 	return os.clock()
 end
 
 local function StopDebugTimer(timer)
+	if not debugTimerEnabled then return "" end
 	if not timer then return "NO TIMER" end
 	local time = os.clock() - timer
 	local multiplier
@@ -126,9 +129,40 @@ end
 
 ------------------------------------------------------------------------------
 
+local function mRandSeed(fixedseed)
+	local seed
+	--fixedseed = 54321
+	if fixedseed == nil then
+		local mapSeed = MapConfiguration.GetValue("RANDOM_SEED")
+		if mapSeed then
+			print("got map seed " .. mapSeed)
+			seed = mapSeed
+		else
+			print("generating seed...")
+			seed = TerrainBuilder.GetRandomNumber(255,"Seeding Fantastical")
+			seed = seed * 256 + TerrainBuilder.GetRandomNumber(255,"Seeding Fantastical")
+			seed = seed * 256 + TerrainBuilder.GetRandomNumber(255,"Seeding Fantastical")
+			seed = seed * 64 + TerrainBuilder.GetRandomNumber(255,"Seeding Fantastical")
+		end
+	else
+		print("got fixed seed")
+		seed = fixedseed
+	end
+	math.randomseed(seed)
+	print("random seed set to " .. seed)
+end
+
 local randomNumbers = 0
 
--- uses civ's TerrainBuilder.GetRandomNumber function to generate random numbers so that multiplayer works
+-- in theory, terrainbuilder's random number gen should be synced across multiplayer, in practice, not so much?
+local function TBRandom(lower, upper)
+	randomNumbers = randomNumbers + 1
+	return TerrainBuilder.GetRandomNumber((upper + 1) - lower, "Fantastical Map Script " .. randomNumbers) + lower
+end
+
+local baseRandFunc = TBRandom -- math.random -- pick the function to be used in mRandom
+
+-- uses math.random to generate random numbers, but must be seeded with mRandSeed to work with multiplayer
 local function mRandom(lower, upper)
 	local hundredth
 	if lower and upper then
@@ -148,14 +182,39 @@ local function mRandom(lower, upper)
 	if upper == lower or lower > upper then
 		number = lower
 	else
-		randomNumbers = randomNumbers + 1
-		number = TerrainBuilder.GetRandomNumber((upper + 1) - lower, "Fantastical Map Script " .. randomNumbers) + lower
+		number = baseRandFunc(lower, upper)
 	end
 	if divide then number = number / upper end
 	if hundredth then
 		number = number / 100
 	end
 	return number
+end
+
+local function TestRNGs(n, high, useClock)
+	mRandSeed()
+	n = n or 10
+	high = high or 10
+	local originalRandFunc = baseRandFunc
+	baseRandFunc = math.random
+	print('math.random')
+	for i = 1, n do
+		if useClock and i == useClock then
+			print(os.clock())
+		end
+		local t = mRandom(1, 10)
+		print(t)
+	end
+	baseRandFunc = TBRandom
+	print('TerrainBuilder.GetRandomNumber')
+	for i = 1, n do
+		if useClock and i == useClock then
+			print(os.clock())
+		end
+		local t = mRandom(1, 10)
+		print(t)
+	end
+	baseRandFunc = originalRandFunc
 end
 
 local function int(x)
@@ -1045,6 +1104,7 @@ local function SetConstants()
 	-- end
 	local ShowMeTheFunctions = {
 		UI = UI,
+		TerrainBuilder = TerrainBuilder,
 	}
 	for showme, actual in pairs(ShowMeTheFunctions) do
 		if actual and type(actual) == "table" then
@@ -1771,8 +1831,8 @@ end
 
 Polygon = class(function(a, space, x, y)
 	a.space = space
-	a.x = x or TerrainBuilder.GetRandomNumber(space.iW, "random x")
-	a.y = y or TerrainBuilder.GetRandomNumber(space.iH, "random y")
+	a.x = x or mRandom(0, space.iW-1)
+	a.y = y or mRandom(0, space.iH-1)
 	a.centerPlot = Map.GetPlot(a.x, a.y)
 	if space.useMapLatitudes then
 		a.latitude = space:GetPlotLatitude(a.centerPlot)
@@ -5664,15 +5724,15 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 				end
 			end
 			region.point = bestPoint
-			print("latitude: " .. region.latitude, "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "vt: " .. mCeil(bestPoint.temp), "vr: " .. mCeil(bestPoint.rain), "tempWeight: " .. tempWeight, "rainWeight: " .. rainWeight)
+			EchoDebug("latitude: " .. region.latitude, "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "vt: " .. mCeil(bestPoint.temp), "vr: " .. mCeil(bestPoint.rain), "tempWeight: " .. tempWeight, "rainWeight: " .. rainWeight)
 			if #voronoiBuffer == 0 then
-				print("ran out of voronoi, refilling buffer...")
+				EchoDebug("ran out of voronoi, refilling buffer...")
 				voronoiBuffer = tDuplicate(climateVoronoi)
 			end
 			tRemove(voronoiBuffer, bestIndex)
 		else
 			if #voronoiBuffer == 0 then
-				print("ran out of voronoi, refilling buffer...")
+				EchoDebug("ran out of voronoi, refilling buffer...")
 				voronoiBuffer = tDuplicate(climateVoronoi)
 			end
 			region.point = tRemoveRandom(voronoiBuffer)
@@ -6393,7 +6453,7 @@ function Space:DrawRiver(seed)
 			usePair = false
 		end
 		if useHex and usePair then
-			if TerrainBuilder.GetRandomNumber(2, "tiny river which direction") == 1 then
+			if mRandom(1, 2) == 1 then
 				usePair = false
 			else
 				useHex = false
@@ -6803,7 +6863,7 @@ function Space:PickCoasts()
 	while #polygonBuffer ~= 0 do
 		local polygon = tRemoveRandom(polygonBuffer)
 		if polygon.continent == nil then
-			if polygon.oceanIndex == nil and TerrainBuilder.GetRandomNumber(10, "coastal polygon dice") < self.coastalPolygonChance then
+			if polygon.oceanIndex == nil and mRandom(0,9) < self.coastalPolygonChance then
 				polygon.coastal = true
 				self.coastalPolygonCount = self.coastalPolygonCount + 1
 				if not polygon:NearOther(nil, "continent") then polygon.loneCoastal = true end
@@ -7202,6 +7262,10 @@ end
 -- ENTRY POINT:
 function GenerateMap()
 	print("Generating Fantastical Map...")
+
+	mRandSeed()
+	-- TestRNGs(5, 10)
+	-- TestRNGs(5, 10, 2)
 	plotTypes = GeneratePlotTypes()
 	terrainTypes = GenerateTerrain()
 	local totalDry = (mySpace.hillCount or 0) + (mySpace.mountainCount or 0) + (mySpace.landCount or 0)
