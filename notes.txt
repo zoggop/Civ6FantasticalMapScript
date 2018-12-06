@@ -9,6 +9,7 @@ find river seeds and draw rivers seperately for each landmass
 	ink the highest scoring river
 	repeat
 
+increase score of rivers that cross deserts
 
 ---
 
