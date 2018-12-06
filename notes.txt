@@ -1,3 +1,17 @@
+river algorithm rework:
+
+calculate the total rainfall for each landmass, and add them up to the total global rainfall
+prescribe river area for each landmass proportional to its total rainfall
+find river seeds and draw rivers seperately for each landmass
+	draw each seed once to collect length data
+	sort the drawn rivers using a modifyable weighted metric adding together distance from target area, length, rainfall, and "height" (mountain, hill, or flat)
+		to control river length, the first river on each landmass can have a target fraction of the prescribed area. the first river is scored by how close it comes to this target. all rivers beyond max out at the same fraction or the fraction remaining, whichever is smaller, but their score is not affected to encourage a variety of river sizes. nor are non-first rivers' scores affectd by length. to encourage long rivers, the target fraction can be set to 1, for many short rivers, 0.1 or something. if the target area of the landmass is below some minimum, the target fraction becomes 1.
+	ink the highest scoring river
+	repeat
+
+
+---
+
 - add ability to set maxIslandSize (instead of always 3 polygons)
 
 - might want to bring back number of islands as a fraction of possible land

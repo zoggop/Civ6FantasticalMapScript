@@ -20,7 +20,7 @@ include "ResourceGenerator"
 include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
-local debugEnabled = false
+local debugEnabled = true
 local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
@@ -160,7 +160,7 @@ local function TBRandom(lower, upper)
 	return TerrainBuilder.GetRandomNumber((upper + 1) - lower, "Fantastical Map Script " .. randomNumbers) + lower
 end
 
-local baseRandFunc = TBRandom -- math.random -- pick the function to be used in mRandom
+local baseRandFunc = math.random -- TBRandom -- math.random -- pick the function to be used in mRandom
 
 -- uses math.random to generate random numbers, but must be seeded with mRandSeed to work with multiplayer
 local function mRandom(lower, upper)
@@ -2731,6 +2731,12 @@ Space = class(function(a)
 	a.climateAssignRainExponent = 0.33 -- curve of how much rain lessens in importance towards the poles in assigning climate voronoi to regions. 1 means no curve, 0.1 means the rain matters the normal amount until a very small portion of the pole
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
 	a.riverForkRatio = 0.33 -- how much of the river area should be reserved for forks
+	a.riverHillOverrideRainfall = 33 -- how much rainfall will cause a river to seed without hills or mountains, and there are no rivers yet on that landmass
+	a.riverScoreLengthMult = 1
+	a.riverScoreRainfallMult = 0.01 -- maximum possible rainfall is 1200
+	a.riverScoreAltitudeMult = 0.5 -- maximum possible altitutde is 24
+	a.maxAreaFractionPerRiver = 0.3 -- maximum fraction of the prescribed river area per landmass for each river
+	a.minMaxAreaPerRiver = 8 -- if the maxAreaFractionPerRiver causes a target single river area to go below this number, this number is used instead
 	a.mountainRangeMaxEdges = 4 -- how many polygon edges long can a mountain range be
 	a.coastRangeRatio = 0.33 -- what ratio of the total mountain ranges should be coastal
 	a.mountainPassSubPolygonRatio = 0.1 -- what portion of a mountain range's subpolygons are passes (not mountains)
@@ -3243,12 +3249,14 @@ function Space:Compute()
 	self:ComputeOceanTemperatures()
 	EchoDebug("computing coasts...")
 	self:ComputeCoasts()
-	EchoDebug("finding river seeds...")
-	self:FindRiverSeeds()
-	EchoDebug("drawing lake rivers...")
-	self:DrawLakeRivers()
-	EchoDebug("drawing rivers...")
-	self:DrawRivers()
+	self:ComputeLandmassRainfalls()
+	self:DrawAllLandmassRivers()
+	-- EchoDebug("finding river seeds...")
+	-- self:FindRiverSeeds()
+	-- EchoDebug("drawing lake rivers...")
+	-- self:DrawLakeRivers()
+	-- EchoDebug("drawing rivers...")
+	-- self:DrawRivers()
 	if self.ancientCitiesCount > 0 or self.postApocalyptic then
 		EchoDebug("drawing ancient cities and roads...")
 		self:DrawRoads()
@@ -6102,7 +6110,161 @@ function Space:LabelMap()
 	end
 end
 
+function Space:ComputeLandmassRainfalls()
+	-- collect all continents (which includes large islands) and tiny islands
+	EchoDebug("collecting landmasses...")
+	self.landmasses = {}
+	for i, continent in pairs(self.continents) do
+		local hexes = {}
+		for ii, polygon in pairs(continent) do
+			for iii, hex in pairs(polygon.hexes) do
+				if not hex.subPolygon.lake then
+					tInsert(hexes, hex)
+				end
+			end
+		end
+		tInsert(self.landmasses, {continent = continent, hexes = hexes})
+	end
+	for i, subPolygon in pairs(self.tinyIslandSubPolygons) do
+		local hexes = {}
+		for ii, hex in pairs(subPolygon.hexes) do
+			if not hex.subPolygon.lake then
+				tInsert(hexes, hex)
+			end
+		end
+		tInsert(self.landmasses, {subPolygon = subPolygon, hexes = hexes})
+	end
+	EchoDebug("computing landmass rainfalls...")
+	self.globalRainfall = 0
+	for i, landmass in pairs(self.landmasses) do
+		local rainfall = 0
+		for ii, hex in pairs(landmass.hexes) do
+			rainfall = rainfall + hex.rainfall
+		end
+		landmass.rainfall = rainfall
+		EchoDebug(#landmass.hexes .. " hex landmass with " .. rainfall .. " rainfall")
+		self.globalRainfall = self.globalRainfall + rainfall
+	end
+	EchoDebug("global rainfall: " .. self.globalRainfall)
+end
+
+function Space:DrawAllLandmassRivers()
+	EchoDebug("drawing rivers for each landmass...")
+	self.riverArea = 0
+	for i, landmass in pairs(self.landmasses) do
+		self:FindLandmassRiverSeeds(landmass)
+		self:DrawLandmassRivers(landmass)
+	end
+end
+
+function Space:FindLandmassRiverSeeds(landmass)
+	if self.oceanNumber == -1 and #self.lakeSubPolygons == 0 then
+		-- no rivers can be drawn if there are no bodies of water on the map
+		EchoDebug("no bodies of water on the map and therefore no rivers")
+		return
+	end
+	local lakeRiverSeeds = {}
+	local riverSeeds = {}
+	for ih, hex in pairs(landmass.hexes) do
+		local neighs, oceanNeighs, lakeNeighs, dryNeighs = {}, {}, {}, {}
+		for d, nhex in pairs(hex:Neighbors()) do
+			if nhex.subPolygon.lake then
+				lakeNeighs[nhex] = d
+			elseif nhex.plotType == plotOcean then
+				oceanNeighs[nhex] = d
+			else
+				dryNeighs[nhex] = d
+			end
+			neighs[nhex] = d
+		end
+		for nhex, d in pairs(dryNeighs) do
+			local lake, seed, connectsToOcean, connectsToLake, validLastHex
+			for dd, nnhex in pairs(nhex:Neighbors()) do
+				if lakeNeighs[nnhex] then
+					seed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = neighs[nnhex], lake = nnhex.subPolygon, dontConnect = true, avoidConnection = true, toWater = true, growsDownstream = true }
+					lakeRiverSeeds[nnhex.subPolygon] = lakeRiverSeeds[nnhex.subPolygon] or {}
+					tInsert(lakeRiverSeeds[nnhex.subPolygon], seed)
+					lake = true
+				elseif neighs[nnhex] then
+					if oceanNeighs[nnhex] then
+						connectsToOcean = true
+					end
+					if lakeNeighs[nnhex] then
+						connectsToLake = true
+					end
+					validLastHex = nnhex
+				end
+			end
+			if validLastHex and not lake and not connectsToLake and not connectsToOcean then
+				seed = { hex = hex, pairHex = nhex, direction = d, lastHex = validLastHex, lastDirection = neighs[validLastHex], dontConnect = true, avoidConnection = true, toWater = true, spawnSeeds = true, growsDownstream = true }
+				tInsert(riverSeeds, seed)
+			end
+		end
+	end
+	landmass.lakeRiverSeeds = lakeRiverSeeds
+	landmass.riverSeeds = riverSeeds
+end
+
+function Space:DrawLandmassRivers(landmass)
+	local rainfallFraction = landmass.rainfall / self.globalRainfall
+	local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea * rainfallFraction)
+	local prescribedForkArea = mCeil(prescribedRiverArea * self.riverForkRatio)
+	local prescribedMainArea = prescribedRiverArea - prescribedForkArea
+	local maxAreaPerRiver = mMax(self.minMaxAreaPerRiver, mCeil(prescribedMainArea * self.maxAreaFractionPerRiver))
+	EchoDebug("landmass fraction of global rainfall: " .. rainfallFraction)
+	EchoDebug("prescribed river area: " .. prescribedRiverArea, "prescribed fork area: " .. prescribedForkArea, "prescribedMainArea: " .. prescribedMainArea)
+	EchoDebug("max area per river: " .. maxAreaPerRiver)
+	local best
+	local bestScore = 0
+	local first = true
+	for i, seed in pairs(landmass.riverSeeds) do
+		if seed.growsDownstream and not seed.altitude then
+			local already = {}
+			local pseudoWatershed = {}
+			for ii, nhex in pairs(seed.hex:Neighbors()) do
+				already[nhex] = true
+				if (nhex.polygon.continent or nhex.subPolygon.tinyIsland) and not nhex.subPolygon.lake then
+					tInsert(pseudoWatershed, nhex)
+				end
+			end
+			for ii, nhex in pairs(seed.pairHex:Neighbors()) do
+				if not already[nhex] and (nhex.polygon.continent or nhex.subPolygon.tinyIsland) and not nhex.subPolygon.lake then
+					tInsert(pseudoWatershed, nhex)
+				end
+			end
+			local rainfall = 0
+			local altitude = 0
+			for ii, hex in pairs(pseudoWatershed) do
+				rainfall = rainfall + hex.rainfall
+				if hex.plotType == plotMountain then
+					altitude = altitude + 2
+				elseif hex.plotType == plotHills then
+					altitude = altitude + 1
+				end
+			end
+			seed.rainfall = rainfall
+			seed.altitude = altitude
+		end
+		local river, done, seedSpawns, endRainfall, area = self:DrawRiver(seed)
+		local rainfall = endRainfall or seed.rainfall
+		if (seed.doneAnywhere or done) and river and #river > 0 and area <= maxAreaPerRiver then
+			local areaDist = 0
+			if first then areaDist = mAbs(maxAreaPerRiver - area) end
+			local score = areaDist + (#river * self.riverScoreLengthMult) + (rainfall * self.riverScoreRainfallMult) + (seed.altitude * self.riverScoreAltitudeMult)
+			if score > bestScore or (score == bestScore and mRandom() < 0.5) then
+				best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done }
+				bestScore = score
+			end
+		end
+		if best then
+			self:InkRiver(best.river, best.seed, best.seedSpawns, best.done)
+			first = false
+		end
+	end
+end
+
 function Space:FindRiverSeeds()
+	self.riverSeedCountByLandmass = {}
 	self.lakeRiverSeeds = {}
 	self.majorRiverSeeds = {}
 	self.minorRiverSeeds = {}
@@ -6147,6 +6309,7 @@ function Space:FindRiverSeeds()
 						end
 						seed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = neighs[nnhex], lake = nnhex.subPolygon, dontConnect = true, avoidConnection = true, toWater = true, growsDownstream = true }
 						tInsert(self.lakeRiverSeeds[nnhex.subPolygon], seed)
+						self.riverSeedCountByLandmass[hex.polygon.continent] = (self.riverSeedCountByLandmass[hex.polygon.continent] or 0) + 1
 					end
 				end
 			end
@@ -6156,7 +6319,7 @@ function Space:FindRiverSeeds()
 				for dd, nnhex in pairs(nhex:Neighbors()) do
 					if neighs[nnhex] then
 						local inTheHills = self:HillsOrMountains(hex, nhex, nnhex) >= 2
-						if mountainNeighs[nnhex] or inTheHills then
+						if mountainNeighs[nnhex] or inTheHills or (not self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] and rainfall > self.riverHillOverrideRainfall) then
 							seed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = neighs[nnhex], rainfall = rainfall, major = true, dontConnect = true, avoidConnection = true, toWater = true, spawnSeeds = true, growsDownstream = true }
 						end
 						if oceanNeighs[nnhex] then
@@ -6169,6 +6332,7 @@ function Space:FindRiverSeeds()
 				end
 				if seed and not connectsToOcean and not connectsToLake then
 					tInsert(self.majorRiverSeeds, seed)
+					self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] = (self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] or 0) + 1
 				end
 			end
 			for nhex, d in pairs(subPolygonNeighs) do
@@ -6185,7 +6349,7 @@ function Space:FindRiverSeeds()
 					end
 					if neighs[nnhex] then
 						local inTheHills = self:HillsOrMountains(hex, nhex, nnhex) >= 2
-						if mountainNeighs[nnhex] or inTheHills then
+						if mountainNeighs[nnhex] or inTheHills or (not self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] and rainfall > self.riverHillOverrideRainfall) then
 							hillSeed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = neighs[nnhex], rainfall = rainfall, minor = true, dontConnect = true, avoidConnection = true, toWater = true, spawnSeeds = true, growsDownstream = true }
 						end
 					end
@@ -6195,8 +6359,10 @@ function Space:FindRiverSeeds()
 				end
 				if oceanSeed then
 					tInsert(self.minorRiverSeeds, oceanSeed)
+					self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] = (self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] or 0) + 1
 				elseif hillSeed and not connectsToOcean and not connectsToLake then
 					tInsert(self.minorRiverSeeds, hillSeed)
+					self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] = (self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] or 0) + 1
 				end
 			end
 			for nhex, d in pairs(hexNeighs) do
@@ -6223,8 +6389,10 @@ function Space:FindRiverSeeds()
 				end
 				if oceanSeed then
 					tInsert(self.tinyRiverSeeds, oceanSeed)
+					self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] = (self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] or 0) + 1
 				elseif hillSeed and not connectsToOcean and not connectsToLake then
 					tInsert(self.tinyRiverSeeds, hillSeed)
+					self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] = (self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] or 0) + 1
 				end
 			end
 		end
@@ -6248,6 +6416,10 @@ function Space:DrawRiver(seed)
 	local direction = seed.direction or hex:GetDirectionTo(pairHex)
 	local lastHex = seed.lastHex
 	local lastDirection = seed.lastDirection or hex:GetDirectionTo(lastHex)
+	local area = 2
+	local isRiver = {}
+	isRiver[hex] = true
+	isRiver[pairHex] = true
 	if hex.plotType == plotOcean or pairHex.plotType == plotOcean then
 		EchoDebug("river will seed next to water")
 	end
@@ -6442,7 +6614,7 @@ function Space:DrawRiver(seed)
 			if pairHex.subPolygon ~= newHex.subPolygon then
 				usePair = true
 			end
-		elseif seed.tiny then
+		else
 			useHex = true
 			usePair = true
 		end
@@ -6474,6 +6646,14 @@ function Space:DrawRiver(seed)
 			-- EchoDebug("NO WAY FORWARD")
 			break
 		end
+		if not isRiver[hex] then
+			area = area + 1
+			isRiver[hex] = true
+		end
+		if not isRiver[pairHex] then
+			area = area + 1
+			isRiver[pairHex] = true
+		end
 		it = it + 1
 	until not newHex or it > 1000
 	local endRainfall
@@ -6481,7 +6661,7 @@ function Space:DrawRiver(seed)
 		endRainfall = mMin(river[#river].hex.rainfall, river[#river].pairHex.rainfall) -- mCeil((river[#river].hex.subPolygon.rainfall + river[#river].pairHex.subPolygon.rainfall) / 2)
 	end
 	-- EchoDebug(it)
-	return river, done, seedSpawns, endRainfall
+	return river, done, seedSpawns, endRainfall, area
 end
 
 function Space:InkRiver(river, seed, seedSpawns, done)
@@ -6578,7 +6758,6 @@ function Space:DrawRivers()
 	local inked = 0
 	local lastCycleInked = 0
 	local recycles = 0
-	local riversByRainfall = {}
 	local maxRiverRainfall = 0
 	local maxRiverData
 	local preInkRivers = 0
