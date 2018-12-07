@@ -1139,7 +1139,7 @@ local function SetConstants()
 	TerrainDictionary = {
 		[terrainGrass] = { points = {{t=76,r=41}, {t=64,r=41}, {t=61,r=50}}, features = { featureNone, featureForest, featureJungle, featureMarsh } },
 		[terrainPlains] = { points = {{t=19,r=41}, {t=21,r=50}}, features = { featureNone, featureForest } },
-		[terrainDesert] = { points = {{t=79,r=14}, {t=56,r=12}, {t=19,r=11}}, features = { featureNone, featureOasis }, specialFeature = featureOasis },
+		[terrainDesert] = { points = {{t=79,r=14}, {t=56,r=12}, {t=19,r=11}}, features = { featureNone, featureOasis } },
 		[terrainTundra] = { points = {{t=11,r=41}, {t=8,r=50}, {t=11,r=11}}, features = { featureNone, featureForest } },
 		[terrainSnow] = { points = {{t=0,r=41}, {t=1,r=49}, {t=0,r=11}}, features = { featureNone } },
 	}
@@ -1717,6 +1717,18 @@ end
 function Hex:Report()
 	for k, v in pairs(self) do
 		EchoDebug(k, " = ", v)
+	end
+end
+
+function Hex:CanBeOasis()
+	if self.terrainType == terrainDesert and not self.isRiver then
+		-- candidate for oasis
+		for i, nhex in pairs(self:Neighbors()) do
+			if nhex.terrainType ~= terrainDesert or nhex.isRiver or nhex.featureType == featureOasis then
+				return false
+			end
+		end
+		return true
 	end
 end
 
@@ -2758,6 +2770,7 @@ Space = class(function(a)
 	a.marshynessMin = 5
 	a.marshynessMax = 33
 	a.marshMinHexRatio = 0.015
+	a.oasisFraction = 0.07 -- of all potential oases (empty desert surrounded by empty desert), what fraction become oases
 	a.inlandSeaContinentRatioMin = 0.02 -- -- minimum size of each inland sea as a fraction of the polygons of the continent they're inside
 	a.inlandSeaContinentRatioMax = 0.02 -- maximum size of each inland sea as a fraction of the polygons of the continent they're inside
 	a.inlandSeasMax = 1 -- maximum number of inland seas
@@ -3893,6 +3906,25 @@ function Space:StripResources()
 	end
 end
 
+function Space:FindOases()
+	local potentialOases = {}
+	for i, hex in pairs(self.hexes) do
+		if hex:CanBeOasis() then 
+			tInsert(potentialOases, hex)
+		end
+	end
+	local prescribedOases = mCeil(#potentialOases * self.oasisFraction)
+	local oasisCount = 0
+	while oasisCount < prescribedOases do
+		local hex = tRemoveRandom(potentialOases)
+		if hex:CanBeOasis() then -- need to check again, in case a neighbor became an oasis
+			hex.featureType = featureOasis
+			oasisCount = oasisCount + 1
+		end
+	end
+	EchoDebug(oasisCount .. " oases of " .. prescribedOases .. " prescribed and " .. #potentialOases + oasisCount .. " possible")
+end
+
 function Space:SetPlots()
 	local plotTypes = {}
 	for i, hex in pairs(self.hexes) do
@@ -3912,6 +3944,7 @@ function Space:SetTerrains()
 end
 
 function Space:SetFeatures()
+	self:FindOases()
 	for i, hex in pairs(self.hexes) do
 		hex:SetFeature()
 	end
