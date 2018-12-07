@@ -1122,9 +1122,9 @@ local function SetConstants()
 	featureIce = g_FEATURE_ICE
 	featureMarsh = g_FEATURE_MARSH
 	featureOasis = g_FEATURE_OASIS
-	featureFloodPlains = g_FEATURE_FLOOD_PLAINS
-	EchoDebug("none " .. featureNone, "forest " .. featureForest, "jungle " .. featureJungle)
-
+	featureFloodPlains = GetGameInfoIndex("Features", "FEATURE_FLOODPLAINS")
+	EchoDebug("flood plains feature", featureFloodPlains)
+	EchoDebug("oasis feature" , featureOasis, GetGameInfoIndex("Features", "FEATURE_OASIS"))
 	featureVolcano = 11 -- g_FEATURE_VOLCANO
 	featureReef = 10 -- g_FEATURE_REEF
 
@@ -1646,6 +1646,7 @@ function Hex:SetFeature()
 		if self.space.falloutEnabled and self.space.contaminatedWater and mRandom(0, 100) < FeatureDictionary[featureFallout].percent then
 			-- self.featureType = featureFallout
 		elseif self.terrainType == terrainDesert and self.plotType == plotLand then
+			EchoDebug("flood plains set", tostring(featureFloodPlains), tostring(g_FEATURE_FLOOD_PLAINS))
 			self.featureType = featureFloodPlains
 		end
 	elseif self.plot:IsCoastalLand() then
@@ -2539,7 +2540,7 @@ function Region:CreateElement(temperature, rainfall, lake)
 	if bestFeature == nil or self.blockFeatures[bestFeature.featureType] or mRandom(1, 100) > bestFeature.percent then bestFeature = FeatureDictionary[bestTerrain.features[1]] end -- default to the first feature in the list
 	if bestFeature.featureType == featureNone and bestTerrain.specialFeature then
 		local sFeature = FeatureDictionary[bestTerrain.specialFeature]
-		if mRandom(1, 100) < sFeature.percent then bestFeature = sFeature end
+		if mRandom() * 100 < sFeature.percent then bestFeature = sFeature end
 	end
 	local plotType = plotLand
 	local terrainType = bestFeature.terrainType or bestTerrain.terrainType
@@ -2730,12 +2731,13 @@ Space = class(function(a)
 	a.climateVoronoiRelaxations = 3 -- number of lloyd relaxations for a region's temperature/rainfall. higher number means less region internal variation
 	a.climateAssignRainExponent = 0.33 -- curve of how much rain lessens in importance towards the poles in assigning climate voronoi to regions. 1 means no curve, 0.1 means the rain matters the normal amount until a very small portion of the pole
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
-	a.riverForkRatio = 0.25 -- how much of the river area should be reserved for forks
+	a.riverForkRatio = 0.2 -- how much of the river area should be reserved for forks
 	a.riverHillOverrideRainfall = 33 -- how much rainfall will cause a river to seed without hills or mountains, and there are no rivers yet on that landmass
 	a.riverScoreLengthMult = 1
 	a.riverScoreRainfallMult = 0.01 -- maximum possible rainfall is 1200
 	a.riverScoreAltitudeMult = 0.5 -- maximum possible altitude is 24
-	a.maxAreaFractionPerRiver = 0.3 -- maximum fraction of the prescribed river area per landmass for each river
+	a.riverScoreDesertMult = 0.5 -- multiplies the amount of desert river tiles river creates (floodplains)
+	a.maxAreaFractionPerRiver = 0.25 -- maximum fraction of the prescribed river area per landmass for each river
 	a.minMaxAreaPerRiver = 10 -- if the maxAreaFractionPerRiver causes a target single river area to go below this number, the whole area prescription for the landmass is used instead
 	a.mountainRangeMaxEdges = 4 -- how many polygon edges long can a mountain range be
 	a.coastRangeRatio = 0.33 -- what ratio of the total mountain ranges should be coastal
@@ -6302,7 +6304,7 @@ function Space:DrawLandmassRivers(landmass)
 		local bestScore = 0
 		for i, seed in pairs(landmass.riverSeeds) do
 			self:AnnotateRiverSeed(seed)
-			local river, done, seedSpawns, endRainfall, endAltitude, area = self:DrawRiver(seed, maxRiverArea, landmass)
+			local river, done, seedSpawns, endRainfall, endAltitude, area, desertArea = self:DrawRiver(seed, maxRiverArea, landmass)
 			local rainfall = endRainfall or seed.rainfall
 			local altitude = endAltitude or seed.altitude
 			if (seed.doneAnywhere or done) and river and #river > 0 and area <= maxRiverArea then
@@ -6310,7 +6312,7 @@ function Space:DrawLandmassRivers(landmass)
 				if first then areaDist = mAbs(maxAreaPerRiver - area) end
 				if not rainfall then EchoDebug("no rainfall") end
 				if not altitude then EchoDebug("no altitude") end
-				local score = areaDist + (#river * self.riverScoreLengthMult) + (rainfall * self.riverScoreRainfallMult) + (altitude * self.riverScoreAltitudeMult)
+				local score = areaDist + (#river * self.riverScoreLengthMult) + (rainfall * self.riverScoreRainfallMult) + (altitude * self.riverScoreAltitudeMult) + (desertArea * self.riverScoreDesertMult)
 				if score > bestScore or (score == bestScore and mRandom() < 0.5) then
 					best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done }
 					bestScore = score
@@ -6336,11 +6338,11 @@ function Space:DrawLandmassRivers(landmass)
 		local bestScore = 0
 		for i, seed in pairs(landmass.forkSeeds) do
 			self:AnnotateRiverSeed(seed)
-			local river, done, seedSpawns, endRainfall, endAltitude, area = self:DrawRiver(seed, maxRiverArea, landmass)
+			local river, done, seedSpawns, endRainfall, endAltitude, area, desertArea = self:DrawRiver(seed, maxRiverArea, landmass)
 			local rainfall = endRainfall or seed.rainfall or 0
 			local altitude = endAltitude or seed.altitude or 0
 			if (seed.doneAnywhere or done) and river and #river > 0 and area <= maxRiverArea then
-				local score = (rainfall * self.riverScoreRainfallMult) + (altitude * self.riverScoreAltitudeMult)
+				local score = (rainfall * self.riverScoreRainfallMult) + (altitude * self.riverScoreAltitudeMult) + (desertArea * self.riverScoreDesertMult)
 				if score > bestScore or (score == bestScore and mRandom() < 0.5) then
 					best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done }
 					bestScore = score
@@ -6510,6 +6512,9 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 	local lastHex = seed.lastHex
 	local lastDirection = seed.lastDirection or hex:GetDirectionTo(lastHex)
 	local area = 2
+	local desertArea = 0
+	if hex.terrainType == terrainDesert then desertArea = desertArea + 1 end
+	if pairHex.terrainType == terrainDesert then desertArea = desertArea + 1 end
 	local isRiver = {}
 	isRiver[hex] = true
 	isRiver[pairHex] = true
@@ -6760,10 +6765,16 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 		end
 		if not isRiver[hex] then
 			area = area + 1
+			if hex.terrainType == terrainDesert then
+				desertArea = desertArea + 1
+			end
 			isRiver[hex] = true
 		end
 		if not isRiver[pairHex] then
 			area = area + 1
+			if pairHex.terrainType == terrainDesert then
+				desertArea = desertArea + 1
+			end
 			isRiver[pairHex] = true
 		end
 		it = it + 1
@@ -6786,7 +6797,7 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 		end
 	end
 	-- EchoDebug(it)
-	return river, done, seedSpawns, endRainfall, endAltitude, area
+	return river, done, seedSpawns, endRainfall, endAltitude, area, desertArea
 end
 
 function Space:InkRiver(river, seed, seedSpawns, done, landmass)

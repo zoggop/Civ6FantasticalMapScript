@@ -11,6 +11,8 @@ find river seeds and draw rivers seperately for each landmass
 
 increase score of rivers that cross deserts
 
+tweak oasis generation: appear only in tiles with all empty desert (no flood plains) surrounding them, and prescribe a percentage rather than doing a random chance
+
 ---
 
 - add ability to set maxIslandSize (instead of always 3 polygons)
