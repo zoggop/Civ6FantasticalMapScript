@@ -848,6 +848,43 @@ local OptionDictionary = {
 				description = "A random amount of mountains and hills." },
 		}
 	},
+	-- 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
+	-- a.riverForkRatio = 0.2 -- how much of the river area should be reserved for forks
+	-- a.riverMaxLakeRatio = 0.4 -- over this much lake-connecting river, stop
+	-- a.riverHillOverrideRainfall = 33 -- how much rainfall will cause a river to seed without hills or mountains, and there are no rivers yet on that landmass
+	-- a.riverFollowPolygonChance = 0.5
+	-- a.riverFollowSubPolygonChance = 0.5
+	-- a.riverScoreLengthMult = 1
+	-- a.riverScoreRainfallMult = 0.0067 -- maximum possible rainfall is 1200
+	-- a.riverScoreAltitudeMult = 0.33 -- maximum possible altitude is 24
+	-- a.riverScoreDesertMult = 0.33 -- multiplies the amount of desert river tiles river creates (floodplains)
+	-- a.maxAreaFractionPerRiver = 0.25 -- maximum fraction of the prescribed river area per landmass for each river
+	{ name = "River Length / Number of Rivers", keys = { "maxAreaFractionPerRiver" }, default = 2,
+	values = {
+			[1] = { name = "Short/Many", values = {0.1},
+				description = "Many short rivers." },
+			[2] = { name = "Medium/Some", values = {0.25},
+				description = "Some medium-length rivers." },
+			[3] = { name = "Long/Few", values = {0.4},
+				description = "Few long rivers." },
+			[4] = { name = "Random", values = "values", lowValues = {0.1}, highValues = {0.4},
+				description = "A random maximum river length / number of rivers." },
+		}
+	},
+	{ name = "River Forks", keys = { "riverForkRatio" }, default = 3,
+	values = {
+			[1] = { name = "None", values = {0.0},
+				description = "Rivers have no tributaries." },
+			[2] = { name = "Few", values = {0.1},
+				description = "Rivers are mostly one channel." },
+			[3] = { name = "Some", values = {0.2},
+				description = "Rivers have some tributaries." },
+			[4] = { name = "Many", values = {0.4},
+				description = "Rivers have many tributaries." },
+			[5] = { name = "Random", values = "values", lowValues = {0.0}, highValues = {0.4},
+				description = "A random amount of river forking." },
+		}
+	},
 	{ name = "Temperature", keys = { "polarExponent", "temperatureMin", "temperatureMax", "freezingTemperature" }, default = 4,
 	values = {
 			[1] = { name = "Snowball", values = {1.8, 0, 15, 16},
@@ -3302,12 +3339,6 @@ function Space:Compute()
 	self:ComputeCoasts()
 	self:ComputeLandmassRainfalls()
 	self:DrawAllLandmassRivers()
-	-- EchoDebug("finding river seeds...")
-	-- self:FindRiverSeeds()
-	-- EchoDebug("drawing lake rivers...")
-	-- self:DrawLakeRivers()
-	-- EchoDebug("drawing rivers...")
-	-- self:DrawRivers()
 	if self.ancientCitiesCount > 0 or self.postApocalyptic then
 		EchoDebug("drawing ancient cities and roads...")
 		self:DrawRoads()
@@ -6380,6 +6411,10 @@ function Space:DrawLandmassRivers(landmass)
 	until landmass.riverArea >= prescribedMainArea or iteration > 50
 	EchoDebug(mainInkedCount .. " main rivers inked", landmass.riverArea .. " river tiles", prescribedMainArea .. " river tiles prescribed for main", iteration .. " iterations", #landmass.forkSeeds .. " fork seeds collected")
 	-- draw branches flowing into the main river channels
+	if prescribedForkArea < 2 then
+		EchoDebug("less than 2 fork river tiles prescribed, there will be no fork rivers")
+		return
+	end
 	local maxAreaPerFork = mMax(self.minForkLength * 2, mCeil(prescribedForkArea * self.maxAreaFractionPerForkRiver))
 	iteration = 0
 	local forkInkedCount = 0
@@ -6407,143 +6442,6 @@ function Space:DrawLandmassRivers(landmass)
 		iteration = iteration + 1
 	until landmass.riverArea >= prescribedRiverArea or iteration > 50
 	EchoDebug(forkInkedCount .. " fork rivers inked", landmass.riverArea .. " river tiles", prescribedRiverArea .. " river tiles prescribed", iteration .. " iterations for forks")
-end
-
-function Space:FindRiverSeeds()
-	self.riverSeedCountByLandmass = {}
-	self.lakeRiverSeeds = {}
-	self.majorRiverSeeds = {}
-	self.minorRiverSeeds = {}
-	self.tinyRiverSeeds = {}
-	if self.oceanNumber == -1 and #self.lakeSubPolygons == 0 then
-		-- no rivers can be drawn if there are no bodies of water on the map
-		EchoDebug("no bodies of water on the map and therefore no rivers")
-		return
-	end
-	local lakeCount = 0
-	for ih, hex in pairs(self.hexes) do
-		if (hex.polygon.continent and not hex.subPolygon.lake) or hex.subPolygon.tinyIsland then
-			local neighs, polygonNeighs, subPolygonNeighs, hexNeighs, oceanNeighs, lakeNeighs, mountainNeighs, dryNeighs = {}, {}, {}, {}, {}, {}, {}, {}
-			for d, nhex in pairs(hex:Neighbors()) do
-				if nhex.subPolygon.lake then
-					lakeNeighs[nhex] = d
-				elseif nhex.plotType == plotOcean then
-					oceanNeighs[nhex] = d
-				else
-					dryNeighs[nhex] = d
-					if nhex.polygon ~= hex.polygon then
-						polygonNeighs[nhex] = d
-					end
-					if nhex.subPolygon ~= hex.subPolygon and nhex.polygon == hex.polygon then
-						subPolygonNeighs[nhex] = d
-					end
-					if nhex.subPolygon == hex.subPolygon and nhex.polygon == hex.polygon then
-						hexNeighs[nhex] = d
-					end
-					if nhex.plotType == plotMountain then
-						mountainNeighs[nhex] = d
-					end
-				end
-				neighs[nhex] = d
-			end
-			for nhex, d in pairs(dryNeighs) do
-				for dd, nnhex in pairs(nhex:Neighbors()) do
-					if lakeNeighs[nnhex] then
-						if self.lakeRiverSeeds[nnhex.subPolygon] == nil then
-							lakeCount = lakeCount + 1
-							self.lakeRiverSeeds[nnhex.subPolygon] = {}
-						end
-						seed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = neighs[nnhex], lake = nnhex.subPolygon, dontConnect = true, avoidConnection = true, toWater = true, growsDownstream = true }
-						tInsert(self.lakeRiverSeeds[nnhex.subPolygon], seed)
-						self.riverSeedCountByLandmass[hex.polygon.continent] = (self.riverSeedCountByLandmass[hex.polygon.continent] or 0) + 1
-					end
-				end
-			end
-			for nhex, d in pairs(polygonNeighs) do
-				local rainfall = mMin(hex.polygon.region.rainfall, nhex.polygon.region.rainfall) -- mFloor((hex.polygon.region.rainfall + nhex.polygon.region.rainfall) / 2)
-				local seed, connectsToOcean, connectsToLake
-				for dd, nnhex in pairs(nhex:Neighbors()) do
-					if neighs[nnhex] then
-						local inTheHills = self:HillsOrMountains(hex, nhex, nnhex) >= 2
-						if mountainNeighs[nnhex] or inTheHills or (not self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] and rainfall > self.riverHillOverrideRainfall) then
-							seed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = neighs[nnhex], rainfall = rainfall, major = true, dontConnect = true, avoidConnection = true, toWater = true, spawnSeeds = true, growsDownstream = true }
-						end
-						if oceanNeighs[nnhex] then
-							connectsToOcean = true
-						end
-						if lakeNeighs[nnhex] then
-							connectsToLake = true
-						end
-					end
-				end
-				if seed and not connectsToOcean and not connectsToLake then
-					tInsert(self.majorRiverSeeds, seed)
-					self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] = (self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] or 0) + 1
-				end
-			end
-			for nhex, d in pairs(subPolygonNeighs) do
-				local oceanSeed, hillSeed, connectsToOcean, connectsToLake
-				for dd, nnhex in pairs(nhex:Neighbors()) do
-					local rainfall = mMin(hex.subPolygon.rainfall, nhex.subPolygon.rainfall, nnhex.subPolygon.rainfall or 100)
-					if oceanNeighs[nnhex] then
-						if not oceanSeed then
-							oceanSeed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = oceanNeighs[nnhex], rainfall = rainfall, minor = true, dontConnect = true, avoidConnection = true, avoidWater = true, toHills = true, spawnSeeds = true }
-						else
-							oceanSeed = nil
-						end
-						connectsToOcean = true
-					end
-					if neighs[nnhex] then
-						local inTheHills = self:HillsOrMountains(hex, nhex, nnhex) >= 2
-						if mountainNeighs[nnhex] or inTheHills or (not self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] and rainfall > self.riverHillOverrideRainfall) then
-							hillSeed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = neighs[nnhex], rainfall = rainfall, minor = true, dontConnect = true, avoidConnection = true, toWater = true, spawnSeeds = true, growsDownstream = true }
-						end
-					end
-					if lakeNeighs[nnhex] then
-						connectsToLake = true
-					end
-				end
-				if oceanSeed then
-					tInsert(self.minorRiverSeeds, oceanSeed)
-					self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] = (self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] or 0) + 1
-				elseif hillSeed and not connectsToOcean and not connectsToLake then
-					tInsert(self.minorRiverSeeds, hillSeed)
-					self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] = (self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] or 0) + 1
-				end
-			end
-			for nhex, d in pairs(hexNeighs) do
-				local oceanSeed, hillSeed, connectsToOcean, connectsToLake
-				for dd, nnhex in pairs(nhex:Neighbors()) do
-					local rainfall = mMin(hex.rainfall, nhex.rainfall, nnhex.rainfall or 100)
-					if oceanNeighs[nnhex] then
-						if not oceanSeed then
-							oceanSeed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = oceanNeighs[nnhex], rainfall = rainfall, tiny = true, dontConnect = true, avoidConnection = true, avoidWater = true, toHills = true, doneAnywhere = true }
-						else
-							oceanSeed = nil
-						end
-						connectsToOcean = true
-					end
-					if neighs[nnhex] then
-						local inTheHills = self:HillsOrMountains(hex, nhex, nnhex) >= 2
-						if mountainNeighs[nnhex] or inTheHills then
-							hillSeed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = neighs[nnhex], rainfall = rainfall, tiny = true, dontConnect = true, avoidConnection = true, toWater = true, growsDownstream = true }
-						end
-					end
-					if lakeNeighs[nnhex] then
-						connectsToLake = true
-					end
-				end
-				if oceanSeed then
-					tInsert(self.tinyRiverSeeds, oceanSeed)
-					self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] = (self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] or 0) + 1
-				elseif hillSeed and not connectsToOcean and not connectsToLake then
-					tInsert(self.tinyRiverSeeds, hillSeed)
-					self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] = (self.riverSeedCountByLandmass[hex.polygon.continent or hex.subPolygon.tinyIsland] or 0) + 1
-				end
-			end
-		end
-	end
-	EchoDebug(lakeCount .. " lakes ", #self.majorRiverSeeds .. " major ", #self.minorRiverSeeds .. " minor ", #self.tinyRiverSeeds .. " tiny")
 end
 
 function Space:HillsOrMountains(...)
@@ -6913,184 +6811,6 @@ function Space:InkRiver(river, seed, seedSpawns, done, landmass)
 	end
 	if seed.flowsInto then tInsert(seed.flowsInto.tributaries, riverThing) end
 	tInsert(self.rivers, riverThing)
-end
-
-function Space:FindLakeFlow(seeds)
-	if self.lakeConnections[seeds[1].lake] then return end
-	local toOcean
-	for si, seed in pairs(seeds) do
-		local river, done, seedSpawns = self:DrawRiver(seed)
-		if done then
-			if done.subPolygon.lake then
-				-- EchoDebug("found lake-to-lake river")
-				self:InkRiver(river, seed, seedSpawns, done)
-				self:FindLakeFlow(self.lakeRiverSeeds[done.subPolygon])
-				return
-			else
-				toOcean = {river = river, seed = seed, seedSpawns = seedSpawns, done = done}
-			end
-		end
-	end
-	if toOcean then
-		-- EchoDebug("found lake-to-ocean river")
-		self:InkRiver(toOcean.river, toOcean.seed, toOcean.seedSpawns, toOcean.done)
-	end
-end
-
-function Space:DrawLakeRivers()
-	self.riverArea = 0
-	self.lakeConnections = {}
-	local lakeSeedBuffer = tDuplicate(self.lakeRiverSeeds)
-	while #lakeSeedBuffer > 0 do
-		local seeds = tRemoveRandom(lakeSeedBuffer)
-		self:FindLakeFlow(seeds)
-	end
-end
-
-function Space:DrawRivers()
-	self.minorForkSeeds, self.tinyForkSeeds = {}, {}
-	local laterRiverSeeds = {}
-	local seedBoxes = { "majorRiverSeeds", "minorRiverSeeds", "tinyRiverSeeds", "minorForkSeeds", "tinyForkSeeds" }
-	local mainSeedBoxes = { "majorRiverSeeds", "minorRiverSeeds", "tinyRiverSeeds" }
-	local forkSeedBoxes = { "minorForkSeeds", "tinyForkSeeds" }
-	self.riverLandRatio = self.riverLandRatio * (self.rainfallMidpoint / 50)
-	local prescribedRiverArea = self.riverLandRatio * self.filledArea
-	local prescribedForkArea = prescribedRiverArea * self.riverForkRatio
-	local prescribedMainArea = prescribedRiverArea - prescribedForkArea
-	local inked = 0
-	local lastCycleInked = 0
-	local recycles = 0
-	local maxRiverRainfall = 0
-	local maxRiverData
-	local preInkRivers = 0
-	local preInkCompared = 0
-	local boxes = mainSeedBoxes
-	while self.riverArea < prescribedRiverArea do
-		local anySeedsAtAll
-		for i, box in pairs(boxes) do
-			local seeds = self[box]
-			if #seeds > 0 then
-				anySeedsAtAll = true
-				local seed = tRemoveRandom(seeds)
-				-- local list = ""
-				-- for key, value in pairs(seed) do list = list .. key .. ": " .. tostring(value) .. ", " end
-				-- EchoDebug("drawing river seed #" .. si, list)
-				local river, done, seedSpawns, endRainfall = self:DrawRiver(seed)
-				local rainfall = endRainfall or seed.rainfall
-				if (seed.doneAnywhere or done) and river and #river > 0 then
-					-- if seed.minor and seed.fork and river then EchoDebug("minor fork is " .. #river .. " long") end
-					-- if seed.tiny and seed.fork and river then EchoDebug("tiny fork is " .. #river .. " long") end
-					-- if alwaysDraw then rainfall = 101 end
-					if rainfall > maxRiverRainfall then
-						if maxRiverData then tInsert(laterRiverSeeds, maxRiverData.seed) end
-						maxRiverRainfall = rainfall
-						maxRiverData = {river = river, seed = seed, seedSpawns = seedSpawns, done = done}
-						preInkCompared = preInkCompared + 1
-					else
-						tInsert(laterRiverSeeds, seed)
-					end
-					preInkRivers = preInkRivers + 1
-				else --if not seed.retries or seed.retries < 2 then
-					tInsert(laterRiverSeeds, seed)
-				end
-			end
-		end
-		if (preInkCompared > 1 or preInkRivers > 3) and maxRiverData then
-			EchoDebug(preInkRivers, preInkCompared, "rainfall: " .. maxRiverRainfall, " length: " .. #maxRiverData.river)
-			local riverData = maxRiverData
-			local river, seed, seedSpawns, done = riverData.river, riverData.seed, riverData.seedSpawns, riverData.done
-			self:InkRiver(river, seed, seedSpawns, done)
-			inked = inked + 1
-			lastCycleInked = lastCycleInked + 1
-			if self.riverArea >= prescribedRiverArea then break end
-			if boxes == mainSeedBoxes and self.riverArea >= prescribedMainArea then
-				EchoDebug(self.riverArea .. " meets non-fork prescription of " .. mFloor(prescribedMainArea))
-				EchoDebug(inked .. " rivers inked so far")
-				EchoDebug(#self.minorForkSeeds .. " minor fork seeds", #self.tinyForkSeeds .. " tiny fork seeds")
-				boxes = forkSeedBoxes
-				laterRiverSeeds = {}
-				recycles = 0
-				lastCycleInked = 0
-			end
-			maxRiverData = nil
-			maxRiverRainfall = 0
-			preInkRivers = 0
-			preInkCompared = 0
-		end
-		if not anySeedsAtAll then
-			if #laterRiverSeeds > 0 then
-				if recycles > 5 and lastCycleInked == 0 then
-					EchoDebug("none inked after five cycles")
-					if boxes == mainSeedBoxes then
-						EchoDebug(self.riverArea .. " does not meet non-fork prescription of " .. mFloor(prescribedMainArea))
-						EchoDebug(inked .. " rivers inked so far")
-						EchoDebug(#self.minorForkSeeds .. " minor fork seeds", #self.tinyForkSeeds .. " tiny fork seeds")
-						boxes = forkSeedBoxes
-						laterRiverSeeds = {}
-						recycles = 0
-						lastCycleInked = 0
-					else
-						break
-					end
-				elseif recycles > 5 and #laterRiverSeeds > 1000 then
-					EchoDebug("too many recycles")
-					if boxes == mainSeedBoxes then
-						EchoDebug(self.riverArea .. " does not meet non-fork prescription of " .. mFloor(prescribedMainArea))
-						EchoDebug(inked .. " rivers inked so far")
-						EchoDebug(#self.minorForkSeeds .. " minor fork seeds", #self.tinyForkSeeds .. " tiny fork seeds")
-						boxes = forkSeedBoxes
-						laterRiverSeeds = {}
-						recycles = 0
-						lastCycleInked = 0
-					else
-						break
-					end
-				else
-					EchoDebug("recycling " .. #laterRiverSeeds .. " unused river seeds (" .. lastCycleInked ..  " rivers inked last cycle" .. ")...")
-					EchoDebug("current river area: " .. self.riverArea .. " of " .. mFloor(prescribedRiverArea) .. " prescribed")
-					for si, seed in pairs(laterRiverSeeds) do
-						seed.retries = (seed.retries or 0) + 1
-						if seed.retries < 4 then
-							if seed.major then
-								tInsert(self.majorRiverSeeds, seed)
-							elseif seed.minor then
-								if seed.fork then
-									tInsert(self.minorForkSeeds, seed)
-								else
-									tInsert(self.minorRiverSeeds, seed)
-								end
-							elseif seed.tiny then
-								if seed.fork then
-									tInsert(self.tinyForkSeeds, seed)
-								else
-									tInsert(self.tinyRiverSeeds, seed)
-								end
-							end
-						end
-					end
-					lastCycleInked = 0
-					recycles = recycles + 1
-				end
-			else
-				EchoDebug("no seeds available at all")			
-				if boxes == mainSeedBoxes then
-					EchoDebug(self.riverArea .. " does not meet non-fork prescription of " .. mFloor(prescribedMainArea))
-					EchoDebug(inked .. " rivers inked so far")
-					EchoDebug(#self.minorForkSeeds .. " minor fork seeds", #self.tinyForkSeeds .. " tiny fork seeds")
-					boxes = forkSeedBoxes
-					laterRiverSeeds = {}
-					recycles = 0
-					lastCycleInked = 0
-				else
-					break
-				end
-			end
-			laterRiverSeeds = {}
-		end
-	end
-	local rlpercent = mFloor( (self.riverArea / self.filledArea) * 100 )
-	local rpercent = mFloor( (self.riverArea / self.iA) * 100 )
-	EchoDebug(inked .. " inked ", " river area: " .. self.riverArea, "(" .. rlpercent .. "% of land, " .. rpercent .. "% of map)")
 end
 
 function Space:DrawRoad(origHex, destHex)
