@@ -181,6 +181,32 @@ local OptionDictionary = {
 				description = "A random amount of mountains and hills." },
 		}
 	},
+	{ name = "River Length / Number of Rivers", keys = { "maxAreaFractionPerRiver" }, default = 2,
+	values = {
+			[1] = { name = "Short/Many", values = {0.1},
+				description = "Many short rivers." },
+			[2] = { name = "Medium/Some", values = {0.25},
+				description = "Some medium-length rivers." },
+			[3] = { name = "Long/Few", values = {0.4},
+				description = "Few long rivers." },
+			[4] = { name = "Random", values = "values", lowValues = {0.1}, highValues = {0.4},
+				description = "A random maximum river length / number of rivers." },
+		}
+	},
+	{ name = "River Forks", keys = { "riverForkRatio" }, default = 3,
+	values = {
+			[1] = { name = "None", values = {0.0},
+				description = "Rivers have no tributaries." },
+			[2] = { name = "Few", values = {0.1},
+				description = "Rivers are mostly one channel." },
+			[3] = { name = "Some", values = {0.2},
+				description = "Rivers have some tributaries." },
+			[4] = { name = "Many", values = {0.4},
+				description = "Rivers have many tributaries." },
+			[5] = { name = "Random", values = "values", lowValues = {0.0}, highValues = {0.4},
+				description = "A random amount of river forking." },
+		}
+	},
 	{ name = "Temperature", keys = { "polarExponent", "temperatureMin", "temperatureMax", "freezingTemperature" }, default = 4,
 	values = {
 			[1] = { name = "Snowball", values = {1.8, 0, 15, 16},
@@ -236,6 +262,7 @@ local OptionDictionary = {
 		}
 	},
 }
+
 
 local fileStartXML = [[<GameInfo>
 	<!-- Add the map script to the list of maps. -->

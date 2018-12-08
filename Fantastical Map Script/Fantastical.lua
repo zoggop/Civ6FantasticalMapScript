@@ -848,17 +848,6 @@ local OptionDictionary = {
 				description = "A random amount of mountains and hills." },
 		}
 	},
-	-- 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
-	-- a.riverForkRatio = 0.2 -- how much of the river area should be reserved for forks
-	-- a.riverMaxLakeRatio = 0.4 -- over this much lake-connecting river, stop
-	-- a.riverHillOverrideRainfall = 33 -- how much rainfall will cause a river to seed without hills or mountains, and there are no rivers yet on that landmass
-	-- a.riverFollowPolygonChance = 0.5
-	-- a.riverFollowSubPolygonChance = 0.5
-	-- a.riverScoreLengthMult = 1
-	-- a.riverScoreRainfallMult = 0.0067 -- maximum possible rainfall is 1200
-	-- a.riverScoreAltitudeMult = 0.33 -- maximum possible altitude is 24
-	-- a.riverScoreDesertMult = 0.33 -- multiplies the amount of desert river tiles river creates (floodplains)
-	-- a.maxAreaFractionPerRiver = 0.25 -- maximum fraction of the prescribed river area per landmass for each river
 	{ name = "River Length / Number of Rivers", keys = { "maxAreaFractionPerRiver" }, default = 2,
 	values = {
 			[1] = { name = "Short/Many", values = {0.1},
@@ -2813,7 +2802,6 @@ Space = class(function(a)
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
 	a.riverForkRatio = 0.2 -- how much of the river area should be reserved for forks
 	a.riverMaxLakeRatio = 0.4 -- over this much lake-connecting river, stop
-	a.riverHillOverrideRainfall = 33 -- how much rainfall will cause a river to seed without hills or mountains, and there are no rivers yet on that landmass
 	a.riverFollowPolygonChance = 0.5
 	a.riverFollowSubPolygonChance = 0.5
 	a.riverScoreLengthMult = 1
