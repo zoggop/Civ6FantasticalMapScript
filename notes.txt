@@ -11,6 +11,8 @@ find river seeds and draw rivers seperately for each landmass
 
 increase score of rivers that cross deserts
 
+make rivers follow polygon and subpolygon boundaries when possible (but not with annoying major/minor/tiny system)
+
 tweak oasis generation: appear only in tiles with all empty desert (no flood plains) surrounding them, and prescribe a percentage rather than doing a random chance
 
 ---
