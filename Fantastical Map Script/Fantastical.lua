@@ -20,7 +20,7 @@ include "ResourceGenerator"
 include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
-local debugEnabled = true
+local debugEnabled = false
 local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
@@ -2801,16 +2801,16 @@ Space = class(function(a)
 	a.climateAssignRainExponent = 0.33 -- curve of how much rain lessens in importance towards the poles in assigning climate voronoi to regions. 1 means no curve, 0.1 means the rain matters the normal amount until a very small portion of the pole
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
 	a.riverForkRatio = 0.2 -- how much of the river area should be reserved for forks
-	a.riverMaxLakeRatio = 0.4 -- over this much lake-connecting river, stop
-	a.riverFollowPolygonChance = 0.5
-	a.riverFollowSubPolygonChance = 0.5
+	a.riverMaxLakeRatio = 0.5 -- over this much lake-connecting river area out of non-fork river area, stop
+	a.riverFollowPolygonChance = 0.5 -- how often out of 1 do rivers follow polygon boundaries
+	a.riverFollowSubPolygonChance = 0.5 -- how often out of 1 do rivers follow subpolygon boundaries
 	a.riverScoreLengthMult = 1
 	a.riverScoreRainfallMult = 0.0067 -- maximum possible rainfall is 1200
 	a.riverScoreAltitudeMult = 0.33 -- maximum possible altitude is 24
 	a.riverScoreDesertMult = 0.33 -- multiplies the amount of desert river tiles river creates (floodplains)
 	a.maxAreaFractionPerRiver = 0.25 -- maximum fraction of the prescribed river area per landmass for each river
 	a.maxAreaFractionPerForkRiver = 0.5 -- maximum fraction of the prescribed fork river area per landmass for each river
-	a.minMaxAreaPerRiver = 10 -- if the maxAreaFractionPerRiver causes a target single river area to go below this number, the whole area prescription for the landmass is used instead
+	a.minMaxAreaPerRiver = 16 -- if the maxAreaFractionPerRiver causes a target single river area to go below this number, the whole area prescription for the landmass is used instead
 	a.minForkLength = 2 -- forks must be at least this long to happen at all
 	a.mountainRangeMaxEdges = 4 -- how many polygon edges long can a mountain range be
 	a.coastRangeRatio = 0.33 -- what ratio of the total mountain ranges should be coastal
@@ -6348,11 +6348,11 @@ end
 function Space:DrawLandmassRivers(landmass)
 	landmass.rainfallFraction = landmass.rainfall / self.globalRainfall
 	landmass.prescribedRiverArea = mMax(2, mCeil(self.riverLandRatio * self.filledArea * landmass.rainfallFraction))
-	landmass.riverMaxLakeArea = mCeil(self.riverMaxLakeRatio * landmass.prescribedRiverArea)
 	local prescribedRiverArea = landmass.prescribedRiverArea
 	local prescribedForkArea = mMax(2, mCeil(prescribedRiverArea * self.riverForkRatio))
 	local prescribedMainArea = mMax(2, prescribedRiverArea - prescribedForkArea)
 	local maxAreaPerRiver = mMax(2, mCeil(prescribedMainArea * self.maxAreaFractionPerRiver))
+	landmass.riverMaxLakeArea = mCeil(self.riverMaxLakeRatio * prescribedMainArea)
 	if prescribedMainArea < self.minMaxAreaPerRiver then
 		maxAreaPerRiver = prescribedRiverArea
 		prescribedMainArea = prescribedRiverArea
