@@ -269,6 +269,8 @@ local fileStartXML = [[<GameInfo>
 	<Maps>
 		<Row File="Fantastical.lua" Name="Fantastical" SortIndex="8"
 			 Description="Surprising lands and squiggly rivers. Highly configurable and randomizable." />
+		<Row Domain="Maps:Expansion1Maps" File="Fantastical.lua" Name="Fantastical" SortIndex="8"
+			 Description="Surprising lands and squiggly rivers. Highly configurable and randomizable." />
 	</Maps>
 
 	<!-- User-selectable parameters for this map. -->
