@@ -6221,10 +6221,10 @@ function Space:ComputeLandmassRainfalls()
 	-- collect all continents (which includes large islands) and tiny islands
 	EchoDebug("collecting landmasses...")
 	self.landmasses = {}
-	for i, continent in pairs(self.continents) do
+	for i, continent in ipairs(self.continents) do
 		local hexes = {}
-		for ii, polygon in pairs(continent) do
-			for iii, hex in pairs(polygon.hexes) do
+		for ii, polygon in ipairs(continent) do
+			for iii, hex in ipairs(polygon.hexes) do
 				if not hex.subPolygon.lake then
 					tInsert(hexes, hex)
 				end
@@ -6232,9 +6232,9 @@ function Space:ComputeLandmassRainfalls()
 		end
 		tInsert(self.landmasses, {continent = continent, hexes = hexes})
 	end
-	for i, subPolygon in pairs(self.tinyIslandSubPolygons) do
+	for i, subPolygon in ipairs(self.tinyIslandSubPolygons) do
 		local hexes = {}
-		for ii, hex in pairs(subPolygon.hexes) do
+		for ii, hex in ipairs(subPolygon.hexes) do
 			if not hex.subPolygon.lake then
 				tInsert(hexes, hex)
 			end
@@ -6271,7 +6271,7 @@ function Space:DrawAllLandmassRivers()
 	self.riverLandRatio = self.riverLandRatio * (self.rainfallMidpoint / 49.5)
 	EchoDebug("original riverLandRatio of " .. oldRiverLandRatio .. " modified by rainfallMidpoint of " .. self.rainfallMidpoint .. " = " .. self.riverLandRatio)
 	self.riverArea = 0
-	for i, landmass in pairs(self.landmasses) do
+	for i, landmass in ipairs(self.landmasses) do
 		self:FindLandmassRiverSeeds(landmass)
 		self:DrawLandmassRivers(landmass)
 	end
@@ -6283,24 +6283,30 @@ function Space:FindLandmassRiverSeeds(landmass)
 		EchoDebug("no bodies of water on the map and therefore no rivers")
 		return
 	end
+	local lakeList = {}
 	local lakeRiverSeeds = {}
 	local riverSeeds = {}
 	local lakeRiverSeedCount = 0
-	for ih, hex in pairs(landmass.hexes) do
+	for ih, hex in ipairs(landmass.hexes) do
 		local neighs, oceanNeighs, lakeNeighs, dryNeighs = {}, {}, {}, {}
-		for d, nhex in pairs(hex:Neighbors()) do
+		local dryNeighList = {}
+		for d, nhex in ipairs(hex:Neighbors()) do
 			if nhex.subPolygon.lake then
 				lakeNeighs[nhex] = d
 			elseif nhex.plotType == plotOcean then
 				oceanNeighs[nhex] = d
 			else
+				if not dryNeighs[nhex] then
+					tInsert(dryNeighList, {hex = nhex, d = d})
+				end
 				dryNeighs[nhex] = d
 			end
 			neighs[nhex] = d
 		end
-		for nhex, d in pairs(dryNeighs) do
+		for idn, dryEntry in ipairs(dryNeighList) do
+			local nhex, d = dryEntry.hex, dryEntry.d
 			local lakeSeed, oceanSeed, validLastHex
-			for dd, nnhex in pairs(nhex:Neighbors()) do
+			for dd, nnhex in ipairs(nhex:Neighbors()) do
 				if lakeNeighs[nnhex] then
 					lakeSeed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = neighs[nnhex], lake = nnhex.subPolygon, dontConnect = true, avoidConnection = true, toWater = true, growsDownstream = true, spawnSeeds = true }
 				elseif oceanNeighs[nnhex] then
@@ -6312,6 +6318,9 @@ function Space:FindLandmassRiverSeeds(landmass)
 			if oceanSeed and not lakeSeed then
 				tInsert(riverSeeds, oceanSeed)
 			elseif lakeSeed and not oceanSeed then
+				if not lakeRiverSeeds[lakeSeed.lake] then
+					tInsert(lakeList, lakeSeed.lake)
+				end
 				lakeRiverSeeds[lakeSeed.lake] = lakeRiverSeeds[lakeSeed.lake] or {}
 				tInsert(lakeRiverSeeds[lakeSeed.lake], lakeSeed)
 				lakeRiverSeedCount = lakeRiverSeedCount + 1
@@ -6323,13 +6332,14 @@ function Space:FindLandmassRiverSeeds(landmass)
 	end
 	landmass.lakeRiverSeeds = lakeRiverSeeds
 	landmass.riverSeeds = riverSeeds
+	landmass.lakeList = lakeList
 	EchoDebug(#riverSeeds .. " river seeds", lakeRiverSeedCount .. " lake river seeds")
 end
 
 function Space:FindLandmassLakeFlow(seeds, landmass)
 	if landmass.lakeConnections[seeds[1].lake] then return end
 	local toOcean
-	for si, seed in pairs(seeds) do
+	for si, seed in ipairs(seeds) do
 		local river, done, seedSpawns, endRainfall, endAltitude, area, desertArea = self:DrawRiver(seed, nil, landmass)
 		if done then
 			if done.subPolygon.lake then
@@ -6353,7 +6363,8 @@ end
 
 function Space:DrawLandmassLakeRivers(landmass)
 	landmass.lakeConnections = {}
-	for subPolygon, seeds in pairs(landmass.lakeRiverSeeds) do
+	for i, subPolygon in ipairs(landmass.lakeList) do
+		local seeds = landmass.lakeRiverSeeds[subPolygon]
 		self:FindLandmassLakeFlow(seeds, landmass)
 		if landmass.riverArea >= landmass.riverMaxLakeArea then
 			break
@@ -6394,7 +6405,7 @@ function Space:DrawLandmassRivers(landmass)
 		local maxRiverArea = mMin(maxAreaPerRiver, prescribedMainArea - landmass.riverArea)
 		local best
 		local bestScore = 0
-		for i, seed in pairs(landmass.riverSeeds) do
+		for i, seed in ipairs(landmass.riverSeeds) do
 			self:AnnotateRiverSeed(seed)
 			local river, done, seedSpawns, endRainfall, endAltitude, area, desertArea = self:DrawRiver(seed, maxRiverArea, landmass)
 			local rainfall = endRainfall or seed.rainfall
@@ -6405,7 +6416,7 @@ function Space:DrawLandmassRivers(landmass)
 				if not rainfall then EchoDebug("no rainfall") end
 				if not altitude then EchoDebug("no altitude") end
 				local score = areaDist + (#river * self.riverScoreLengthMult) + (rainfall * self.riverScoreRainfallMult) + (altitude * self.riverScoreAltitudeMult) + (desertArea * self.riverScoreDesertMult)
-				if score > bestScore or (score == bestScore and mRandom() < 0.5) then
+				if score > bestScore then
 					best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done }
 					bestScore = score
 				end
@@ -6433,14 +6444,14 @@ function Space:DrawLandmassRivers(landmass)
 		local maxRiverArea = mMin(maxAreaPerFork, prescribedRiverArea - landmass.riverArea)
 		local best
 		local bestScore = 0
-		for i, seed in pairs(landmass.forkSeeds) do
+		for i, seed in ipairs(landmass.forkSeeds) do
 			self:AnnotateRiverSeed(seed)
 			local river, done, seedSpawns, endRainfall, endAltitude, area, desertArea = self:DrawRiver(seed, maxRiverArea, landmass)
 			local rainfall = endRainfall or seed.rainfall or 0
 			local altitude = endAltitude or seed.altitude or 0
 			if (seed.doneAnywhere or done) and river and #river >= self.minForkLength and area <= maxRiverArea then
 				local score = (#river * self.riverScoreLengthMult) + (rainfall * self.riverScoreRainfallMult) + (altitude * self.riverScoreAltitudeMult) + (desertArea * self.riverScoreDesertMult)
-				if score > bestScore or (score == bestScore and mRandom() < 0.5) then
+				if score > bestScore then
 					best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done }
 					bestScore = score
 				end
@@ -6509,11 +6520,12 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 			end
 		end
 		local newHex, newDirection, newDirectionPair
-		for d, nhex in pairs(pairHex:Neighbors()) do
+		for d, nhex in ipairs(pairHex:Neighbors()) do
 			if neighs[nhex] and nhex ~= lastHex then
 				newHex = nhex
 				newDirection = neighs[nhex]
 				newDirectionPair = d
+				break
 			end
 		end
 		-- check if the river needs to stop before it gets connected to the next mutual neighbor
@@ -6761,7 +6773,7 @@ end
 
 function Space:InkRiver(river, seed, seedSpawns, done, landmass)
 	local riverThing = { path = river, seed = seed, done = done, riverLength = #river, tributaries = {} }
-	for f, flow in pairs(river) do
+	for f, flow in ipairs(river) do
 		if flow.hex.ofRiver == nil then flow.hex.ofRiver = {} end
 		if seed.reverseFlow then flow.flowDirection = GetOppositeFlowDirection(flow.flowDirection) end
 		--[[
@@ -6793,8 +6805,8 @@ function Space:InkRiver(river, seed, seedSpawns, done, landmass)
 		flow.pairHex.isRiver[seed.flowsInto or riverThing] = true
 		-- EchoDebug(flow.hex:Locate() .. ": " .. tostring(flow.hex.plotType) .. " " .. tostring(flow.hex.subPolygon.lake) .. " " .. tostring(flow.hex.mountainRange), " / ", flow.pairHex:Locate() .. ": " .. tostring(flow.pairHex.plotType) .. " " .. tostring(flow.pairHex.subPolygon.lake).. " " .. tostring(flow.pairHex.mountainRange))
 	end
-	for f, newseeds in pairs(seedSpawns) do
-		for nsi, newseed in pairs(newseeds) do
+	for f, newseeds in ipairs(seedSpawns) do
+		for nsi, newseed in ipairs(newseeds) do
 			newseed.flowsInto = riverThing
 			local riverMile = f
 			if seed.growsDownstream then riverMile = #river - (f-1) end
