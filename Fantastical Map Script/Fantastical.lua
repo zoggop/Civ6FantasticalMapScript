@@ -129,6 +129,7 @@ end
 
 ------------------------------------------------------------------------------
 
+-- only necessary if math.random() is used as baseRandFunc for mRandom
 local function mRandSeed(fixedseed)
 	local seed
 	--fixedseed = 54321
@@ -154,20 +155,15 @@ end
 
 local randomNumbers = 0
 
--- in theory, terrainbuilder's random number gen should be synced across multiplayer, in practice, not so much?
 local function TBRandom(lower, upper)
 	randomNumbers = randomNumbers + 1
 	local number = TerrainBuilder.GetRandomNumber((upper + 1) - lower, "Fantastical Map Script " .. randomNumbers) + lower
-	-- if randomNumbers == 2859 then
-		-- print(randomNumbers .. " : " .. number)
-		-- print(debug.traceback())
-	-- end
 	return number
 end
 
 local baseRandFunc = TBRandom -- TBRandom -- math.random -- pick the function to be used in mRandom
 
--- uses TerrainBuilder.GetRandomNumber to generate random numbers, so that in theory, multiplayer works, but I've heard that it doesn't.
+-- uses TerrainBuilder.GetRandomNumber to generate random numbers, so that in theory, multiplayer works
 local function mRandom(lower, upper)
 	local hundredth
 	if lower and upper then
