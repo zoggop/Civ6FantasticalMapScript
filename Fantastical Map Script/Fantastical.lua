@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-7
+-- version 32-VI-8
 
 --------------------------------------------------------------
 if include == nil then
@@ -157,7 +157,12 @@ local randomNumbers = 0
 -- in theory, terrainbuilder's random number gen should be synced across multiplayer, in practice, not so much?
 local function TBRandom(lower, upper)
 	randomNumbers = randomNumbers + 1
-	return TerrainBuilder.GetRandomNumber((upper + 1) - lower, "Fantastical Map Script " .. randomNumbers) + lower
+	local number = TerrainBuilder.GetRandomNumber((upper + 1) - lower, "Fantastical Map Script " .. randomNumbers) + lower
+	-- if randomNumbers == 2859 then
+		-- print(randomNumbers .. " : " .. number)
+		-- print(debug.traceback())
+	-- end
+	return number
 end
 
 local baseRandFunc = TBRandom -- TBRandom -- math.random -- pick the function to be used in mRandom
@@ -2046,7 +2051,7 @@ function Polygon:FloodFillSea(sea)
 	sea = sea or { polygons = {}, inland = true, astronomyIndex = self.astronomyIndex, continent = self.continent, maxPolygons = mRandom(minPolys, maxPolys) }
 	self.sea = sea
 	tInsert(sea.polygons, self)
-	for i, neighbor in pairs(self.neighbors) do
+	for i, neighbor in ipairs(self.neighbors) do
 		neighbor:FloodFillSea(sea)
 	end
 	return sea
@@ -2335,6 +2340,7 @@ SubEdge = class(function(a, polygon1, polygon2)
 	a.hexes = {}
 	a.pairings = {}
 	a.connections = {}
+	a.connectList = {}
 	polygon1.subEdges[polygon2] = a
 	polygon2.subEdges[polygon1] = a
 	tInsert(a.space.subEdges, a)
@@ -2360,18 +2366,22 @@ function SubEdge:FindConnections()
 	for i, neighbor in pairs(self.polygons[1].neighbors) do
 		neighs[neighbor] = true
 	end
-	local mut = 0
-	local mutual = {}
-	for i, neighbor in pairs(self.polygons[2].neighbors) do
+	local mutuals = {}
+	for i, neighbor in ipairs(self.polygons[2].neighbors) do
 		if neighs[neighbor] then
-			mutual[neighbor] = true
-			mut = mut + 1
+			tInsert(mutuals, neighbor)
 		end
 	end
-	for neighbor, yes in pairs(mutual) do
-		for p, polygon in pairs(self.polygons) do
+	for i, neighbor in ipairs(mutuals) do
+		for p, polygon in ipairs(self.polygons) do
 			local subEdge = neighbor.subEdges[polygon] or polygon.subEdges[neighbor]
+			if not self.connections[subEdge] then
+				tInsert(self.connectList, subEdge)
+			end
 			self.connections[subEdge] = true
+			if not subEdge.connections[self] then
+				tInsert(subEdge.connectList, self)
+			end
 			subEdge.connections[self] = true
 		end
 	end
@@ -2384,6 +2394,7 @@ Edge = class(function(a, polygon1, polygon2)
 	a.polygons = { polygon1, polygon2 }
 	a.subEdges = {}
 	a.connections = {}
+	a.connectList = {}
 	polygon1.edges[polygon2] = a
 	polygon2.edges[polygon1] = a
 	tInsert(a.space.edges, a)
@@ -2398,10 +2409,16 @@ end
 
 function Edge:FindConnections()
 	local cons = 0
-	for i, subEdge in pairs(self.subEdges) do
-		for cedge, yes in pairs(subEdge.connections) do
+	for i, subEdge in ipairs(self.subEdges) do
+		for ii, cedge in ipairs(subEdge.connectList) do
 			if cedge.superEdge and cedge.superEdge ~= self then
+				if not self.connections[cedge.superEdge] then
+					tInsert(self.connectList, cedge.superEdge)
+				end
 				self.connections[cedge.superEdge] = true
+				if not cedge.superEdge.connections[self] then
+					tInsert(cedge.superEdge.connectList, self)
+				end
 				cedge.superEdge.connections[self] = true
 				cons = cons + 1
 			end
@@ -5328,7 +5345,7 @@ function Space:PickMountainRanges()
 	self.continentMountainEdgeCounts = {}
 	-- collect relevent edges
 	local edgeBuffer = {}
-	for i, edge in pairs(self.edges) do
+	for i, edge in ipairs(self.edges) do
 		if (edge.polygons[1].continent or edge.polygons[2].continent) and (edge.polygons[1].region ~= edge.polygons[2].region or edge.polygons[1].continent ~= edge.polygons[2].continent) then
 			tInsert(edgeBuffer, edge)
 		end
@@ -5396,7 +5413,7 @@ function Space:PickMountainRanges()
 				self.continentMountainEdgeCounts[edge.polygons[2].continent] = (self.continentMountainEdgeCounts[edge.polygons[2].continent] or 0) + 1
 			end
 			local edgeCountEst = 0
-			for ise, subEdge in pairs(edge.subEdges) do
+			for ise, subEdge in ipairs(edge.subEdges) do
 				-- pick one side of the subedge
 				local subPolygon
 				local subPolygons = tDuplicate(subEdge.polygons)
@@ -5444,7 +5461,7 @@ function Space:PickMountainRanges()
 				interiorHexCountEstimate = interiorHexCountEstimate + edgeCountEst
 			end
 			local nextEdges = {}
-			for nextEdge, yes in pairs(edge.connections) do
+			for ie, nextEdge in ipairs(edge.connectList) do
 				local okay = false
 				if (nextEdge.polygons[1].continent or nextEdge.polygons[2].continent) and not nextEdge.mountains then
 					if coastRange and (not nextEdge.polygons[1].continent or not nextEdge.polygons[2].continent) then
@@ -5506,7 +5523,7 @@ function Space:PickRangeMountains(range)
 			subPolygon.mountainPass = true
 		end
 		subPolygon.mountainRange = true
-		for ih, hex in pairs(subPolygon.hexes) do
+		for ih, hex in ipairs(subPolygon.hexes) do
 			local passRatio = self.mountainPassNonCoreHexRatio
 			if range.isCoreHex[hex] then
 				passRatio = self.mountainPassHexRatio
