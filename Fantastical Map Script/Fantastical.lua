@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-6
+-- version 32-VI-7
 
 --------------------------------------------------------------
 if include == nil then
@@ -160,9 +160,9 @@ local function TBRandom(lower, upper)
 	return TerrainBuilder.GetRandomNumber((upper + 1) - lower, "Fantastical Map Script " .. randomNumbers) + lower
 end
 
-local baseRandFunc = math.random -- TBRandom -- math.random -- pick the function to be used in mRandom
+local baseRandFunc = TBRandom -- TBRandom -- math.random -- pick the function to be used in mRandom
 
--- uses math.random to generate random numbers, but must be seeded with mRandSeed to work with multiplayer
+-- uses TerrainBuilder.GetRandomNumber to generate random numbers, so that in theory, multiplayer works, but I've heard that it doesn't.
 local function mRandom(lower, upper)
 	local hundredth
 	if lower and upper then
@@ -848,15 +848,15 @@ local OptionDictionary = {
 				description = "A random amount of mountains and hills." },
 		}
 	},
-	{ name = "River Length / Number of Rivers", keys = { "maxAreaFractionPerRiver" }, default = 2,
+	{ name = "River Length / Number of Rivers", keys = { "maxAreaFractionPerRiver", "riverMaxLakeRatio" }, default = 2,
 	values = {
-			[1] = { name = "Short/Many", values = {0.1},
+			[1] = { name = "Short/Many", values = {0.1, 0.25},
 				description = "Many short rivers." },
-			[2] = { name = "Medium/Some", values = {0.25},
+			[2] = { name = "Medium/Some", values = {0.25, 0.5},
 				description = "Some medium-length rivers." },
-			[3] = { name = "Long/Few", values = {0.4},
+			[3] = { name = "Long/Few", values = {0.4, 0.5},
 				description = "Few long rivers." },
-			[4] = { name = "Random", values = "values", lowValues = {0.1}, highValues = {0.4},
+			[4] = { name = "Random", values = "keys",
 				description = "A random maximum river length / number of rivers." },
 		}
 	},
@@ -6250,6 +6250,9 @@ end
 
 function Space:DrawAllLandmassRivers()
 	EchoDebug("drawing rivers for each landmass...")
+	local oldRiverLandRatio = self.riverLandRatio + 0
+	self.riverLandRatio = self.riverLandRatio * (self.rainfallMidpoint / 49.5)
+	EchoDebug("original riverLandRatio of " .. oldRiverLandRatio .. " modified by rainfallMidpoint of " .. self.rainfallMidpoint .. " = " .. self.riverLandRatio)
 	self.riverArea = 0
 	for i, landmass in pairs(self.landmasses) do
 		self:FindLandmassRiverSeeds(landmass)
@@ -6335,6 +6338,9 @@ function Space:DrawLandmassLakeRivers(landmass)
 	landmass.lakeConnections = {}
 	for subPolygon, seeds in pairs(landmass.lakeRiverSeeds) do
 		self:FindLandmassLakeFlow(seeds, landmass)
+		if landmass.riverArea >= landmass.riverMaxLakeArea then
+			break
+		end
 	end
 	EchoDebug((landmass.riverArea or 0) .. " river tiles from lake rivers of " .. landmass.riverMaxLakeArea .. " maximum")
 end
@@ -6389,8 +6395,8 @@ function Space:DrawLandmassRivers(landmass)
 			end
 		end
 		if best then
-			if not best.seed.growsDownstream then EchoDebug("best river grows upstream") end
-			if not best.done then EchoDebug("best river hasnt found target") end
+			-- if not best.seed.growsDownstream then EchoDebug("best river grows upstream") end
+			-- if not best.done then EchoDebug("best river hasnt found target") end
 			self:InkRiver(best.river, best.seed, best.seedSpawns, best.done, landmass)
 			first = false
 			mainInkedCount = mainInkedCount + 1
@@ -7352,7 +7358,7 @@ end
 function GenerateMap()
 	print("Generating Fantastical Map...")
 
-	mRandSeed()
+	-- mRandSeed()
 	-- TestRNGs(5, 10)
 	-- TestRNGs(5, 10, 2)
 	plotTypes = GeneratePlotTypes()
