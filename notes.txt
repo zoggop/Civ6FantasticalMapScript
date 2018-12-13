@@ -1,3 +1,11 @@
+- make it possible for regions to be made of 1 or more subpolygon instead of polygons
+
+- create an algorithm to guess the amount of habitable land per civ, because map size can't be increased after map generation. increase the size of the map if it's too low.
+
+- add ability to set maxIslandSize (instead of always 3 polygons)
+
+---
+
 river algorithm rework:
 
 calculate the total rainfall for each landmass, and add them up to the total global rainfall
@@ -16,8 +24,6 @@ make rivers follow polygon and subpolygon boundaries when possible (but not with
 tweak oasis generation: appear only in tiles with all empty desert (no flood plains) surrounding them, and prescribe a percentage rather than doing a random chance
 
 ---
-
-- add ability to set maxIslandSize (instead of always 3 polygons)
 
 - might want to bring back number of islands as a fraction of possible land
 

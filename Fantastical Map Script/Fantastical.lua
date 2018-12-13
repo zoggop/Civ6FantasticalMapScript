@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-8
+-- version 32-VI-9
 
 --------------------------------------------------------------
 if include == nil then
@@ -20,7 +20,7 @@ include "ResourceGenerator"
 include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
-local debugEnabled = false
+local debugEnabled = true
 local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
@@ -1748,7 +1748,7 @@ end
 
 function Hex:SetContinentArtType()
 	if self.plot == nil then return end
-	if self.polygon.region then
+	if self.polygon.region and type(self.polygon.region) == "boolean" then
 		self.plot:SetContinentArtType(self.polygon.region.artType)
 	else
 		if self.plotType == plotOcean then
@@ -2328,6 +2328,64 @@ function Polygon:DistanceToPolygon(polygon)
 	return self.space:HexDistance(self.x, self.y, polygon.x, polygon.y)
 end
 
+function Polygon:PickSubPolygonRegions()
+	local polygonBuffer = tDuplicate(self.subPolygons)
+	while #polygonBuffer > 0 do
+		local size = mMin(#polygonBuffer, mRandom(self.space.regionSubPolygonSizeMin, self.space.regionSubPolygonSizeMax))
+		local polygon
+		repeat
+			polygon = tRemoveRandom(polygonBuffer)
+			if polygon.region == nil then
+				break
+			else
+				polygon = nil
+			end
+		until #polygonBuffer == 0
+		if polygon ~= nil then
+			local backlog = {}
+			local region = Region(self.space)
+			polygon.region = region
+			tInsert(region.polygons, polygon)
+			region.area = region.area + #polygon.hexes
+			while region.area < self.space.regionAreaMax and #region.polygons < #self.subPolygons do
+				if #polygon.neighbors == 0 then break end
+				local candidates = {}
+				for ni, neighbor in pairs(polygon.neighbors) do
+					if neighbor.superPolygon == self and neighbor.region == nil then
+						tInsert(candidates, neighbor)
+					end
+				end
+				local candidate
+				if #candidates == 0 then
+					if #backlog == 0 then
+						break
+					else
+						repeat
+							candidate = tRemoveRandom(backlog)
+							if candidate.region ~= nil then candidate = nil end
+						 until candidate ~= nil or #backlog == 0
+					end
+				else
+					candidate = tRemoveRandom(candidates)
+				end
+				if candidate == nil then break end
+				if candidate.region then EchoDebug("DUPLICATE REGION POLYGON") end
+				candidate.region = region
+				tInsert(region.polygons, candidate)
+				region.area = region.area + #candidate.hexes
+				polygon = candidate
+				for candi, c in pairs(candidates) do
+					tInsert(backlog, c)
+				end
+			end
+			if region then
+				tInsert(self.space.regions, region)
+				self.space.regionHexCount = self.space.regionHexCount + region.area
+			end
+		end
+	end
+end
+
 ------------------------------------------------------------------------------
 
 SubEdge = class(function(a, polygon1, polygon2)
@@ -2499,8 +2557,12 @@ function Region:CreateCollection()
 		if polygon.polar then self.polar = true end
 		subPolys = subPolys + #polygon.subPolygons
 	end
-	self.size = mMin(self.size, subPolys) -- make sure there aren't more collections than subpolygons in the region
-	self.size = mMin(self.size, #self.point.pixels) -- make sure there aren't more collections than climate pixels
+	if subPolys == 0 then
+		self.size = 1
+	else
+		self.size = mMin(self.size, subPolys) -- make sure there aren't more collections than subpolygons in the region
+	end
+		self.size = mMin(self.size, #self.point.pixels) -- make sure there aren't more collections than climate pixels
 	-- divide pixels into subvoronoi
 	local pixelBuffer = tDuplicate(self.point.pixels)
 	local subPoints = {}
@@ -2645,7 +2707,12 @@ end
 function Region:Fill()
 	local filledHexes = {}
 	for i, polygon in pairs(self.polygons) do
-		for spi, subPolygon in pairs(polygon.subPolygons) do
+		local subPolygons = polygon.subPolygons
+		if #polygon.subPolygons == 0 then
+			-- the polygon is a subpolygon actually
+			subPolygons = { polygon }
+		end
+		for spi, subPolygon in pairs(subPolygons) do
 			local subCollection = tGetRandom(self.collection)
 			if subPolygon.polar ~= subCollection.polar then
 				local subCollectionBuffer = tDuplicate(self.collection)
@@ -2810,6 +2877,7 @@ Space = class(function(a)
 	a.subCollectionSizeMax = 3 -- of how many kinds of tiles does a group consist, at maximum (modified by map size)
 	a.regionSizeMin = 1 -- least number of polygons a region can have
 	a.regionSizeMax = 3 -- most number of polygons a region can have (but most will be limited by their area, which must not exceed half the largest polygon's area)
+	a.regionMaxAreaFraction = 0.25 -- fraction of largest polygon area allowable for a region
 	a.climateVoronoiRelaxations = 3 -- number of lloyd relaxations for a region's temperature/rainfall. higher number means less region internal variation
 	a.climateAssignRainExponent = 0.33 -- curve of how much rain lessens in importance towards the poles in assigning climate voronoi to regions. 1 means no curve, 0.1 means the rain matters the normal amount until a very small portion of the pole
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
@@ -3284,6 +3352,7 @@ function Space:Compute()
     self.nonOceanPolygons = #self.polygons
     self:GetPolygonSizes()
 	EchoDebug("smallest polygon: " .. self.polygonMinArea, "largest polygon: " .. self.polygonMaxArea)
+	self.regionAreaMax = self.polygonMaxArea * self.regionMaxAreaFraction
     EchoDebug("finding polygon neighbors...")
     self:FindPolygonNeighbors()
     EchoDebug("finding subedge connections...")
@@ -3730,8 +3799,16 @@ function Space:ComputeOceanTemperatures()
 			for ni, neighbor in pairs(polygon.neighbors) do
 				if neighbor.continent then
 					polygon.coast = true
-					coastTempTotal = coastTempTotal + neighbor.region.temperature
-					coastTotal = coastTotal + 1
+					if type(neighbor.region) == "boolean" then
+						for isp, subPolygon in pairs(neighbor.subPolygons) do
+							coastTempTotal = coastTempTotal + subPolygon.region.temperature
+							coastTotal = coastTotal + 1
+						end
+						
+					else
+						coastTempTotal = coastTempTotal + neighbor.region.temperature
+						coastTotal = coastTotal + 1
+					end
 					if not coastalContinents[neighbor.continent] then
 						coastalContinents[neighbor.continent] = true
 						polygon.coastContinentsTotal = polygon.coastContinentsTotal + 1
@@ -5622,7 +5699,7 @@ function Space:PickMountainClumps()
 end
 
 function Space:PickRegions()
-	local regionHexCount = 0
+	self.regionHexCount = 0
 	for ci, continent in pairs(self.continents) do
 		local polygonBuffer = {}
 		for polyi, polygon in pairs(continent) do
@@ -5640,45 +5717,52 @@ function Space:PickRegions()
 				end
 			until #polygonBuffer == 0
 			if polygon ~= nil then
-				local backlog = {}
-				local region = Region(self)
-				polygon.region = region
-				tInsert(region.polygons, polygon)
-				region.area = region.area + #polygon.hexes
-				repeat
-					if #polygon.neighbors == 0 then break end
-					local candidates = {}
-					for ni, neighbor in pairs(polygon.neighbors) do
-						if neighbor.continent == continent and neighbor.region == nil then
-							tInsert(candidates, neighbor)
+				if #polygon.hexes > self.regionAreaMax then
+					-- polygon is too big, pick subPolygons instead
+					EchoDebug("polygon is too big, doing subPolygons...")
+					polygon:PickSubPolygonRegions()
+					polygon.region = true
+				else
+					local backlog = {}
+					local region = Region(self)
+					polygon.region = region
+					tInsert(region.polygons, polygon)
+					region.area = region.area + #polygon.hexes
+					while region.area < self.regionAreaMax and #region.polygons < #continent do
+						if #polygon.neighbors == 0 then break end
+						local candidates = {}
+						for ni, neighbor in pairs(polygon.neighbors) do
+							if neighbor.continent == continent and neighbor.region == nil then
+								tInsert(candidates, neighbor)
+							end
 						end
-					end
-					local candidate
-					if #candidates == 0 then
-						if #backlog == 0 then
-							break
+						local candidate
+						if #candidates == 0 then
+							if #backlog == 0 then
+								break
+							else
+								repeat
+									candidate = tRemoveRandom(backlog)
+									if candidate.region ~= nil then candidate = nil end
+								 until candidate ~= nil or #backlog == 0
+							end
 						else
-							repeat
-								candidate = tRemoveRandom(backlog)
-								if candidate.region ~= nil then candidate = nil end
-							 until candidate ~= nil or #backlog == 0
+							candidate = tRemoveRandom(candidates)
 						end
-					else
-						candidate = tRemoveRandom(candidates)
+						if candidate == nil then break end
+						if candidate.region then EchoDebug("DUPLICATE REGION POLYGON") end
+						candidate.region = region
+						tInsert(region.polygons, candidate)
+						region.area = region.area + #candidate.hexes
+						polygon = candidate
+						for candi, c in pairs(candidates) do
+							tInsert(backlog, c)
+						end
 					end
-					if candidate == nil then break end
-					if candidate.region then EchoDebug("DUPLICATE REGION POLYGON") end
-					candidate.region = region
-					tInsert(region.polygons, candidate)
-					region.area = region.area + #candidate.hexes
-					polygon = candidate
-					for candi, c in pairs(candidates) do
-						tInsert(backlog, c)
+					if region then
+						tInsert(self.regions, region)
+						self.regionHexCount = self.regionHexCount + region.area
 					end
-				until #region.polygons == size or region.area > self.polygonMaxArea / 2 or #region.polygons == #continent
-				if region then
-					tInsert(self.regions, region)
-					regionHexCount = regionHexCount + region.area
 				end
 			end
 		end
@@ -5691,11 +5775,10 @@ function Space:PickRegions()
 				polygon.region.area = (polygon.region.area or 0) + #subPolygon.hexes
 			end
 		end
-		regionHexCount = regionHexCount + polygon.region.area
+		self.regionHexCount = self.regionHexCount + polygon.region.area
 		polygon.region.archipelago = true
 		tInsert(self.regions, polygon.region)
 	end
-	self.regionHexCount = regionHexCount
 end
 
 function Space:DistortClimateGrid(grid, tempExponent, rainExponent)
@@ -5802,9 +5885,18 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 		local poleBuffer = tDuplicate(poleSource)
 		while #poleBuffer ~= 0 do
 			local polygon = tRemoveRandom(poleBuffer)
-			if polygon.region and not haveRegion[polygon.region] then
-				haveRegion[polygon.region] = true
-				tInsert(regionBuffer, polygon.region)
+			if polygon.region then
+				if type(polygon.region) == "boolean" then
+					for isp, subPoly in ipairs(polygon.subPolygons) do
+						if subPolygon.region and not haveRegion[subPolygon.region] then
+							haveRegion[subPolygon.region] = true
+							tInsert(regionBuffer, subPolygon.region)
+						end
+					end
+				elseif not haveRegion[polygon.region] then
+					haveRegion[polygon.region] = true
+					tInsert(regionBuffer, polygon.region)
+				end
 			end
 		end
 	end
