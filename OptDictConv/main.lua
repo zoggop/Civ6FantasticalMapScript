@@ -151,14 +151,28 @@ local OptionDictionary = {
 				description = "Flip a coin to decide if the climate follows latitudes." },
  		}
 	},
+	{ name = "Region Size", keys = { "regionAreaMaxFraction" }, default = 3,
+	values = {
+			[1] = { name = "Tiny", values = {0.15},
+				description = "Region pâté." },
+			[2] = { name = "Small", values = {0.3},
+				description = "A nice mash of diced regions, with a few big chunks." },
+			[3] = { name = "Medium", values = {0.5},
+				description = "Regions are chunky but not interminable." },
+			[4] = { name = "Large", values = {0.7},
+				description = "Regions have to be eaten with a knife and fork." },
+			[5] = { name = "Random", values = "values", lowValues = {0.1}, highValues = {0.6},
+				description = "Regions are of a random maximum size." },
+ 		}
+	},
 	{ name = "Granularity", keys = { "polygonCount" }, default = 2,
 	values = {
 			[1] = { name = "Low", values = {100},
-				description = "Larger climactic regions, wider ocean rifts, pointier continents, and fewer islands" },
+				description = "Larger egions, wider ocean rifts, pointier continents, and fewer islands" },
 			[2] = { name = "Standard", values = {200},
 				description = "A balance between global nonuniformity and local nonuniformity." },
 			[3] = { name = "High", values = {300},
-				description = "Smaller climactic regions, skinnier ocean rifts, rounder and snakier continents, and more islands." },
+				description = "Smaller regions, skinnier ocean rifts, rounder and snakier continents, and more islands." },
 			[4] = { name = "Random", values = "values", lowValues = {100}, highValues = {300},
 				description = "A random polygonal density." },
 		}
@@ -181,15 +195,15 @@ local OptionDictionary = {
 				description = "A random amount of mountains and hills." },
 		}
 	},
-	{ name = "River Length / Number of Rivers", keys = { "maxAreaFractionPerRiver" }, default = 2,
+	{ name = "River Length / Number of Rivers", keys = { "maxAreaFractionPerRiver", "riverMaxLakeRatio" }, default = 2,
 	values = {
-			[1] = { name = "Short/Many", values = {0.1},
+			[1] = { name = "Short/Many", values = {0.1, 0.25},
 				description = "Many short rivers." },
-			[2] = { name = "Medium/Some", values = {0.25},
+			[2] = { name = "Medium/Some", values = {0.25, 0.5},
 				description = "Some medium-length rivers." },
-			[3] = { name = "Long/Few", values = {0.4},
+			[3] = { name = "Long/Few", values = {0.4, 0.5},
 				description = "Few long rivers." },
-			[4] = { name = "Random", values = "values", lowValues = {0.1}, highValues = {0.4},
+			[4] = { name = "Random", values = "keys",
 				description = "A random maximum river length / number of rivers." },
 		}
 	},
