@@ -184,6 +184,21 @@
 
 		<Row
 			ConfigurationGroup="Map"
+			ConfigurationId="region_size"
+			DefaultValue="3"
+			Description=""
+			Domain="FNTSTCLDomain_Region_Size"
+			GroupId="MapOptions"
+			Hash="0"
+			Key1="Map"
+			Key2="Fantastical.lua"
+			Name="Region Size"
+			ParameterId="FNTSTCL_Region_Size"
+			SortIndex="400"
+		/>
+
+		<Row
+			ConfigurationGroup="Map"
 			ConfigurationId="granularity"
 			DefaultValue="2"
 			Description=""
@@ -194,7 +209,7 @@
 			Key2="Fantastical.lua"
 			Name="Granularity"
 			ParameterId="FNTSTCL_Granularity"
-			SortIndex="400"
+			SortIndex="410"
 		/>
 
 		<Row
@@ -209,7 +224,7 @@
 			Key2="Fantastical.lua"
 			Name="World Age"
 			ParameterId="FNTSTCL_World_Age"
-			SortIndex="410"
+			SortIndex="420"
 		/>
 
 		<Row
@@ -224,7 +239,7 @@
 			Key2="Fantastical.lua"
 			Name="River Length / Number of Rivers"
 			ParameterId="FNTSTCL_River_Length_/_Number_of_Rivers"
-			SortIndex="420"
+			SortIndex="430"
 		/>
 
 		<Row
@@ -239,7 +254,7 @@
 			Key2="Fantastical.lua"
 			Name="River Forks"
 			ParameterId="FNTSTCL_River_Forks"
-			SortIndex="430"
+			SortIndex="440"
 		/>
 
 		<Row
@@ -254,7 +269,7 @@
 			Key2="Fantastical.lua"
 			Name="Temperature"
 			ParameterId="FNTSTCL_Temperature"
-			SortIndex="440"
+			SortIndex="450"
 		/>
 
 		<Row
@@ -269,7 +284,7 @@
 			Key2="Fantastical.lua"
 			Name="Rainfall"
 			ParameterId="FNTSTCL_Rainfall"
-			SortIndex="450"
+			SortIndex="460"
 		/>
 
 		<Row
@@ -284,7 +299,7 @@
 			Key2="Fantastical.lua"
 			Name="Ancient Roads"
 			ParameterId="FNTSTCL_Ancient_Roads"
-			SortIndex="460"
+			SortIndex="470"
 		/>
 
 	</Parameters>
@@ -367,9 +382,15 @@
 		<Row Description="Climate follows latitudes, like a standard map." Domain="FNTSTCLDomain_Climate_Realism" Name="On" SortIndex="11" Value="2" />
 		<Row Description="Flip a coin to decide if the climate follows latitudes." Domain="FNTSTCLDomain_Climate_Realism" Name="Random" SortIndex="12" Value="3" />
 
-		<Row Description="Larger climactic regions, wider ocean rifts, pointier continents, and fewer islands" Domain="FNTSTCLDomain_Granularity" Name="Low" SortIndex="10" Value="1" />
+		<Row Description="Region pâté." Domain="FNTSTCLDomain_Region_Size" Name="Tiny" SortIndex="10" Value="1" />
+		<Row Description="A nice mash of diced regions, with a few big chunks." Domain="FNTSTCLDomain_Region_Size" Name="Small" SortIndex="11" Value="2" />
+		<Row Description="Regions are chunky but not interminable." Domain="FNTSTCLDomain_Region_Size" Name="Medium" SortIndex="12" Value="3" />
+		<Row Description="Regions have to be eaten with a knife and fork." Domain="FNTSTCLDomain_Region_Size" Name="Large" SortIndex="13" Value="4" />
+		<Row Description="Regions are of a random maximum size." Domain="FNTSTCLDomain_Region_Size" Name="Random" SortIndex="14" Value="5" />
+
+		<Row Description="Larger egions, wider ocean rifts, pointier continents, and fewer islands" Domain="FNTSTCLDomain_Granularity" Name="Low" SortIndex="10" Value="1" />
 		<Row Description="A balance between global nonuniformity and local nonuniformity." Domain="FNTSTCLDomain_Granularity" Name="Standard" SortIndex="11" Value="2" />
-		<Row Description="Smaller climactic regions, skinnier ocean rifts, rounder and snakier continents, and more islands." Domain="FNTSTCLDomain_Granularity" Name="High" SortIndex="12" Value="3" />
+		<Row Description="Smaller regions, skinnier ocean rifts, rounder and snakier continents, and more islands." Domain="FNTSTCLDomain_Granularity" Name="High" SortIndex="12" Value="3" />
 		<Row Description="A random polygonal density." Domain="FNTSTCLDomain_Granularity" Name="Random" SortIndex="13" Value="4" />
 
 		<Row Description="A quarter of the land is mountainous." Domain="FNTSTCLDomain_World_Age" Name="Newest" SortIndex="10" Value="1" />

@@ -819,14 +819,28 @@ local OptionDictionary = {
 				description = "Flip a coin to decide if the climate follows latitudes." },
  		}
 	},
+	{ name = "Region Size", keys = { "regionAreaMaxFraction" }, default = 3,
+	values = {
+			[1] = { name = "Tiny", values = {0.15},
+				description = "Region pâté." },
+			[2] = { name = "Small", values = {0.3},
+				description = "A nice mash of diced regions, with a few big chunks." },
+			[3] = { name = "Medium", values = {0.5},
+				description = "Regions are chunky but not interminable." },
+			[4] = { name = "Large", values = {0.7},
+				description = "Regions have to be eaten with a knife and fork." },
+			[5] = { name = "Random", values = "values", lowValues = {0.1}, highValues = {0.6},
+				description = "Regions are of a random maximum size." },
+ 		}
+	},
 	{ name = "Granularity", keys = { "polygonCount" }, default = 2,
 	values = {
 			[1] = { name = "Low", values = {100},
-				description = "Larger climactic regions, wider ocean rifts, pointier continents, and fewer islands" },
+				description = "Larger egions, wider ocean rifts, pointier continents, and fewer islands" },
 			[2] = { name = "Standard", values = {200},
 				description = "A balance between global nonuniformity and local nonuniformity." },
 			[3] = { name = "High", values = {300},
-				description = "Smaller climactic regions, skinnier ocean rifts, rounder and snakier continents, and more islands." },
+				description = "Smaller regions, skinnier ocean rifts, rounder and snakier continents, and more islands." },
 			[4] = { name = "Random", values = "values", lowValues = {100}, highValues = {300},
 				description = "A random polygonal density." },
 		}
@@ -1704,7 +1718,7 @@ function Hex:SetFeature()
 		if self.space.falloutEnabled and self.space.contaminatedWater and mRandom(0, 100) < FeatureDictionary[featureFallout].percent then
 			-- self.featureType = featureFallout
 		elseif self.terrainType == terrainDesert and self.plotType == plotLand then
-			EchoDebug("flood plains set", tostring(featureFloodPlains), tostring(g_FEATURE_FLOOD_PLAINS))
+			-- EchoDebug("flood plains set", tostring(featureFloodPlains), tostring(g_FEATURE_FLOOD_PLAINS))
 			self.featureType = featureFloodPlains
 		end
 	elseif self.plot:IsCoastalLand() then
@@ -2351,7 +2365,7 @@ function Polygon:PickSubPolygonRegions()
 				if #polygon.neighbors == 0 then break end
 				local candidates = {}
 				for ni, neighbor in pairs(polygon.neighbors) do
-					if neighbor.superPolygon == self and neighbor.region == nil then
+					if neighbor.superPolygon == self and neighbor.region == nil and #neighbor.hexes + region.area < self.space.regionAreaMax then
 						tInsert(candidates, neighbor)
 					end
 				end
@@ -2381,6 +2395,7 @@ function Polygon:PickSubPolygonRegions()
 			if region then
 				tInsert(self.space.regions, region)
 				self.space.regionHexCount = self.space.regionHexCount + region.area
+				self.space.subPolygonRegionCount = self.space.subPolygonRegionCount + 1
 			end
 		end
 	end
@@ -2517,6 +2532,7 @@ function Region:GiveLatitude()
 	end
 	-- self.latitude = self.representativePolygon.latitude
 	self.latitude = latTot / #self.polygons
+	self.latitude = mMax(0, mMin(90, self.latitude))
 end
 
 function Region:GiveParameters()
@@ -2877,9 +2893,10 @@ Space = class(function(a)
 	a.subCollectionSizeMax = 3 -- of how many kinds of tiles does a group consist, at maximum (modified by map size)
 	a.regionSizeMin = 1 -- least number of polygons a region can have
 	a.regionSizeMax = 3 -- most number of polygons a region can have (but most will be limited by their area, which must not exceed half the largest polygon's area)
-	a.regionMaxAreaFraction = 0.25 -- fraction of largest polygon area allowable for a region
+	a.regionAreaMaxFraction = 0.25 -- fraction of largest polygon area allowable for a region
 	a.climateVoronoiRelaxations = 3 -- number of lloyd relaxations for a region's temperature/rainfall. higher number means less region internal variation
 	a.climateAssignRainExponent = 0.33 -- curve of how much rain lessens in importance towards the poles in assigning climate voronoi to regions. 1 means no curve, 0.1 means the rain matters the normal amount until a very small portion of the pole
+	a.climateAssignTemperatureTolerance = 5 -- how far above or below the best temperature match will be allowed for finding the best rainfall match, when assigning climate voronoi to regions
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
 	a.riverForkRatio = 0.2 -- how much of the river area should be reserved for forks
 	a.riverMaxLakeRatio = 0.5 -- over this much lake-connecting river area out of non-fork river area, stop
@@ -3352,7 +3369,8 @@ function Space:Compute()
     self.nonOceanPolygons = #self.polygons
     self:GetPolygonSizes()
 	EchoDebug("smallest polygon: " .. self.polygonMinArea, "largest polygon: " .. self.polygonMaxArea)
-	self.regionAreaMax = self.polygonMaxArea * self.regionMaxAreaFraction
+	self.regionAreaMax = self.polygonMaxArea * self.regionAreaMaxFraction
+	EchoDebug("maximum hexes for a region: " .. self.regionAreaMax)
     EchoDebug("finding polygon neighbors...")
     self:FindPolygonNeighbors()
     EchoDebug("finding subedge connections...")
@@ -3385,7 +3403,7 @@ function Space:Compute()
 	self:PickRegions()
 	-- EchoDebug("distorting climate grid...")
 	-- climateGrid = self:DistortClimateGrid(climateGrid, 1.5, 1)
-	EchoDebug(#self.regions .. " regions")
+	EchoDebug(#self.regions .. " regions", "(" .. self.subPolygonRegionCount .. " subpolygon regions)")
 	EchoDebug("creating climate voronoi...")
 	local regionclimatetime = StartDebugTimer()
 	local cliVorNum = mMin(62 - (self.polygonCount / 8), #self.regions) -- higher granularity makes greater intraregion variability
@@ -3394,9 +3412,11 @@ function Space:Compute()
 		cliVorNum = #self.regions
 	end
 	self.climateVoronoi = self:CreateClimateVoronoi(cliVorNum, self.climateVoronoiRelaxations)
-	EchoDebug(cliVorNum .. " climate voronoi created in " .. StopDebugTimer(regionclimatetime))
-	EchoDebug("assigning climate voronoi to regions...")
-	self:AssignClimateVoronoiToRegions(self.climateVoronoi)
+	EchoDebug(#self.climateVoronoi .. " climate voronoi created in " .. StopDebugTimer(regionclimatetime))
+	if not self.useMapLatitudes then
+		EchoDebug("assigning climate voronoi to regions...")
+		self:AssignClimateVoronoiToRegions(self.climateVoronoi)
+	end
 	EchoDebug("picking mountain ranges...")
     self:PickMountainRanges()
 	EchoDebug("filling regions...")
@@ -3801,10 +3821,15 @@ function Space:ComputeOceanTemperatures()
 					polygon.coast = true
 					if type(neighbor.region) == "boolean" then
 						for isp, subPolygon in pairs(neighbor.subPolygons) do
-							coastTempTotal = coastTempTotal + subPolygon.region.temperature
-							coastTotal = coastTotal + 1
+							for insp, neighSubPoly in pairs(subPolygon.neighbors) do
+								-- only count coastal subpolygons
+								if neighSubPoly.superPolygon == polygon then
+									coastTempTotal = coastTempTotal + subPolygon.region.temperature
+									coastTotal = coastTotal + 1
+									break
+								end
+							end
 						end
-						
 					else
 						coastTempTotal = coastTempTotal + neighbor.region.temperature
 						coastTotal = coastTotal + 1
@@ -5700,6 +5725,7 @@ end
 
 function Space:PickRegions()
 	self.regionHexCount = 0
+	self.subPolygonRegionCount = 0
 	for ci, continent in pairs(self.continents) do
 		local polygonBuffer = {}
 		for polyi, polygon in pairs(continent) do
@@ -5719,7 +5745,6 @@ function Space:PickRegions()
 			if polygon ~= nil then
 				if #polygon.hexes > self.regionAreaMax then
 					-- polygon is too big, pick subPolygons instead
-					EchoDebug("polygon is too big, doing subPolygons...")
 					polygon:PickSubPolygonRegions()
 					polygon.region = true
 				else
@@ -5732,7 +5757,7 @@ function Space:PickRegions()
 						if #polygon.neighbors == 0 then break end
 						local candidates = {}
 						for ni, neighbor in pairs(polygon.neighbors) do
-							if neighbor.continent == continent and neighbor.region == nil then
+							if neighbor.continent == continent and neighbor.region == nil and #neighbor.hexes + region.area < self.regionAreaMax then
 								tInsert(candidates, neighbor)
 							end
 						end
@@ -5801,15 +5826,26 @@ end
 function Space:CreateClimateVoronoi(number, relaxations)
 	relaxations = relaxations or 0
 	local pixelBuffer = {}
-	for t = self.temperatureMin, self.temperatureMax do
-		for r = self.rainfallMin, self.rainfallMax do
-			tInsert(pixelBuffer, {temp=t, rain=r})
-		end
-	end
 	local climateVoronoi = {}
-	for i = 1, number do
-		local point = tRemoveRandom(pixelBuffer)
-		tInsert(climateVoronoi, point)
+	if self.useMapLatitudes then
+		for i, region in ipairs(self.regions) do
+			region:GiveLatitude()
+			local temp = self:GetTemperature(region.latitude)
+			local rain = self:GetRainfall(region.latitude)
+			local point = {temp = temp, rain = rain, regions = {region}}
+			tInsert(climateVoronoi, point)
+			region.point = point
+		end
+	else
+		for t = self.temperatureMin, self.temperatureMax do
+			for r = self.rainfallMin, self.rainfallMax do
+				tInsert(pixelBuffer, {temp=t, rain=r})
+			end
+		end
+		for i = 1, number do
+			local point = tRemoveRandom(pixelBuffer)
+			tInsert(climateVoronoi, point)
+		end
 	end
 	local cullCount = 0
 	for iteration = 1, relaxations + 1 do
@@ -5842,6 +5878,27 @@ function Space:CreateClimateVoronoi(number, relaxations)
 		for i = #climateVoronoi, 1, -1 do
 			local point = climateVoronoi[i]
 			if not point.pixelCount and not point.pixels then
+				if self.useMapLatitudes then
+					-- reassign climate-realistic regions to another point
+					local leastDist
+					local nearestP
+					for i, p in pairs(climateVoronoi) do
+						if p.pixelCount or p.pixels then
+							local dt = mAbs(point.temp - p.temp)
+							local dr = mAbs(point.temp - p.rain)
+							local dist = (dt * dt) + (dr * dr)
+							-- local dist = dt + dr
+							if not leastDist or dist < leastDist then
+								leastDist = dist
+								nearestP = p
+							end
+						end
+					end
+					for ir, region in pairs(point.regions) do
+						region.point = nearestP
+						tInsert(nearestP.regions, region)
+					end
+				end
 				tRemove(climateVoronoi, i)
 				cullCount = cullCount + 1
 			end
@@ -5852,15 +5909,22 @@ function Space:CreateClimateVoronoi(number, relaxations)
 				local point = climateVoronoi[i]
 				point.temp = point.totalT / point.pixelCount
 				point.rain = point.totalR / point.pixelCount
-				if relaxation == relaxations then
+				if iteration == relaxations then
 					-- integerize at the last relaxation
-					point.temp = mFloor(point.temp)
-					point.rain = mFloor(point.rain)
+					point.temp = int(point.temp)
+					point.rain = int(point.rain)
 				end
 				point.totalT = nil
 				point.totalR = nil
 				point.pixelCount = nil
 			end
+		end
+	end
+	if self.useMapLatitudes then
+		for i, region in pairs(self.regions) do
+			region.temperature = region.point.temp
+			region.rainfall = region.point.rain
+			EchoDebug("l: " .. region.latitude, "t: " .. region.temperature, "r: " .. region.rainfall, "p: " .. #region.point.pixels)
 		end
 	end
 	EchoDebug(cullCount .. " points culled")
@@ -5887,7 +5951,7 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 			local polygon = tRemoveRandom(poleBuffer)
 			if polygon.region then
 				if type(polygon.region) == "boolean" then
-					for isp, subPoly in ipairs(polygon.subPolygons) do
+					for isp, subPolygon in ipairs(polygon.subPolygons) do
 						if subPolygon.region and not haveRegion[subPolygon.region] then
 							haveRegion[subPolygon.region] = true
 							tInsert(regionBuffer, subPolygon.region)
@@ -5908,26 +5972,77 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 			tInsert(regionBuffer, region)
 		end
 	end
-	for i, region in pairs(regionBuffer) do
+	for i, region in ipairs(regionBuffer) do
 		if self.useMapLatitudes then
 			region:GiveLatitude()
 			local temp = self:GetTemperature(region.latitude)
 			local rain = self:GetRainfall(region.latitude)
-			local bestDist, bestPoint, bestIndex
-			local rainWeight = ((90 - region.latitude) ^ self.climateAssignRainExponent) / self.climateAssignRainExponentNinety
-			local tempWeight = 2 - rainWeight
-			for ii, point in pairs(voronoiBuffer) do
+			-- local bestDist, bestPoint, bestIndex
+			-- local rainWeight = ((90 - region.latitude) ^ self.climateAssignRainExponent) / self.climateAssignRainExponentNinety
+			-- local tempWeight = 2 - rainWeight
+			-- for ii, point in pairs(voronoiBuffer) do
+			-- 	local dt = mAbs(temp - point.temp)
+			-- 	local dr = mAbs(rain - point.rain)
+			-- 	local dist = (dt * dt * tempWeight) + (dr * dr * rainWeight)
+			-- 	local dist = dt
+			-- 	if not bestDist or dist < bestDist then
+			-- 		bestDist = dist
+			-- 		bestPoint = point
+			-- 		bestIndex = ii
+			-- 	end
+			-- end
+			local bestTempDist
+			-- find the nearest by temperature first
+			for ii, point in ipairs(voronoiBuffer) do
 				local dt = mAbs(temp - point.temp)
-				local dr = mAbs(rain - point.rain)
-				local dist = (dt * dt * tempWeight) + (dr * dr * rainWeight)
-				if not bestDist or dist < bestDist then
-					bestDist = dist
-					bestPoint = point
-					bestIndex = ii
+				if not bestTempDist or dt < bestTempDist then
+					bestTempDist = dt
 				end
 			end
+			-- if bestTempDist > 25 then
+			-- 	-- there's not a good option left, use a duplicate
+			-- 	EchoDebug("using a duplicate climate voronoi point for temp")
+			-- 	for ii, point in ipairs(climateVoronoi) do
+			-- 		if not bestTempDist or dt < bestTempDist then
+			-- 			bestTempDist = dt
+			-- 		end
+			-- 	end
+			-- end
+			local bestRainDist, bestPoint, bestIndex
+			-- then among the nearest temperatures, find the nearest rainfall
+			local rainWeight = (90 - region.latitude) / 90
+			-- local temperatureTolerance = mCeil(mMax(1, rainWeight * 2 * self.climateAssignTemperatureTolerance))
+			local temperatureTolerance = self.climateAssignTemperatureTolerance
+			for ii, point in pairs(voronoiBuffer) do
+				local dt = mAbs(temp - point.temp)
+				local ddt = dt - bestTempDist
+				if ddt <= self.climateAssignTemperatureTolerance then
+					local dr = mAbs(rain - point.rain)
+					if not bestRainDist or dr < bestRainDist then
+						bestRainDist = dr
+						bestPoint = point
+						bestIndex = ii
+					end
+				end
+			end
+			-- if bestRainDist > 25 then
+			-- 	-- no good option, use a duplicate
+			-- 	EchoDebug("using a duplicate climate voronoi point for rain")
+			-- 	for ii, point in pairs(climateVoronoi) do
+			-- 		local dt = mAbs(temp - point.temp)
+			-- 		local ddt = dt - bestTempDist
+			-- 		if ddt <= self.climateAssignTemperatureTolerance then
+			-- 			local dr = mAbs(rain - point.rain)
+			-- 			if not bestRainDist or dr < bestRainDist then
+			-- 				bestRainDist = dr
+			-- 				bestPoint = point
+			-- 				bestIndex = ii
+			-- 			end
+			-- 		end
+			-- 	end
+			-- end
 			region.point = bestPoint
-			EchoDebug("latitude: " .. region.latitude, "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "vt: " .. mCeil(bestPoint.temp), "vr: " .. mCeil(bestPoint.rain), "tempWeight: " .. tempWeight, "rainWeight: " .. rainWeight)
+			EchoDebug("latitude: " .. mCeil(region.latitude), "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "vt: " .. mCeil(bestPoint.temp), "vr: " .. mCeil(bestPoint.rain), "temptol: " .. temperatureTolerance)
 			if #voronoiBuffer == 0 then
 				EchoDebug("ran out of voronoi, refilling buffer...")
 				voronoiBuffer = tDuplicate(climateVoronoi)
