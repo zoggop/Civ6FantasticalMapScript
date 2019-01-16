@@ -6483,12 +6483,14 @@ function Space:DrawAllLandmassRivers()
 	EchoDebug("drawing rivers for each landmass...")
 	local oldRiverLandRatio = self.riverLandRatio + 0
 	self.riverLandRatio = self.riverLandRatio * (self.rainfallMidpoint / 49.5)
-	EchoDebug("original riverLandRatio of " .. oldRiverLandRatio .. " modified by rainfallMidpoint of " .. self.rainfallMidpoint .. " = " .. self.riverLandRatio)
+	EchoDebug("original riverLandRatio of " .. oldRiverLandRatio .. " modified by rainfallMidpoint of " .. self.rainfallMidpoint .. " is now " .. self.riverLandRatio)
+	local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea)
 	self.riverArea = 0
 	for i, landmass in ipairs(self.landmasses) do
 		self:FindLandmassRiverSeeds(landmass)
 		self:DrawLandmassRivers(landmass)
 	end
+	EchoDebug(self.riverArea .. " river tiles created of " .. prescribedRiverArea)
 end
 
 function Space:FindLandmassRiverSeeds(landmass)
@@ -6615,7 +6617,7 @@ function Space:DrawLandmassRivers(landmass)
 	local first = true
 	local iteration = 0
 	local deadIteration = 0
-	local lastLandmassRiverArea = 0
+	local lastLandmassRiverArea = landmass.riverArea + 0
 	local mainInkedCount = 0
 	repeat
 		local maxRiverArea = mMin(maxAreaPerRiver, prescribedMainArea - landmass.riverArea)
@@ -6661,6 +6663,8 @@ function Space:DrawLandmassRivers(landmass)
 	end
 	local maxAreaPerFork = mMax(self.minForkLength * 2, mCeil(prescribedForkArea * self.maxAreaFractionPerForkRiver))
 	iteration = 0
+	deadIteration = 0
+	lastLandmassRiverArea = landmass.riverArea + 0
 	local forkInkedCount = 0
 	repeat
 		local maxRiverArea = mMin(maxAreaPerFork, prescribedRiverArea - landmass.riverArea)
@@ -6683,8 +6687,14 @@ function Space:DrawLandmassRivers(landmass)
 			self:InkRiver(best.river, best.seed, best.seedSpawns, best.done, landmass)
 			forkInkedCount = forkInkedCount + 1
 		end
+		if landmass.riverArea == lastLandmassRiverArea then
+			deadIteration = deadIteration + 1
+		else
+			deadIteration = 0
+		end
+		lastLandmassRiverArea = landmass.riverArea + 0
 		iteration = iteration + 1
-	until landmass.riverArea >= prescribedRiverArea or iteration > 50
+	until landmass.riverArea >= prescribedRiverArea or deadIteration > 5 or iteration > 50
 	EchoDebug(forkInkedCount .. " fork rivers inked", landmass.riverArea .. " river tiles", prescribedRiverArea .. " river tiles prescribed", iteration .. " iterations for forks")
 end
 
