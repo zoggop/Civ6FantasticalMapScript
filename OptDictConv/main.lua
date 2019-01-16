@@ -153,7 +153,7 @@ local OptionDictionary = {
 	},
 	{ name = "Region Size", keys = { "regionAreaMaxFraction" }, default = 3,
 	values = {
-			[1] = { name = "Tiny", values = {0.15},
+			[1] = { name = "Tiny", values = {0.1},
 				description = "Region pâté." },
 			[2] = { name = "Small", values = {0.3},
 				description = "A nice mash of diced regions, with a few big chunks." },
@@ -161,18 +161,20 @@ local OptionDictionary = {
 				description = "Regions are chunky but not interminable." },
 			[4] = { name = "Large", values = {0.7},
 				description = "Regions have to be eaten with a knife and fork." },
-			[5] = { name = "Random", values = "values", lowValues = {0.1}, highValues = {0.6},
+			[5] = { name = "Enormous", values = {1.0},
+				description = "Regions bigger than the plate." },
+			[6] = { name = "Random", values = "values", lowValues = {0.1}, highValues = {0.9},
 				description = "Regions are of a random maximum size." },
  		}
 	},
 	{ name = "Granularity", keys = { "polygonCount" }, default = 2,
 	values = {
 			[1] = { name = "Low", values = {100},
-				description = "Larger egions, wider ocean rifts, pointier continents, and fewer islands" },
+				description = "Wider ocean rifts, pointier continents, and fewer islands" },
 			[2] = { name = "Standard", values = {200},
 				description = "A balance between global nonuniformity and local nonuniformity." },
 			[3] = { name = "High", values = {300},
-				description = "Smaller regions, skinnier ocean rifts, rounder and snakier continents, and more islands." },
+				description = "Skinnier ocean rifts, rounder and snakier continents, and more islands." },
 			[4] = { name = "Random", values = "values", lowValues = {100}, highValues = {300},
 				description = "A random polygonal density." },
 		}

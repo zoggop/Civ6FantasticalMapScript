@@ -386,11 +386,12 @@
 		<Row Description="A nice mash of diced regions, with a few big chunks." Domain="FNTSTCLDomain_Region_Size" Name="Small" SortIndex="11" Value="2" />
 		<Row Description="Regions are chunky but not interminable." Domain="FNTSTCLDomain_Region_Size" Name="Medium" SortIndex="12" Value="3" />
 		<Row Description="Regions have to be eaten with a knife and fork." Domain="FNTSTCLDomain_Region_Size" Name="Large" SortIndex="13" Value="4" />
-		<Row Description="Regions are of a random maximum size." Domain="FNTSTCLDomain_Region_Size" Name="Random" SortIndex="14" Value="5" />
+		<Row Description="Regions bigger than the plate." Domain="FNTSTCLDomain_Region_Size" Name="Enormous" SortIndex="14" Value="5" />
+		<Row Description="Regions are of a random maximum size." Domain="FNTSTCLDomain_Region_Size" Name="Random" SortIndex="15" Value="6" />
 
-		<Row Description="Larger egions, wider ocean rifts, pointier continents, and fewer islands" Domain="FNTSTCLDomain_Granularity" Name="Low" SortIndex="10" Value="1" />
+		<Row Description="Wider ocean rifts, pointier continents, and fewer islands" Domain="FNTSTCLDomain_Granularity" Name="Low" SortIndex="10" Value="1" />
 		<Row Description="A balance between global nonuniformity and local nonuniformity." Domain="FNTSTCLDomain_Granularity" Name="Standard" SortIndex="11" Value="2" />
-		<Row Description="Smaller regions, skinnier ocean rifts, rounder and snakier continents, and more islands." Domain="FNTSTCLDomain_Granularity" Name="High" SortIndex="12" Value="3" />
+		<Row Description="Skinnier ocean rifts, rounder and snakier continents, and more islands." Domain="FNTSTCLDomain_Granularity" Name="High" SortIndex="12" Value="3" />
 		<Row Description="A random polygonal density." Domain="FNTSTCLDomain_Granularity" Name="Random" SortIndex="13" Value="4" />
 
 		<Row Description="A quarter of the land is mountainous." Domain="FNTSTCLDomain_World_Age" Name="Newest" SortIndex="10" Value="1" />
