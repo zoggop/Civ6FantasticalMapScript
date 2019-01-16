@@ -20,7 +20,7 @@ include "ResourceGenerator"
 include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
-local debugEnabled = false
+local debugEnabled = true
 local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
@@ -3247,8 +3247,10 @@ function Space:CreatePseudoLatitudes()
 	self.pseudoLatitudes = pseudoLatitudes
 end
 
-function Space:Compute()
-    self.iW, self.iH = Map.GetGridSize()
+function Space:Compute(setWidth, setHeight, stopAfterLandforms)
+	local gridSizeX, gridSizeY = Map.GetGridSize()
+    self.iW = setWidth or gridSizeX
+    self.iH = setHeight or gridSizeY
     self.iA = self.iW * self.iH
     self.areaMod = mFloor( (self.iA ^ 0.75) / 360 )
     self.areaMod2 = mFloor( (self.iA ^ 0.75) / 500 )
@@ -3425,6 +3427,9 @@ function Space:Compute()
 	self:FillRegions()
 	EchoDebug("computing landforms...")
 	self:ComputeLandforms()
+	if stopAfterLandforms then
+		return
+	end
 	EchoDebug("computing ocean temperatures...")
 	self:ComputeOceanTemperatures()
 	EchoDebug("computing coasts...")
@@ -4195,7 +4200,7 @@ function Space:InitPolygons(availableHexes)
 	end
 	for i = 1, self.polygonCount do
 		local polygon
-		if availableHexes then
+		if availableHexes and #availableHexes > 0 then
 			local hex = tRemoveRandom(availableHexes)
 			polygon = Polygon(self, hex.x, hex.y)
 		else
@@ -5077,7 +5082,10 @@ function Space:PickContinents()
 	self.majorContinentsInBasin = {}
 	local islandsInBasin = {}
 	local largeEnoughBasinIndices = {}
-	local basinSizeMin = #self.largestAstronomyBasin / 2
+	local basinSizeMin = 0
+	if self.largestAstronomyBasin then
+		basinSizeMin = #self.largestAstronomyBasin / 2
+	end
 	for astronomyIndex, basin in pairs(self.astronomyBasins) do
 		self.majorContinentsInBasin[astronomyIndex] = 0
 		islandsInBasin[astronomyIndex] = 0
@@ -6606,6 +6614,8 @@ function Space:DrawLandmassRivers(landmass)
 	-- draw the main rivers without branches:
 	local first = true
 	local iteration = 0
+	local deadIteration = 0
+	local lastLandmassRiverArea = 0
 	local mainInkedCount = 0
 	repeat
 		local maxRiverArea = mMin(maxAreaPerRiver, prescribedMainArea - landmass.riverArea)
@@ -6635,8 +6645,14 @@ function Space:DrawLandmassRivers(landmass)
 			first = false
 			mainInkedCount = mainInkedCount + 1
 		end
+		if landmass.riverArea == lastLandmassRiverArea then
+			deadIteration = deadIteration + 1
+		else
+			deadIteration = 0
+		end
+		lastLandmassRiverArea = landmass.riverArea + 0
 		iteration = iteration + 1
-	until landmass.riverArea >= prescribedMainArea or iteration > 50
+	until landmass.riverArea >= prescribedMainArea or deadIteration > 5 or iteration > 50
 	EchoDebug(mainInkedCount .. " main rivers inked", landmass.riverArea .. " river tiles", prescribedMainArea .. " river tiles prescribed for main", iteration .. " iterations", #landmass.forkSeeds .. " fork seeds collected")
 	-- draw branches flowing into the main river channels
 	if prescribedForkArea < 2 then
@@ -7507,6 +7523,33 @@ function GetMapInitData(worldSize)
 			grid_width = mSqrt(grid_area)
 			grid_height = grid_width
 		end
+	end
+
+	-- create a scaled-down test map to see if there will be enough land per civilization
+	local testDivisor = 4
+	if mMin(grid_width, grid_height) < 50 then
+		testDivisor = 2
+	elseif mMin(grid_width, grid_height) < 90 then
+		testDivisor = 3
+	end
+	local testWidth = mCeil(grid_width / testDivisor)
+	local testHeight = mCeil(grid_height / testDivisor)
+	local testAreaDivisor = (grid_width * grid_height) / (testWidth * testHeight)
+	SetConstants()
+	local testSpace = Space()
+	testSpace:GetPlayerTeamInfo()
+	testSpace:SetOptions(OptionDictionary)
+	testSpace:Compute(testWidth, testHeight, true)
+	local normalLandPerCiv = 178 / testAreaDivisor
+	local landPerCiv = (testSpace.filledArea - testSpace.totalMountains) / testSpace.iNumCivs
+	-- landPerCiv = landPerCiv * 2.5 -- because when everything is scaled down it's not that accurate
+	local landPerCivNormRatio = landPerCiv / normalLandPerCiv
+	EchoDebug("test map " .. testWidth .. "x" .. testHeight .. " had " .. testSpace.filledArea .. " land tiles and " .. landPerCiv .. " land tiles per civ, which is " .. landPerCivNormRatio .. " of normal")
+	if landPerCivNormRatio < 0.75 then
+		local mapSizeMult = mMin(1.4, mSqrt(1 / landPerCivNormRatio))
+		EchoDebug("map predicted to only have " .. landPerCivNormRatio .. " of normal land per civ, multiplying dimensions by " .. mapSizeMult)
+		grid_width = mFloor(grid_width * mapSizeMult)
+		grid_height = mFloor(grid_height * mapSizeMult)
 	end
 	
 	EchoDebug(grid_width .. "x" .. grid_height .. " map")
