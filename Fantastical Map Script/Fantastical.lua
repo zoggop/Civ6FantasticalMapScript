@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-9
+-- version 32-VI-10
 
 --------------------------------------------------------------
 if include == nil then
@@ -6116,7 +6116,8 @@ end
 function Space:FillRegions()
 	self.minLakes = mCeil(self.lakeMinRatio * self.filledSubPolygons)
 	self.lakeynessMax = mMin(100, mCeil((self.lakeMinRatio / 0.175) * 100))
-	self.marshMinHexes = mFloor(self.marshMinHexRatio * self.filledArea)
+	local rainAdjustedMarshRatio = mMin(1, self.marshMinHexRatio * (self.rainfallMidpoint / 49.5))
+	self.marshMinHexes = mFloor(rainAdjustedMarshRatio * self.filledArea)
 	self.marshHexCount = 0
 	self.totalRegionHills = 0
 	EchoDebug(self.minLakes .. " minimum lake subpolygons (of " .. self.filledSubPolygons .. ") ", self.marshMinHexes .. " minimum marsh hexes")
