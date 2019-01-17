@@ -2703,7 +2703,7 @@ function Region:CreateElement(temperature, rainfall, lake)
 		plotType = plotHills
 		self.hillCount = self.hillCount + 1
 	end
-	if self.latitude > 30 and featureType == featureJungle then
+	if self.latitude and self.latitude > 30 and featureType == featureJungle then
 		EchoDebug("jungle at high latitude", "L: " .. self.latitude, "T: " .. temperature, "R: " .. rainfall, "regT: " .. self.temperature, "regR: " .. self.rainfall)
 	end
 	return { plotType = plotType, terrainType = terrainType, featureType = featureType, temperature = temperature, rainfall = rainfall, lake = lake }
@@ -5951,9 +5951,7 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 				end
 			end
 			region.point = bestPoint
-			if bestPoint.temp > 60 and bestPoint.rain > 70 then
-				EchoDebug("latitude: " .. mCeil(region.latitude), "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "vt: " .. mCeil(bestPoint.temp), "vr: " .. mCeil(bestPoint.rain))
-			end
+			-- EchoDebug("latitude: " .. mCeil(region.latitude), "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "vt: " .. mCeil(bestPoint.temp), "vr: " .. mCeil(bestPoint.rain))
 			if #voronoiBuffer == 0 then
 				EchoDebug("ran out of voronoi, refilling buffer...")
 				voronoiBuffer = tDuplicate(climateVoronoi)
@@ -7212,7 +7210,7 @@ function Space:RealmLatitude(y)
 end
 
 function Space:GetTemperature(latitude, noFloor)
-	latitude = mFloor(latitude)
+	if latitude then latitude = mMin(90, mMax(0, int(latitude))) end
 	local temp
 	if self.pseudoLatitudes and self.pseudoLatitudes[latitude] then
 		temp = self.pseudoLatitudes[latitude].temperature
