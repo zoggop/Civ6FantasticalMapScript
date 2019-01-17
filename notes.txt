@@ -1,12 +1,14 @@
-- increase river tile prescription slightly, to account for coming in under the target
+- stop having jungles at higher latitudes (are they getting put on plains?)
 
 - regenerate map if it totally screws up (when there's no second continent, for instance)
-
-- add ability to set maxIslandSize (instead of always 3 polygons)
 
 ---
 DONE:
 ---
+
+- add ability to set maxIslandSize (instead of always 3 polygons)
+
+- increase river tile prescription slightly, to account for coming in under the target
 
 - create an algorithm to guess the amount of habitable land per civ, because map size can't be increased after map generation. increase the size of the map if it's too low.
 

@@ -1922,8 +1922,9 @@ Polygon = class(function(a, space, x, y)
 	a.y = y or mRandom(0, space.iH-1)
 	a.centerPlot = Map.GetPlot(a.x, a.y)
 	if space.useMapLatitudes then
-		a.latitude = space:GetPlotLatitude(a.centerPlot)
-		if not space.wrapX then
+		if space.wrapX then
+			a.latitude = space:GetPlotLatitude(a.centerPlot)
+		else
 			a.latitude = space:RealmLatitude(a.y)
 		end
 	end
@@ -2681,24 +2682,7 @@ function Region:CreateElement(temperature, rainfall, lake)
 	temperature = mFloor(temperature)
 	rainfall = mFloor(rainfall)
 	local bestTerrain = self.space:NearestTempRainThing(temperature, rainfall, TerrainDictionary)
-	local featureList = {}
-	for i, featureType in pairs(bestTerrain.features) do
-		if FeatureDictionary[featureType] then
-			if not FeatureDictionary[featureType].disabled then
-				tInsert(featureList, FeatureDictionary[featureType])
-			end
-			if featureType == featureMarsh and marsh then
-				featureList = { FeatureDictionary[featureMarsh] }
-				break
-			end
-		end
-	end
-	local bestFeature
-	if #featureList == 1 then
-		bestFeature = featureList[1]
-	else
-		bestFeature = self.space:NearestTempRainThing(temperature, rainfall, featureList, 2)
-	end
+	local bestFeature = self.space:NearestTempRainThing(temperature, rainfall, FeatureDictionary, 2)
 	if bestFeature == nil or self.blockFeatures[bestFeature.featureType] or mRandom(1, 100) > bestFeature.percent then bestFeature = FeatureDictionary[bestTerrain.features[1]] end -- default to the first feature in the list
 	if bestFeature.featureType == featureNone and bestTerrain.specialFeature then
 		local sFeature = FeatureDictionary[bestTerrain.specialFeature]
@@ -2718,6 +2702,9 @@ function Region:CreateElement(temperature, rainfall, lake)
 	elseif hill and bestFeature.hill and self.hillCount < mCeil(self.totalSize * (self.hillyness / 100)) then
 		plotType = plotHills
 		self.hillCount = self.hillCount + 1
+	end
+	if self.latitude > 30 and featureType == featureJungle then
+		EchoDebug("jungle at high latitude", "L: " .. self.latitude, "T: " .. temperature, "R: " .. rainfall, "regT: " .. self.temperature, "regR: " .. self.rainfall)
 	end
 	return { plotType = plotType, terrainType = terrainType, featureType = featureType, temperature = temperature, rainfall = rainfall, lake = lake }
 end
@@ -3248,7 +3235,7 @@ function Space:CreatePseudoLatitudes()
 	self.pseudoLatitudes = pseudoLatitudes
 end
 
-function Space:Compute(setWidth, setHeight, stopAfterLandforms)
+function Space:Compute(setWidth, setHeight, stopAfterPickCoasts, stopAfterLandforms)
 	local gridSizeX, gridSizeY = Map.GetGridSize()
     self.iW = setWidth or gridSizeX
     self.iH = setHeight or gridSizeY
@@ -3396,6 +3383,9 @@ function Space:Compute(setWidth, setHeight, stopAfterLandforms)
     self:FillInlandSeas()
     EchoDebug("picking coasts...")
 	self:PickCoasts()
+	if stopAfterPickCoasts then
+		return
+	end
 	if not self.useMapLatitudes then
 		-- EchoDebug("dispersing fake latitude...")
 		-- self:DisperseFakeLatitude()
@@ -3418,10 +3408,10 @@ function Space:Compute(setWidth, setHeight, stopAfterLandforms)
 	end
 	self.climateVoronoi = self:CreateClimateVoronoi(cliVorNum, self.climateVoronoiRelaxations)
 	EchoDebug(#self.climateVoronoi .. " climate voronoi created in " .. StopDebugTimer(regionclimatetime))
-	if not self.useMapLatitudes then
+	-- if not self.useMapLatitudes then
 		EchoDebug("assigning climate voronoi to regions...")
 		self:AssignClimateVoronoiToRegions(self.climateVoronoi)
-	end
+	-- end
 	EchoDebug("picking mountain ranges...")
     self:PickMountainRanges()
 	EchoDebug("filling regions...")
@@ -5838,25 +5828,14 @@ function Space:CreateClimateVoronoi(number, relaxations)
 	relaxations = relaxations or 0
 	local pixelBuffer = {}
 	local climateVoronoi = {}
-	if self.useMapLatitudes then
-		for i, region in ipairs(self.regions) do
-			region:GiveLatitude()
-			local temp = self:GetTemperature(region.latitude)
-			local rain = self:GetRainfall(region.latitude)
-			local point = {temp = temp, rain = rain, regions = {region}}
-			tInsert(climateVoronoi, point)
-			region.point = point
+	for t = self.temperatureMin, self.temperatureMax do
+		for r = self.rainfallMin, self.rainfallMax do
+			tInsert(pixelBuffer, {temp=t, rain=r})
 		end
-	else
-		for t = self.temperatureMin, self.temperatureMax do
-			for r = self.rainfallMin, self.rainfallMax do
-				tInsert(pixelBuffer, {temp=t, rain=r})
-			end
-		end
-		for i = 1, number do
-			local point = tRemoveRandom(pixelBuffer)
-			tInsert(climateVoronoi, point)
-		end
+	end
+	for i = 1, number do
+		local point = tRemoveRandom(pixelBuffer)
+		tInsert(climateVoronoi, point)
 	end
 	local cullCount = 0
 	for iteration = 1, relaxations + 1 do
@@ -5889,27 +5868,6 @@ function Space:CreateClimateVoronoi(number, relaxations)
 		for i = #climateVoronoi, 1, -1 do
 			local point = climateVoronoi[i]
 			if not point.pixelCount and not point.pixels then
-				if self.useMapLatitudes then
-					-- reassign climate-realistic regions to another point
-					local leastDist
-					local nearestP
-					for i, p in pairs(climateVoronoi) do
-						if p.pixelCount or p.pixels then
-							local dt = mAbs(point.temp - p.temp)
-							local dr = mAbs(point.temp - p.rain)
-							local dist = (dt * dt) + (dr * dr)
-							-- local dist = dt + dr
-							if not leastDist or dist < leastDist then
-								leastDist = dist
-								nearestP = p
-							end
-						end
-					end
-					for ir, region in pairs(point.regions) do
-						region.point = nearestP
-						tInsert(nearestP.regions, region)
-					end
-				end
 				tRemove(climateVoronoi, i)
 				cullCount = cullCount + 1
 			end
@@ -5929,13 +5887,6 @@ function Space:CreateClimateVoronoi(number, relaxations)
 				point.totalR = nil
 				point.pixelCount = nil
 			end
-		end
-	end
-	if self.useMapLatitudes then
-		for i, region in pairs(self.regions) do
-			region.temperature = region.point.temp
-			region.rainfall = region.point.rain
-			EchoDebug("l: " .. region.latitude, "t: " .. region.temperature, "r: " .. region.rainfall, "p: " .. #region.point.pixels)
 		end
 	end
 	EchoDebug(cullCount .. " points culled")
@@ -5988,72 +5939,21 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 			region:GiveLatitude()
 			local temp = self:GetTemperature(region.latitude)
 			local rain = self:GetRainfall(region.latitude)
-			-- local bestDist, bestPoint, bestIndex
-			-- local rainWeight = ((90 - region.latitude) ^ self.climateAssignRainExponent) / self.climateAssignRainExponentNinety
-			-- local tempWeight = 2 - rainWeight
-			-- for ii, point in pairs(voronoiBuffer) do
-			-- 	local dt = mAbs(temp - point.temp)
-			-- 	local dr = mAbs(rain - point.rain)
-			-- 	local dist = (dt * dt * tempWeight) + (dr * dr * rainWeight)
-			-- 	local dist = dt
-			-- 	if not bestDist or dist < bestDist then
-			-- 		bestDist = dist
-			-- 		bestPoint = point
-			-- 		bestIndex = ii
-			-- 	end
-			-- end
-			local bestTempDist
-			-- find the nearest by temperature first
+			local bestDist, bestPoint, bestIndex
 			for ii, point in ipairs(voronoiBuffer) do
 				local dt = mAbs(temp - point.temp)
-				if not bestTempDist or dt < bestTempDist then
-					bestTempDist = dt
+				local dr = mAbs(rain - point.rain)
+				local dist = dt + dr
+				if not bestDist or dist < bestDist then
+					bestDist = dist
+					bestPoint = point
+					bestIndex = ii
 				end
 			end
-			-- if bestTempDist > 25 then
-			-- 	-- there's not a good option left, use a duplicate
-			-- 	EchoDebug("using a duplicate climate voronoi point for temp")
-			-- 	for ii, point in ipairs(climateVoronoi) do
-			-- 		if not bestTempDist or dt < bestTempDist then
-			-- 			bestTempDist = dt
-			-- 		end
-			-- 	end
-			-- end
-			local bestRainDist, bestPoint, bestIndex
-			-- then among the nearest temperatures, find the nearest rainfall
-			local rainWeight = (90 - region.latitude) / 90
-			-- local temperatureTolerance = mCeil(mMax(1, rainWeight * 2 * self.climateAssignTemperatureTolerance))
-			local temperatureTolerance = self.climateAssignTemperatureTolerance
-			for ii, point in pairs(voronoiBuffer) do
-				local dt = mAbs(temp - point.temp)
-				local ddt = dt - bestTempDist
-				if ddt <= self.climateAssignTemperatureTolerance then
-					local dr = mAbs(rain - point.rain)
-					if not bestRainDist or dr < bestRainDist then
-						bestRainDist = dr
-						bestPoint = point
-						bestIndex = ii
-					end
-				end
-			end
-			-- if bestRainDist > 25 then
-			-- 	-- no good option, use a duplicate
-			-- 	EchoDebug("using a duplicate climate voronoi point for rain")
-			-- 	for ii, point in pairs(climateVoronoi) do
-			-- 		local dt = mAbs(temp - point.temp)
-			-- 		local ddt = dt - bestTempDist
-			-- 		if ddt <= self.climateAssignTemperatureTolerance then
-			-- 			local dr = mAbs(rain - point.rain)
-			-- 			if not bestRainDist or dr < bestRainDist then
-			-- 				bestRainDist = dr
-			-- 				bestPoint = point
-			-- 				bestIndex = ii
-			-- 			end
-			-- 		end
-			-- 	end
-			-- end
 			region.point = bestPoint
-			EchoDebug("latitude: " .. mCeil(region.latitude), "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "vt: " .. mCeil(bestPoint.temp), "vr: " .. mCeil(bestPoint.rain), "temptol: " .. temperatureTolerance)
+			if bestPoint.temp > 60 and bestPoint.rain > 70 then
+				EchoDebug("latitude: " .. mCeil(region.latitude), "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "vt: " .. mCeil(bestPoint.temp), "vr: " .. mCeil(bestPoint.rain))
+			end
 			if #voronoiBuffer == 0 then
 				EchoDebug("ran out of voronoi, refilling buffer...")
 				voronoiBuffer = tDuplicate(climateVoronoi)
@@ -6079,6 +5979,8 @@ end
 
 function Space:NearestTempRainThing(temperature, rainfall, things, oneTtwoF)
 	oneTtwoF = oneTtwoF or 1
+	temperature = int(temperature)
+	rainfall = int(rainfall)
 	temperature = mMax(self.temperatureMin, temperature)
 	temperature = mMin(self.temperatureMax, temperature)
 	rainfall = mMax(self.rainfallMin, rainfall)
@@ -6485,13 +6387,14 @@ function Space:DrawAllLandmassRivers()
 	local oldRiverLandRatio = self.riverLandRatio + 0
 	self.riverLandRatio = self.riverLandRatio * (self.rainfallMidpoint / 49.5)
 	EchoDebug("original riverLandRatio of " .. oldRiverLandRatio .. " modified by rainfallMidpoint of " .. self.rainfallMidpoint .. " is now " .. self.riverLandRatio)
-	local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea * 1.1)
+	local realPrescribedRiverArea =  mCeil(self.riverLandRatio * self.filledArea)
+	local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea * 1.1) -- because the algorithm tends to underproduce by roughly 10%
 	self.riverArea = 0
 	for i, landmass in ipairs(self.landmasses) do
 		self:FindLandmassRiverSeeds(landmass)
 		self:DrawLandmassRivers(landmass)
 	end
-	EchoDebug(self.riverArea .. " river tiles created of " .. prescribedRiverArea)
+	EchoDebug(self.riverArea .. " river tiles created of " .. realPrescribedRiverArea .. " prescribed")
 end
 
 function Space:FindLandmassRiverSeeds(landmass)
@@ -7309,6 +7212,7 @@ function Space:RealmLatitude(y)
 end
 
 function Space:GetTemperature(latitude, noFloor)
+	latitude = mFloor(latitude)
 	local temp
 	if self.pseudoLatitudes and self.pseudoLatitudes[latitude] then
 		temp = self.pseudoLatitudes[latitude].temperature
@@ -7549,7 +7453,7 @@ function GetMapInitData(worldSize)
 	testSpace:SetOptions(OptionDictionary)
 	testSpace:Compute(testWidth, testHeight, true)
 	local normalLandPerCiv = 178 / testAreaDivisor
-	local landPerCiv = (testSpace.filledArea - testSpace.totalMountains) / testSpace.iNumCivs
+	local landPerCiv = (testSpace.filledArea * (1 - testSpace.mountainRatio)) / testSpace.iNumCivs
 	local landPerCivNormRatio = landPerCiv / normalLandPerCiv
 	EchoDebug("test map " .. testWidth .. "x" .. testHeight .. " had " .. testSpace.filledArea .. " land tiles and " .. landPerCiv .. " land tiles per civ, which is " .. landPerCivNormRatio .. " of normal")
 	if landPerCivNormRatio < 0.75 then
