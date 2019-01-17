@@ -21,7 +21,7 @@ include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
 local debugEnabled = true
-local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
+local debugTimerEnabled = true -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
 local firstDebugTimer
@@ -7536,15 +7536,11 @@ function GetMapInitData(worldSize)
 	end
 
 	-- create a scaled-down test map to see if there will be enough land per civilization
-	local testDivisor = 4
-	if mMin(grid_width, grid_height) < 50 then
-		testDivisor = 2
-	elseif mMin(grid_width, grid_height) < 90 then
-		testDivisor = 3
-	end
+	local testArea = 600
+	local testAreaDivisor = (grid_width * grid_height) / testArea
+	local testDivisor = mSqrt(testAreaDivisor)
 	local testWidth = mCeil(grid_width / testDivisor)
 	local testHeight = mCeil(grid_height / testDivisor)
-	local testAreaDivisor = (grid_width * grid_height) / (testWidth * testHeight)
 	SetConstants()
 	local testSpace = Space()
 	testSpace:GetPlayerTeamInfo()
