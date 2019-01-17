@@ -2885,7 +2885,8 @@ Space = class(function(a)
 	a.astronomyBlobMaxPolygons = 18
 	a.astronomyBlobsMustConnectToOcean = false
 	a.majorContinentNumber = 2 -- how many large continents on the whole map
-	a.islandNumber = 4 -- how many 1-3-polygon islands on the whole map
+	a.islandNumber = 4 -- how many one-polygon or larger islands on the whole map
+	a.islandMaxPolygons = 2 -- maximum number of polygons for one-polygon or larger islands
 	a.openWaterRatio = 0.1 -- what part of an astronomy basin is reserved for open water
 	a.polarMaxLandRatio = 0.4 -- how much of the land in each astronomy basin can be at the poles
 	a.useMapLatitudes = false -- should the climate have anything to do with latitude?
@@ -5211,7 +5212,7 @@ function Space:GrowContinentSeeds(seedPolygons, coastOrContinentLimit, astronomy
 		seed.continent = { polygon }
 		seed.polygon = polygon
 		if (i > 1 or islandNumber >= #seedPolygons) and islandsToPlace > 0 and (mRandom() < islandChance or i > #seedPolygons - islandsToPlace) then
-			seed.maxPolygons = mRandom(1, 3)
+			seed.maxPolygons = mRandom(1, self.islandMaxPolygons)
 			islandsToPlace = islandsToPlace - 1
 		else
 			seed.maxPolygons = continentPolygonLimit
@@ -5250,7 +5251,7 @@ function Space:GrowContinentSeeds(seedPolygons, coastOrContinentLimit, astronomy
 			end
 			polygon.continent = continent
 			local polarWanted = polarPolygonCount < self.maxPolarPolygons[astronomyIndex]
-			local goodSideWanted = seed.maxPolygons > 3 and self.putTheContinentOnMyGoodSide[astronomyIndex] and seed.goodSideThisContinent < self.putTheContinentOnMyGoodSide[astronomyIndex]
+			local goodSideWanted = seed.maxPolygons > self.islandMaxPolygons and self.putTheContinentOnMyGoodSide[astronomyIndex] and seed.goodSideThisContinent < self.putTheContinentOnMyGoodSide[astronomyIndex]
 			local candidates = {}
 			local polarCandidates = {}
 			local goodSideCandidates = {}
@@ -6484,7 +6485,7 @@ function Space:DrawAllLandmassRivers()
 	local oldRiverLandRatio = self.riverLandRatio + 0
 	self.riverLandRatio = self.riverLandRatio * (self.rainfallMidpoint / 49.5)
 	EchoDebug("original riverLandRatio of " .. oldRiverLandRatio .. " modified by rainfallMidpoint of " .. self.rainfallMidpoint .. " is now " .. self.riverLandRatio)
-	local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea)
+	local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea * 1.1)
 	self.riverArea = 0
 	for i, landmass in ipairs(self.landmasses) do
 		self:FindLandmassRiverSeeds(landmass)

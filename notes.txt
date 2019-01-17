@@ -1,4 +1,4 @@
-- create an algorithm to guess the amount of habitable land per civ, because map size can't be increased after map generation. increase the size of the map if it's too low.
+- increase river tile prescription slightly, to account for coming in under the target
 
 - regenerate map if it totally screws up (when there's no second continent, for instance)
 
@@ -7,6 +7,8 @@
 ---
 DONE:
 ---
+
+- create an algorithm to guess the amount of habitable land per civ, because map size can't be increased after map generation. increase the size of the map if it's too low.
 
 - make it possible for regions to be made of 1 or more subpolygon instead of polygons
 
