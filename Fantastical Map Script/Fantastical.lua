@@ -7537,7 +7537,8 @@ function GetMapInitData(worldSize)
 
 	-- create a scaled-down test map to see if there will be enough land per civilization
 	local testArea = 600
-	local testAreaDivisor = (grid_width * grid_height) / testArea
+	local currentArea = grid_width * grid_height
+	local testAreaDivisor = currentArea / testArea
 	local testDivisor = mSqrt(testAreaDivisor)
 	local testWidth = mCeil(grid_width / testDivisor)
 	local testHeight = mCeil(grid_height / testDivisor)
@@ -7548,11 +7549,12 @@ function GetMapInitData(worldSize)
 	testSpace:Compute(testWidth, testHeight, true)
 	local normalLandPerCiv = 178 / testAreaDivisor
 	local landPerCiv = (testSpace.filledArea - testSpace.totalMountains) / testSpace.iNumCivs
-	-- landPerCiv = landPerCiv * 2.5 -- because when everything is scaled down it's not that accurate
 	local landPerCivNormRatio = landPerCiv / normalLandPerCiv
 	EchoDebug("test map " .. testWidth .. "x" .. testHeight .. " had " .. testSpace.filledArea .. " land tiles and " .. landPerCiv .. " land tiles per civ, which is " .. landPerCivNormRatio .. " of normal")
 	if landPerCivNormRatio < 0.75 then
-		local mapSizeMult = mMin(1.4, mSqrt(1 / landPerCivNormRatio))
+		local areaMultMax = mMin(2.5, 12960 / currentArea)
+		local areaMult = mMin(areaMultMax, 0.75 / landPerCivNormRatio)
+		local mapSizeMult = mSqrt(areaMult)
 		EchoDebug("map predicted to only have " .. landPerCivNormRatio .. " of normal land per civ, multiplying dimensions by " .. mapSizeMult)
 		grid_width = mFloor(grid_width * mapSizeMult)
 		grid_height = mFloor(grid_height * mapSizeMult)
