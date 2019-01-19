@@ -20,8 +20,8 @@ include "ResourceGenerator"
 include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
-local debugEnabled = true
-local debugTimerEnabled = true -- i'm paranoid that os.clock() is causing desyncs
+local debugEnabled = false
+local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
 local firstDebugTimer
@@ -2702,6 +2702,8 @@ function Region:CreateElement(temperature, rainfall, lake)
 	elseif hill and bestFeature.hill and self.hillCount < mCeil(self.totalSize * (self.hillyness / 100)) then
 		plotType = plotHills
 		self.hillCount = self.hillCount + 1
+	elseif marsh and terrainType == terrainGrass then
+		featureType = featureMarsh
 	end
 	if self.latitude and self.latitude > 30 and featureType == featureJungle then
 		EchoDebug("jungle at high latitude", "L: " .. self.latitude, "T: " .. temperature, "R: " .. rainfall, "regT: " .. self.temperature, "regR: " .. self.rainfall)
