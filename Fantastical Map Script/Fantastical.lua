@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-10
+-- version 32-VI-11
 
 --------------------------------------------------------------
 if include == nil then
@@ -2983,10 +2983,14 @@ function Space:SetOptions(optDict)
 	for optionNumber, option in ipairs(optDict) do
 		local optionChoice = MapConfiguration.GetValue(string.lower(string.gsub(option.name, " ", "_")))
 		if option.values[optionChoice].values == "keys" then
+			-- option.randomChoice makes it possible to execute SetOptions multiple times and get the same random values
+			-- it's setup this way to allow creation of a scaled-down test map
 			if option.values[optionChoice].randomKeys then
-				optionChoice = tGetRandom(option.values[optionChoice].randomKeys)
+				optionChoice = option.randomChoice or tGetRandom(option.values[optionChoice].randomKeys)
+				option.randomChoice = optionChoice
 			else
-				optionChoice = mRandom(1, #option.values-1)
+				optionChoice = option.randomChoice or mRandom(1, #option.values-1)
+				option.randomChoice = optionChoice
 			end
 		elseif option.values[optionChoice].values == "values" then
 			local lowValues =  option.values[optionChoice].lowValues or option.values[1].values
