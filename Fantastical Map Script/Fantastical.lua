@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-11
+-- version 32-VI-12
 
 --------------------------------------------------------------
 if include == nil then
@@ -20,7 +20,7 @@ include "ResourceGenerator"
 include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
-local debugEnabled = false
+local debugEnabled = true
 local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
@@ -1129,7 +1129,7 @@ local function SetConstants()
 	terrainDesert = g_TERRAIN_TYPE_DESERT -- TerrainTypes.TERRAIN_DESERT
 	terrainTundra = g_TERRAIN_TYPE_TUNDRA -- TerrainTypes.TERRAIN_TUNDRA
 	terrainSnow = g_TERRAIN_TYPE_SNOW -- TerrainTypes.TERRAIN_SNOW
-	EchoDebug("ocean " .. terrainOcean, "coast " .. terrainCoast, "grass " .. terrainGrass, "plains " .. terrainPlains, "desert " .. terrainDesert, "tundra " .. terrainTundra, "snow " .. terrainSnow)
+	-- EchoDebug("ocean " .. terrainOcean, "coast " .. terrainCoast, "grass " .. terrainGrass, "plains " .. terrainPlains, "desert " .. terrainDesert, "tundra " .. terrainTundra, "snow " .. terrainSnow)
 	for t in GameInfo.Terrains() do
 		if t then
 			terrainNames[t.Index] = t.TerrainType
@@ -1146,8 +1146,8 @@ local function SetConstants()
 	-- 	EchoDebug(improvement.Name, improvement.Index, improvement.ImprovementType)
 	-- end
 	local ShowMeTheFunctions = {
-		UI = UI,
-		TerrainBuilder = TerrainBuilder,
+		-- UI = UI,
+		-- TerrainBuilder = TerrainBuilder,
 	}
 	for showme, actual in pairs(ShowMeTheFunctions) do
 		if actual and type(actual) == "table" then
@@ -1439,7 +1439,11 @@ Hex = class(function(a, space, x, y, index)
 	a.plot = Map.GetPlotByIndex(a.index-1)
 	if space.useMapLatitudes then
 		if space.wrapX then
-			a.latitude = space:GetPlotLatitude(a.plot)
+			if a.plot then
+				a.latitude = space:GetPlotLatitude(a.plot)
+			else
+				a.latitude = space:GetGameLatitudeFromY(y)
+			end
 		else
 			a.latitude = space:RealmLatitude(y)
 		end
@@ -1923,7 +1927,11 @@ Polygon = class(function(a, space, x, y)
 	a.centerPlot = Map.GetPlot(a.x, a.y)
 	if space.useMapLatitudes then
 		if space.wrapX then
-			a.latitude = space:GetPlotLatitude(a.centerPlot)
+			if a.centerPlot then
+				a.latitude = space:GetPlotLatitude(a.centerPlot)
+			else
+				a.latitude = space:GetGameLatitudeFromY(a.y)
+			end
 		else
 			a.latitude = space:RealmLatitude(a.y)
 		end
@@ -6394,6 +6402,11 @@ function Space:DrawAllLandmassRivers()
 	local realPrescribedRiverArea =  mCeil(self.riverLandRatio * self.filledArea)
 	local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea * 1.1) -- because the algorithm tends to underproduce by roughly 10%
 	self.riverArea = 0
+	if self.oceanNumber == -1 and #self.lakeSubPolygons == 0 then
+		-- no rivers can be drawn if there are no bodies of water on the map
+		EchoDebug("no bodies of water on the map and therefore no rivers")
+		return
+	end
 	for i, landmass in ipairs(self.landmasses) do
 		self:FindLandmassRiverSeeds(landmass)
 		self:DrawLandmassRivers(landmass)
@@ -6402,11 +6415,6 @@ function Space:DrawAllLandmassRivers()
 end
 
 function Space:FindLandmassRiverSeeds(landmass)
-	if self.oceanNumber == -1 and #self.lakeSubPolygons == 0 then
-		-- no rivers can be drawn if there are no bodies of water on the map
-		EchoDebug("no bodies of water on the map and therefore no rivers")
-		return
-	end
 	local lakeList = {}
 	local lakeRiverSeeds = {}
 	local riverSeeds = {}
