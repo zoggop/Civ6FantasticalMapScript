@@ -20,7 +20,7 @@ include "ResourceGenerator"
 include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
-local debugEnabled = true
+local debugEnabled = false
 local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
@@ -7431,18 +7431,19 @@ function GetMapInitData(worldSize)
 	local wrapX = true
 	local wrapY = false
 
+	-- Use native RNG so that we can generate a test map with random map options, and a randomized aspect ratio if necessary
+	-- Note: multiplayer games between different platforms might not work.
+	local mapSeed = MapConfiguration.GetValue("RANDOM_SEED");
+	math.randomseed(mapSeed)
+	print("Map seed: " .. mapSeed)
+
 	-- if MapConfiguration.GetValue("landmass_type") > 11 then
 	if MapConfiguration.GetValue("wrapping") == 2 then
 		wrapX = false
 		local grid_area = grid_width * grid_height
 		-- DO NOT generate random numbers with TerrainBuilder in this method.
 		-- This method happens before initializing the TerrainBuilder's RNG.
-		local mapSeed = MapConfiguration.GetValue("RANDOM_SEED");
 		if mapSeed then
-			-- Use native RNG so that we can randomize world wrap.
-			-- Note: multiplayer games between different platforms might not work.
-			math.randomseed(mapSeed);
-			print("Map seed: " .. mapSeed)
 			grid_width = mCeil( mSqrt(grid_area) * ((math.random() * 0.5) + 0.75) )
 			grid_height = mCeil( grid_area / grid_width )
 		else
@@ -7453,6 +7454,7 @@ function GetMapInitData(worldSize)
 	end
 
 	-- create a scaled-down test map to see if there will be enough land per civilization
+	baseRandFunc = math.random -- so that random map options are actually random
 	local testArea = 600
 	local currentArea = grid_width * grid_height
 	local testAreaDivisor = currentArea / testArea
@@ -7476,6 +7478,7 @@ function GetMapInitData(worldSize)
 		grid_width = mFloor(grid_width * mapSizeMult)
 		grid_height = mFloor(grid_height * mapSizeMult)
 	end
+	baseRandFunc = TBRandom -- go back to using the usual TerrainBuilder random function
 	
 	EchoDebug(grid_width .. "x" .. grid_height .. " map")
 
