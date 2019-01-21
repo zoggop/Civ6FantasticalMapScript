@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-12
+-- version 32-VI-13
 
 --------------------------------------------------------------
 if include == nil then
@@ -20,7 +20,7 @@ include "ResourceGenerator"
 include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
-local debugEnabled = false
+local debugEnabled = true
 local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
@@ -131,6 +131,7 @@ end
 
 -- only necessary if math.random() is used as baseRandFunc for mRandom
 local function mRandSeed(fixedseed)
+	local seedType = ""
 	local seed
 	--fixedseed = 54321
 	if fixedseed == nil then
@@ -138,19 +139,23 @@ local function mRandSeed(fixedseed)
 		if mapSeed then
 			print("got map seed " .. mapSeed)
 			seed = mapSeed
+			seedType = "map"
 		else
 			print("generating seed...")
 			seed = TerrainBuilder.GetRandomNumber(255,"Seeding Fantastical")
 			seed = seed * 256 + TerrainBuilder.GetRandomNumber(255,"Seeding Fantastical")
 			seed = seed * 256 + TerrainBuilder.GetRandomNumber(255,"Seeding Fantastical")
 			seed = seed * 64 + TerrainBuilder.GetRandomNumber(255,"Seeding Fantastical")
+			seedType = "generated"
 		end
 	else
 		print("got fixed seed")
 		seed = fixedseed
+		seedType = "fixed"
 	end
 	math.randomseed(seed)
 	print("random seed set to " .. seed)
+	return seedType
 end
 
 local randomNumbers = 0
@@ -946,6 +951,19 @@ local OptionDictionary = {
 		}
 	},
 }
+
+local function OptionNameToConfigurationId(optionName)
+	return string.lower(string.gsub(optionName, " ", "_"))
+end
+
+local function AnyMapOptionsAreRandom(optDict)
+	for i, option in pairs(optDict) do
+		local optionChoice = MapConfiguration.GetValue(OptionNameToConfigurationId(option.name))
+		if option.values[optionChoice].name == "Random" then
+			return true
+		end
+	end
+end
 
 local function DatabaseQuery(sqlStatement)
 	for whatever in DB.Query(sqlStatement) do
@@ -2991,7 +3009,7 @@ end
 function Space:SetOptions(optDict)
 	local keySetByOption = {}
 	for optionNumber, option in ipairs(optDict) do
-		local optionChoice = MapConfiguration.GetValue(string.lower(string.gsub(option.name, " ", "_")))
+		local optionChoice = MapConfiguration.GetValue(OptionNameToConfigurationId(option.name))
 		if option.values[optionChoice].values == "keys" then
 			-- option.randomChoice makes it possible to execute SetOptions multiple times and get the same random values
 			-- it's setup this way to allow creation of a scaled-down test map
@@ -7431,19 +7449,21 @@ function GetMapInitData(worldSize)
 	local wrapX = true
 	local wrapY = false
 
-	-- Use native RNG so that we can generate a test map with random map options, and a randomized aspect ratio if necessary
-	-- Note: multiplayer games between different platforms might not work.
-	local mapSeed = MapConfiguration.GetValue("RANDOM_SEED");
-	math.randomseed(mapSeed)
-	print("Map seed: " .. mapSeed)
+	local seedType
+	local randomMapOptions = AnyMapOptionsAreRandom(OptionDictionary)
+	if MapConfiguration.GetValue("wrapping") == 2 or randomMapOptions then
+		-- Use native RNG so that we can generate a test map with random map options, and a randomized aspect ratio if necessary
+		-- Note: multiplayer games between different platforms might not work.
+		seedType = mRandSeed()
+	end
 
-	-- if MapConfiguration.GetValue("landmass_type") > 11 then
 	if MapConfiguration.GetValue("wrapping") == 2 then
 		wrapX = false
 		local grid_area = grid_width * grid_height
 		-- DO NOT generate random numbers with TerrainBuilder in this method.
 		-- This method happens before initializing the TerrainBuilder's RNG.
-		if mapSeed then
+		if seedType == "map" then
+			print("Using map seed for random aspect ratio...")
 			grid_width = mCeil( mSqrt(grid_area) * ((math.random() * 0.5) + 0.75) )
 			grid_height = mCeil( grid_area / grid_width )
 		else
@@ -7453,34 +7473,40 @@ function GetMapInitData(worldSize)
 		end
 	end
 
-	-- create a scaled-down test map to see if there will be enough land per civilization
-	baseRandFunc = math.random -- so that random map options are actually random
-	local testArea = 600
-	local currentArea = grid_width * grid_height
-	local testAreaDivisor = currentArea / testArea
-	local testDivisor = mSqrt(testAreaDivisor)
-	local testWidth = mCeil(grid_width / testDivisor)
-	local testHeight = mCeil(grid_height / testDivisor)
-	SetConstants()
-	local testSpace = Space()
-	testSpace:GetPlayerTeamInfo()
-	testSpace:SetOptions(OptionDictionary)
-	testSpace:Compute(testWidth, testHeight, true)
-	local normalLandPerCiv = 178 / testAreaDivisor
-	local landPerCiv = (testSpace.filledArea * (1 - testSpace.mountainRatio)) / testSpace.iNumCivs
-	local landPerCivNormRatio = landPerCiv / normalLandPerCiv
-	EchoDebug("test map " .. testWidth .. "x" .. testHeight .. " had " .. testSpace.filledArea .. " land tiles and " .. landPerCiv .. " land tiles per civ, which is " .. landPerCivNormRatio .. " of normal")
-	if landPerCivNormRatio < 0.75 then
-		local areaMultMax = mMin(2.5, 12960 / currentArea)
-		local areaMult = mMin(areaMultMax, 0.75 / landPerCivNormRatio)
-		local mapSizeMult = mSqrt(areaMult)
-		EchoDebug("map predicted to only have " .. landPerCivNormRatio .. " of normal land per civ, multiplying dimensions by " .. mapSizeMult)
-		grid_width = mFloor(grid_width * mapSizeMult)
-		grid_height = mFloor(grid_height * mapSizeMult)
+	if not randomMapOptions or seedType == "map" then
+		-- create a scaled-down test map to see if there will be enough land per civilization
+		if randomMapOptions then
+			baseRandFunc = math.random -- so that random map options are actually random
+		end
+		local testArea = 600
+		local currentArea = grid_width * grid_height
+		local testAreaDivisor = currentArea / testArea
+		local testDivisor = mSqrt(testAreaDivisor)
+		local testWidth = mCeil(grid_width / testDivisor)
+		local testHeight = mCeil(grid_height / testDivisor)
+		SetConstants()
+		local testSpace = Space()
+		testSpace:GetPlayerTeamInfo()
+		testSpace:SetOptions(OptionDictionary)
+		testSpace:Compute(testWidth, testHeight, true)
+		local normalLandPerCiv = 178 / testAreaDivisor
+		local landPerCiv = (testSpace.filledArea * (1 - testSpace.mountainRatio)) / testSpace.iNumCivs
+		local landPerCivNormRatio = landPerCiv / normalLandPerCiv
+		print("test map " .. testWidth .. "x" .. testHeight .. " had " .. testSpace.filledArea .. " land tiles and " .. landPerCiv .. " land tiles per civ, which is " .. landPerCivNormRatio .. " of normal")
+		if landPerCivNormRatio < 0.75 then
+			local areaMultMax = mMin(2.5, 12960 / currentArea)
+			local areaMult = mMin(areaMultMax, 0.75 / landPerCivNormRatio)
+			local mapSizeMult = mSqrt(areaMult)
+			print("map predicted to only have " .. landPerCivNormRatio .. " of normal land per civ, multiplying dimensions by " .. mapSizeMult)
+			grid_width = mFloor(grid_width * mapSizeMult)
+			grid_height = mFloor(grid_height * mapSizeMult)
+		end
+		if randomMapOptions then
+			baseRandFunc = TBRandom -- go back to using the usual TerrainBuilder random function
+		end
 	end
-	baseRandFunc = TBRandom -- go back to using the usual TerrainBuilder random function
 	
-	EchoDebug(grid_width .. "x" .. grid_height .. " map")
+	print(grid_width .. "x" .. grid_height .. " map")
 
 	return {
 		Width  = grid_width,
