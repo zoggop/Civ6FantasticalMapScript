@@ -20,7 +20,7 @@ include "ResourceGenerator"
 include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
-local debugEnabled = true
+local debugEnabled = false
 local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
@@ -1185,6 +1185,7 @@ local function SetConstants()
 	featureOasis = g_FEATURE_OASIS
 	featureFloodPlains = GetGameInfoIndex("Features", "FEATURE_FLOODPLAINS")
 	featureReef = g_FEATURE_REEF -- this will be nil unless Rise and Fall is present
+	-- featureReef = 99 -- just for testing purposes
 	-- featureVolcano = 11
 	-- featureGreatBarrierReef = 10
 
@@ -1755,6 +1756,7 @@ function Hex:SetFeature()
 	if self.polygon.nuked and not self.subPolygon.nuked and self.plotType ~= plotOcean and mRandom(1, 100) < 33 then
 		-- self.featureType = featureFallout
 	end
+	-- if self.featureType == featureIce then self.featureType = featureNone elseif self.reef then self.featureType = featureIce end -- for testing reef placement without having rise and fall
 	TerrainBuilder.SetFeatureType(self.plot, self.featureType or featureNone)
 end
 
@@ -2938,7 +2940,7 @@ Space = class(function(a)
 	a.coastalExpansionPercent = 67 -- out of 100, how often are hexes within coastal subpolygons but without adjacent land hexes coastal?
 	a.tinyIslandTarget = 7 -- how many tiny islands will a map attempt to have
 	a.freezingTemperature = 19 -- this temperature and below creates ice. temperature is 0 to 99
-	a.reefChance = 0.15 -- at 99 ocean temperature, this is the chance for a hex to be a reef
+	a.reefChance = 0.07 -- at 99 ocean temperature, this is the chance for a hex to be a reef
 	a.polarExponent = 1.2 -- exponent. lower exponent = smaller poles (somewhere between 0 and 2 is advisable)
 	a.rainfallMidpoint = 49.5 -- 25 means rainfall varies from 0 to 50, 75 means 50 to 100, 50 means 0 to 100.
 	a.temperatureMin = 0 -- lowest temperature possible (plus or minus temperatureMaxDeviation)
@@ -3583,8 +3585,9 @@ function Space:ComputeCoasts()
 					if nearLand or mRandom(1, 100) < self.coastalExpansionPercent then
 						hex.terrainType = terrainCoast
 						coastHexes[#coastHexes+1] = hex
-						if not ice and featureReef and mRandom() < reefChance then
+						if not ice and featureReef and not subPolygon.lake and (not subPolygon.superPolygon.sea or subPolygon.superPolygon.sea.size > 30) and mRandom() < reefChance then
 							hex.featureType = featureReef
+							hex.reef = true
 						end
 					else
 						hex.terrainType = terrainOcean
