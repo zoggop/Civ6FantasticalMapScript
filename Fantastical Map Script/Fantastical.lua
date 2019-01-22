@@ -1184,8 +1184,9 @@ local function SetConstants()
 	featureMarsh = g_FEATURE_MARSH
 	featureOasis = g_FEATURE_OASIS
 	featureFloodPlains = GetGameInfoIndex("Features", "FEATURE_FLOODPLAINS")
-	featureVolcano = 11 -- g_FEATURE_VOLCANO
-	featureReef = 10 -- g_FEATURE_REEF
+	featureReef = g_FEATURE_REEF -- this will be nil unless Rise and Fall is present
+	-- featureVolcano = 11
+	-- featureGreatBarrierReef = 10
 
 	-- for thisFeature in GameInfo.Features() do
 		-- for k, v in pairs(thisFeature) do
@@ -1724,8 +1725,8 @@ end
 
 function Hex:SetFeature()
 	-- if self.polygon.oceanIndex then self.featureType = featureIce end -- uncomment to debug ocean rifts
-	-- if self.polygon.astronomyBlob then self.featureType = featureReef end -- uncomment to debug astronomy blobs
-	-- if self.polygon.astronomyIndex < 100 then self.featureType = featureReef end -- uncomment to debug astronomy basins
+	-- if self.polygon.astronomyBlob then self.featureType = featureGreatBarrierReef end -- uncomment to debug astronomy blobs
+	-- if self.polygon.astronomyIndex < 100 then self.featureType = featureGreatBarrierReef end -- uncomment to debug astronomy basins
 	if self.plot == nil then
 		return
 	end
@@ -1826,7 +1827,7 @@ function Hex:CanBeOasis()
 	end
 end
 
-function Hex:CanBeReef()
+function Hex:CanBeGreatBarrierReef()
 	if self.polygon.continent then return end
 	if self.polygon.oceanIndex then return end
 	if self.y == 0 or self.y == self.space.h then return end
@@ -1905,7 +1906,7 @@ function Hex:PlaceNaturalWonder(featureType, pairedHex)
 			neighHex.terrainType = terrainCoast
 			TerrainBuilder.SetTerrainType(neighHex.plot, terrainCoast)
 		end
-	elseif featureType == featureReef then
+	elseif featureType == featureGreatBarrierReef then
 		self.terrainType = terrainCoast
 		TerrainBuilder.SetTerrainType(self.plot, terrainCoast)
 		pairedHex.terrainType = terrainCoast
@@ -1923,8 +1924,8 @@ function Hex:PlaceNaturalWonderPossibly(featureType)
 	if self.plot:GetFeatureType() >= 7 then return end -- it's already a natural wonder
 	if self.plot:GetResourceType(-1) ~= -1 then return end -- it has resources on it
 	local placeIt = false
-	if featureType == featureReef then
-		placeIt = self:CanBeReef()
+	if featureType == featureGreatBarrierReef then
+		placeIt = self:CanBeGreatBarrierReef()
 	elseif featureType == featureVolcano then
 		placeIt = self:CanBeVolcano()
 	end
@@ -2937,6 +2938,7 @@ Space = class(function(a)
 	a.coastalExpansionPercent = 67 -- out of 100, how often are hexes within coastal subpolygons but without adjacent land hexes coastal?
 	a.tinyIslandTarget = 7 -- how many tiny islands will a map attempt to have
 	a.freezingTemperature = 19 -- this temperature and below creates ice. temperature is 0 to 99
+	a.reefChance = 0.15 -- at 99 ocean temperature, this is the chance for a hex to be a reef
 	a.polarExponent = 1.2 -- exponent. lower exponent = smaller poles (somewhere between 0 and 2 is advisable)
 	a.rainfallMidpoint = 49.5 -- 25 means rainfall varies from 0 to 50, 75 means 50 to 100, 50 means 0 to 100.
 	a.temperatureMin = 0 -- lowest temperature possible (plus or minus temperatureMaxDeviation)
@@ -3548,6 +3550,7 @@ function Space:ComputeCoasts()
 				subPolygon.oceanTemperature = subPolygon.superPolygon.oceanTemperature
 			end
 			subPolygon.oceanTemperature = subPolygon.oceanTemperature or subPolygon.superPolygon.oceanTemperature or subPolygon.temperature or self:GetOceanTemperature(subPolygon.temperature)
+			local reefChance = (subPolygon.oceanTemperature / 99) * self.reefChance
 			local ice
 			if subPolygon.lake then
 				ice = subPolygon.oceanTemperature <= self.freshFreezingTemperature
@@ -3580,6 +3583,9 @@ function Space:ComputeCoasts()
 					if nearLand or mRandom(1, 100) < self.coastalExpansionPercent then
 						hex.terrainType = terrainCoast
 						coastHexes[#coastHexes+1] = hex
+						if not ice and featureReef and mRandom() < reefChance then
+							hex.featureType = featureReef
+						end
 					else
 						hex.terrainType = terrainOcean
 						if not hex.subPolygon.lake and not hex.polygon.sea then
@@ -4003,7 +4009,7 @@ function Space:RemoveBadlyPlacedNaturalWonders()
 		local featureType = hex.plot:GetFeatureType()
 		local removeWonder = false
 		local removeFromHereAlso
-		if featureType == featureVolcano or featureType == featureReef then
+		if featureType == featureVolcano or featureType == featureGreatBarrierReef then
 			-- krakatoa and reefs sometime form an astronomy basin leak
 			if hex.polygon.oceanIndex then
 				removeWonder = true
@@ -4012,7 +4018,7 @@ function Space:RemoveBadlyPlacedNaturalWonders()
 				if neighHex.polygon.oceanIndex then
 					removeWonder = true
 				end
-				if featureType == featureReef and neighHex.plot:GetFeatureType() == featureReef then
+				if featureType == featureGreatBarrierReef and neighHex.plot:GetFeatureType() == featureGreatBarrierReef then
 					removeFromHereAlso = neighHex
 				end
 			end
@@ -4034,7 +4040,7 @@ function Space:RemoveBadlyPlacedNaturalWonders()
 			end
 		end
 	end
-	-- tInsert(removedWonders, featureVolcano); tInsert(removedWonders, featureReef) -- uncomment to test removed wonder replacer
+	-- tInsert(removedWonders, featureVolcano); tInsert(removedWonders, featureGreatBarrierReef) -- uncomment to test removed wonder replacer
 	if #removedWonders == 0 then return end
 	-- find new places for removed wonders
 	local hexBuffer = tDuplicate(self.hexes)
