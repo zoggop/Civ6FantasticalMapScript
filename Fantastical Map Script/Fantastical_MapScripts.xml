@@ -214,31 +214,31 @@
 
 		<Row
 			ConfigurationGroup="Map"
-			ConfigurationId="world_age"
-			DefaultValue="4"
+			ConfigurationId="rivers"
+			DefaultValue="2"
 			Description=""
-			Domain="FNTSTCLDomain_World_Age"
+			Domain="FNTSTCLDomain_Rivers"
 			GroupId="MapOptions"
 			Hash="0"
 			Key1="Map"
 			Key2="Fantastical.lua"
-			Name="World Age"
-			ParameterId="FNTSTCL_World_Age"
+			Name="Rivers"
+			ParameterId="FNTSTCL_Rivers"
 			SortIndex="420"
 		/>
 
 		<Row
 			ConfigurationGroup="Map"
-			ConfigurationId="river_length_/_number_of_rivers"
+			ConfigurationId="river_length/number"
 			DefaultValue="2"
 			Description=""
-			Domain="FNTSTCLDomain_River_Length_/_Number_of_Rivers"
+			Domain="FNTSTCLDomain_River_Length/Number"
 			GroupId="MapOptions"
 			Hash="0"
 			Key1="Map"
 			Key2="Fantastical.lua"
-			Name="River Length / Number of Rivers"
-			ParameterId="FNTSTCL_River_Length_/_Number_of_Rivers"
+			Name="River Length/Number"
+			ParameterId="FNTSTCL_River_Length/Number"
 			SortIndex="430"
 		/>
 
@@ -259,6 +259,21 @@
 
 		<Row
 			ConfigurationGroup="Map"
+			ConfigurationId="world_age"
+			DefaultValue="4"
+			Description=""
+			Domain="FNTSTCLDomain_World_Age"
+			GroupId="MapOptions"
+			Hash="0"
+			Key1="Map"
+			Key2="Fantastical.lua"
+			Name="World Age"
+			ParameterId="FNTSTCL_World_Age"
+			SortIndex="450"
+		/>
+
+		<Row
+			ConfigurationGroup="Map"
 			ConfigurationId="temperature"
 			DefaultValue="4"
 			Description=""
@@ -269,7 +284,7 @@
 			Key2="Fantastical.lua"
 			Name="Temperature"
 			ParameterId="FNTSTCL_Temperature"
-			SortIndex="450"
+			SortIndex="460"
 		/>
 
 		<Row
@@ -284,7 +299,7 @@
 			Key2="Fantastical.lua"
 			Name="Rainfall"
 			ParameterId="FNTSTCL_Rainfall"
-			SortIndex="460"
+			SortIndex="470"
 		/>
 
 		<Row
@@ -299,7 +314,7 @@
 			Key2="Fantastical.lua"
 			Name="Ancient Roads"
 			ParameterId="FNTSTCL_Ancient_Roads"
-			SortIndex="470"
+			SortIndex="480"
 		/>
 
 	</Parameters>
@@ -389,10 +404,26 @@
 		<Row Description="Regions bigger than the plate." Domain="FNTSTCLDomain_Region_Size" Name="Enormous" SortIndex="14" Value="5" />
 		<Row Description="Regions are of a random maximum size." Domain="FNTSTCLDomain_Region_Size" Name="Random" SortIndex="15" Value="6" />
 
-		<Row Description="Wider ocean rifts, pointier continents, and fewer islands" Domain="FNTSTCLDomain_Granularity" Name="Low" SortIndex="10" Value="1" />
+		<Row Description="Wider ocean rifts, pointier continents, and fewer islands." Domain="FNTSTCLDomain_Granularity" Name="Low" SortIndex="10" Value="1" />
 		<Row Description="A balance between global nonuniformity and local nonuniformity." Domain="FNTSTCLDomain_Granularity" Name="Standard" SortIndex="11" Value="2" />
 		<Row Description="Skinnier ocean rifts, rounder and snakier continents, and more islands." Domain="FNTSTCLDomain_Granularity" Name="High" SortIndex="12" Value="3" />
 		<Row Description="A random polygonal density." Domain="FNTSTCLDomain_Granularity" Name="Random" SortIndex="13" Value="4" />
+
+		<Row Description="A small amount of river-adjacent tiles." Domain="FNTSTCLDomain_Rivers" Name="Few" SortIndex="10" Value="1" />
+		<Row Description="A medium amount of river-adjacent tiles." Domain="FNTSTCLDomain_Rivers" Name="Some" SortIndex="11" Value="2" />
+		<Row Description="A large amount of river-adjacent tiles." Domain="FNTSTCLDomain_Rivers" Name="Many" SortIndex="12" Value="3" />
+		<Row Description="A random amount of river-adjacent tiles." Domain="FNTSTCLDomain_Rivers" Name="Random" SortIndex="13" Value="4" />
+
+		<Row Description="Many short rivers." Domain="FNTSTCLDomain_River_Length/Number" Name="Short/Many" SortIndex="10" Value="1" />
+		<Row Description="Some medium-length rivers." Domain="FNTSTCLDomain_River_Length/Number" Name="Medium/Some" SortIndex="11" Value="2" />
+		<Row Description="Few long rivers." Domain="FNTSTCLDomain_River_Length/Number" Name="Long/Few" SortIndex="12" Value="3" />
+		<Row Description="A random maximum river length / number of rivers." Domain="FNTSTCLDomain_River_Length/Number" Name="Random" SortIndex="13" Value="4" />
+
+		<Row Description="Rivers have no tributaries." Domain="FNTSTCLDomain_River_Forks" Name="None" SortIndex="10" Value="1" />
+		<Row Description="Rivers are mostly one channel." Domain="FNTSTCLDomain_River_Forks" Name="Few" SortIndex="11" Value="2" />
+		<Row Description="Rivers have some tributaries." Domain="FNTSTCLDomain_River_Forks" Name="Some" SortIndex="12" Value="3" />
+		<Row Description="Rivers have many tributaries." Domain="FNTSTCLDomain_River_Forks" Name="Many" SortIndex="13" Value="4" />
+		<Row Description="A random amount of river forking." Domain="FNTSTCLDomain_River_Forks" Name="Random" SortIndex="14" Value="5" />
 
 		<Row Description="A quarter of the land is mountainous." Domain="FNTSTCLDomain_World_Age" Name="Newest" SortIndex="10" Value="1" />
 		<Row Description="Large quantities of mountains and hills." Domain="FNTSTCLDomain_World_Age" Name="Newer" SortIndex="11" Value="2" />
@@ -401,17 +432,6 @@
 		<Row Description="Fewer mountains and hills." Domain="FNTSTCLDomain_World_Age" Name="Old" SortIndex="14" Value="5" />
 		<Row Description="Almost no mountains or hills." Domain="FNTSTCLDomain_World_Age" Name="Older" SortIndex="15" Value="6" />
 		<Row Description="A random amount of mountains and hills." Domain="FNTSTCLDomain_World_Age" Name="Random" SortIndex="16" Value="7" />
-
-		<Row Description="Many short rivers." Domain="FNTSTCLDomain_River_Length_/_Number_of_Rivers" Name="Short/Many" SortIndex="10" Value="1" />
-		<Row Description="Some medium-length rivers." Domain="FNTSTCLDomain_River_Length_/_Number_of_Rivers" Name="Medium/Some" SortIndex="11" Value="2" />
-		<Row Description="Few long rivers." Domain="FNTSTCLDomain_River_Length_/_Number_of_Rivers" Name="Long/Few" SortIndex="12" Value="3" />
-		<Row Description="A random maximum river length / number of rivers." Domain="FNTSTCLDomain_River_Length_/_Number_of_Rivers" Name="Random" SortIndex="13" Value="4" />
-
-		<Row Description="Rivers have no tributaries." Domain="FNTSTCLDomain_River_Forks" Name="None" SortIndex="10" Value="1" />
-		<Row Description="Rivers are mostly one channel." Domain="FNTSTCLDomain_River_Forks" Name="Few" SortIndex="11" Value="2" />
-		<Row Description="Rivers have some tributaries." Domain="FNTSTCLDomain_River_Forks" Name="Some" SortIndex="12" Value="3" />
-		<Row Description="Rivers have many tributaries." Domain="FNTSTCLDomain_River_Forks" Name="Many" SortIndex="13" Value="4" />
-		<Row Description="A random amount of river forking." Domain="FNTSTCLDomain_River_Forks" Name="Random" SortIndex="14" Value="5" />
 
 		<Row Description="No grassland, and very little plains. Ice sheets cover much of the oceans." Domain="FNTSTCLDomain_Temperature" Name="Snowball" SortIndex="10" Value="1" />
 		<Row Description="Very little grassland. Larger oceanic ice sheets than standard." Domain="FNTSTCLDomain_Temperature" Name="Ice Age" SortIndex="11" Value="2" />

@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-13
+-- version 32-VI-14
 
 --------------------------------------------------------------
 if include == nil then
@@ -20,7 +20,7 @@ include "ResourceGenerator"
 include "AssignStartingPlots"
 ----------------------------------------------------------------------------------
 
-local debugEnabled = false
+local debugEnabled = true
 local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
@@ -843,7 +843,7 @@ local OptionDictionary = {
 	{ name = "Granularity", keys = { "polygonCount" }, default = 2,
 	values = {
 			[1] = { name = "Low", values = {100},
-				description = "Wider ocean rifts, pointier continents, and fewer islands" },
+				description = "Wider ocean rifts, pointier continents, and fewer islands." },
 			[2] = { name = "Standard", values = {200},
 				description = "A balance between global nonuniformity and local nonuniformity." },
 			[3] = { name = "High", values = {300},
@@ -852,25 +852,19 @@ local OptionDictionary = {
 				description = "A random polygonal density." },
 		}
 	},
-	{ name = "World Age", keys = { "mountainRatio" }, default = 4,
+	{ name = "Rivers", keys = { "riverLandRatio" }, default = 2,
 	values = {
-			[1] = { name = "Newest", values = {0.25},
-				description = "A quarter of the land is mountainous." },
-			[2] = { name = "Newer", values = {0.17},
-				description = "Large quantities of mountains and hills." },
-			[3] = { name = "New", values = {0.1},
-				description = "More mountains and hills." },
-			[4] = { name = "Standard", values = {0.06},
-				description = "Similar to Earth." },
-			[5] = { name = "Old", values = {0.03},
-				description = "Fewer mountains and hills." },
-			[6] = { name = "Older", values = {0.005},
-				description = "Almost no mountains or hills." },
-			[7] = { name = "Random", values = "keys",
-				description = "A random amount of mountains and hills." },
+			[1] = { name = "Few", values = {0.1},
+				description = "A small amount of river-adjacent tiles." },
+			[2] = { name = "Some", values = {0.19},
+				description = "A medium amount of river-adjacent tiles." },
+			[3] = { name = "Many", values = {0.4},
+				description = "A large amount of river-adjacent tiles." },
+			[4] = { name = "Random", values = "keys",
+				description = "A random amount of river-adjacent tiles." },
 		}
 	},
-	{ name = "River Length / Number of Rivers", keys = { "maxAreaFractionPerRiver", "riverMaxLakeRatio" }, default = 2,
+	{ name = "River Length/Number", keys = { "maxAreaFractionPerRiver", "riverMaxLakeRatio" }, default = 2,
 	values = {
 			[1] = { name = "Short/Many", values = {0.1, 0.25},
 				description = "Many short rivers." },
@@ -894,6 +888,24 @@ local OptionDictionary = {
 				description = "Rivers have many tributaries." },
 			[5] = { name = "Random", values = "values", lowValues = {0.0}, highValues = {0.4},
 				description = "A random amount of river forking." },
+		}
+	},
+	{ name = "World Age", keys = { "mountainRatio" }, default = 4,
+	values = {
+			[1] = { name = "Newest", values = {0.25},
+				description = "A quarter of the land is mountainous." },
+			[2] = { name = "Newer", values = {0.17},
+				description = "Large quantities of mountains and hills." },
+			[3] = { name = "New", values = {0.1},
+				description = "More mountains and hills." },
+			[4] = { name = "Standard", values = {0.06},
+				description = "Similar to Earth." },
+			[5] = { name = "Old", values = {0.03},
+				description = "Fewer mountains and hills." },
+			[6] = { name = "Older", values = {0.005},
+				description = "Almost no mountains or hills." },
+			[7] = { name = "Random", values = "keys",
+				description = "A random amount of mountains and hills." },
 		}
 	},
 	{ name = "Temperature", keys = { "polarExponent", "temperatureMin", "temperatureMax", "freezingTemperature" }, default = 4,
