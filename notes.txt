@@ -1,5 +1,7 @@
 - regenerate map if it totally screws up (when there's no second continent, for instance)
 
+- gut markov chain region naming? i don't see any easy way to add map labels in civ 6 that wouldn't look really stupid (map pins)
+
 ---
 DONE:
 ---

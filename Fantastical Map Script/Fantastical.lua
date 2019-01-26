@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-14
+-- version 32-VI-15
 
 --------------------------------------------------------------
 if include == nil then
@@ -2936,7 +2936,7 @@ Space = class(function(a)
 	a.riverScoreLengthMult = 1
 	a.riverScoreRainfallMult = 0.0067 -- maximum possible rainfall is 1200
 	a.riverScoreAltitudeMult = 0.33 -- maximum possible altitude is 24
-	a.riverScoreDesertMult = 0.33 -- multiplies the amount of desert river tiles river creates (floodplains)
+	a.riverScoreFloodPlainsMult = 0.33 -- multiplies the amount of flood plains tiles river creates
 	a.riverScoreMountainBlockedMult = 1 -- multiplies the amount of river segments that have mountains on both sides, this subtracts from the river score
 	a.maxAreaFractionPerRiver = 0.25 -- maximum fraction of the prescribed river area per landmass for each river
 	a.maxAreaFractionPerForkRiver = 0.5 -- maximum fraction of the prescribed fork river area per landmass for each river
@@ -6510,7 +6510,7 @@ function Space:FindLandmassLakeFlow(seeds, landmass)
 	if landmass.lakeConnections[seeds[1].lake] then return end
 	local toOcean
 	for si, seed in ipairs(seeds) do
-		local river, done, seedSpawns, endRainfall, endAltitude, area, desertArea, mountainBlockedCount = self:DrawRiver(seed, nil, landmass)
+		local river, done, seedSpawns, endRainfall, endAltitude, area, floodPlainsCount, mountainBlockedCount = self:DrawRiver(seed, nil, landmass)
 		if done then
 			if done.subPolygon.lake then
 				-- EchoDebug("found lake-to-lake river")
@@ -6579,7 +6579,7 @@ function Space:DrawLandmassRivers(landmass)
 		local bestScore = 0
 		for i, seed in ipairs(landmass.riverSeeds) do
 			self:AnnotateRiverSeed(seed)
-			local river, done, seedSpawns, endRainfall, endAltitude, area, desertArea, mountainBlockedCount = self:DrawRiver(seed, maxRiverArea, landmass)
+			local river, done, seedSpawns, endRainfall, endAltitude, area, floodPlainsCount, mountainBlockedCount = self:DrawRiver(seed, maxRiverArea, landmass)
 			local rainfall = endRainfall or seed.rainfall
 			local altitude = endAltitude or seed.altitude
 			if (seed.doneAnywhere or done) and river and #river > 0 and area <= maxRiverArea then
@@ -6587,7 +6587,7 @@ function Space:DrawLandmassRivers(landmass)
 				if first then areaDist = mAbs(maxAreaPerRiver - area) end
 				if not rainfall then EchoDebug("no rainfall") end
 				if not altitude then EchoDebug("no altitude") end
-				local score = areaDist + (#river * self.riverScoreLengthMult) + (rainfall * self.riverScoreRainfallMult) + (altitude * self.riverScoreAltitudeMult) + (desertArea * self.riverScoreDesertMult) - (mountainBlockedCount * self.riverScoreMountainBlockedMult)
+				local score = areaDist + (#river * self.riverScoreLengthMult) + (rainfall * self.riverScoreRainfallMult) + (altitude * self.riverScoreAltitudeMult) + (floodPlainsCount * self.riverScoreFloodPlainsMult) - (mountainBlockedCount * self.riverScoreMountainBlockedMult)
 				if score > bestScore then
 					best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done }
 					bestScore = score
@@ -6626,11 +6626,11 @@ function Space:DrawLandmassRivers(landmass)
 		local bestScore = 0
 		for i, seed in ipairs(landmass.forkSeeds) do
 			self:AnnotateRiverSeed(seed)
-			local river, done, seedSpawns, endRainfall, endAltitude, area, desertArea, mountainBlockedCount = self:DrawRiver(seed, maxRiverArea, landmass)
+			local river, done, seedSpawns, endRainfall, endAltitude, area, floodPlainsCount, mountainBlockedCount = self:DrawRiver(seed, maxRiverArea, landmass)
 			local rainfall = endRainfall or seed.rainfall or 0
 			local altitude = endAltitude or seed.altitude or 0
 			if (seed.doneAnywhere or done) and river and #river >= self.minForkLength and area <= maxRiverArea then
-				local score = (#river * self.riverScoreLengthMult) + (rainfall * self.riverScoreRainfallMult) + (altitude * self.riverScoreAltitudeMult) + (desertArea * self.riverScoreDesertMult) - (mountainBlockedCount * self.riverScoreMountainBlockedMult)
+				local score = (#river * self.riverScoreLengthMult) + (rainfall * self.riverScoreRainfallMult) + (altitude * self.riverScoreAltitudeMult) + (floodPlainsCount * self.riverScoreFloodPlainsMult) - (mountainBlockedCount * self.riverScoreMountainBlockedMult)
 				if score > bestScore then
 					best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done }
 					bestScore = score
@@ -6669,10 +6669,10 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 	local lastHex = seed.lastHex
 	local lastDirection = seed.lastDirection or hex:GetDirectionTo(lastHex)
 	local area = 2
-	local desertArea = 0
+	local floodPlainsCount = 0
 	local mountainBlockedCount = 0
-	if hex.terrainType == terrainDesert then desertArea = desertArea + 1 end
-	if pairHex.terrainType == terrainDesert then desertArea = desertArea + 1 end
+	if hex.terrainType == terrainDesert and hex.plotType ~= plotHills then floodPlainsCount = floodPlainsCount + 1 end
+	if pairHex.terrainType == terrainDesert and pairHex.plotType ~= plotHills then floodPlainsCount = floodPlainsCount + 1 end
 	local isRiver = {}
 	isRiver[hex] = true
 	isRiver[pairHex] = true
@@ -6935,8 +6935,8 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 		local mountainOneSide
 		if not isRiver[hex] then
 			area = area + 1
-			if hex.terrainType == terrainDesert then
-				desertArea = desertArea + 1
+			if hex.terrainType == terrainDesert and hex.plotType ~= plotHills then
+				floodPlainsCount = floodPlainsCount + 1
 			end
 			if hex.plotType == plotMountain then
 				mountainOneSide = true
@@ -6945,8 +6945,8 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 		end
 		if not isRiver[pairHex] then
 			area = area + 1
-			if pairHex.terrainType == terrainDesert then
-				desertArea = desertArea + 1
+			if pairHex.terrainType == terrainDesert and pairHex ~= plotHills then
+				floodPlainsCount = floodPlainsCount + 1
 			end
 			if mountainOneSide and pairHex.plotType == plotMountain then
 				mountainBlockedCount = mountainBlockedCount + 1
@@ -6962,7 +6962,7 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 		endRainfall, endAltitude = aHex:RiverScore(bHex)
 	end
 	-- EchoDebug(it)
-	return river, done, seedSpawns, endRainfall, endAltitude, area, desertArea, mountainBlockedCount
+	return river, done, seedSpawns, endRainfall, endAltitude, area, floodPlainsCount, mountainBlockedCount
 end
 
 function Space:InkRiver(river, seed, seedSpawns, done, landmass)
