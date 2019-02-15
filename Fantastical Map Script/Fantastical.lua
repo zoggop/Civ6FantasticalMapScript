@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-17
+-- version 32-VI-18
 
 --------------------------------------------------------------
 if include == nil then
@@ -1775,9 +1775,9 @@ end
 function Hex:SetRiver()
 	if self.plot == nil then return end
 	if not self.ofRiver then return end
-	if self.ofRiver[DirW] then TerrainBuilder.SetWOfRiver(self.plot, true, self.ofRiver[DirW] or FlowDirectionTypes.NO_DIRECTION) end
-	if self.ofRiver[DirNW] then TerrainBuilder.SetNWOfRiver(self.plot, true, self.ofRiver[DirNW] or FlowDirectionTypes.NO_DIRECTION) end
-	if self.ofRiver[DirNE] then TerrainBuilder.SetNEOfRiver(self.plot, true, self.ofRiver[DirNE] or FlowDirectionTypes.NO_DIRECTION) end
+	if self.ofRiver[DirW] then TerrainBuilder.SetWOfRiver(self.plot, true, self.ofRiver[DirW] or FlowDirectionTypes.NO_DIRECTION, 0) end
+	if self.ofRiver[DirNW] then TerrainBuilder.SetNWOfRiver(self.plot, true, self.ofRiver[DirNW] or FlowDirectionTypes.NO_DIRECTION, 0) end
+	if self.ofRiver[DirNE] then TerrainBuilder.SetNEOfRiver(self.plot, true, self.ofRiver[DirNE] or FlowDirectionTypes.NO_DIRECTION, 0) end
 	-- for d, fd in pairs(self.ofRiver) do
 		-- EchoDebug(DirName(d), FlowDirName(fd))
 	-- end
