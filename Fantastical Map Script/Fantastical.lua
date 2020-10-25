@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-18
+-- version 32-VI-19
 
 --------------------------------------------------------------
 if include == nil then
@@ -18,6 +18,8 @@ include "TerrainGenerator"
 include "NaturalWonderGenerator"
 include "ResourceGenerator"
 include "AssignStartingPlots"
+include "CoastalLowlands" -- Gathering Storm only
+
 ----------------------------------------------------------------------------------
 
 local debugEnabled = false
@@ -1770,14 +1772,22 @@ function Hex:SetFeature()
 	end
 	-- if self.featureType == featureIce then self.featureType = featureNone elseif self.reef then self.featureType = featureIce end -- for testing reef placement without having rise and fall
 	TerrainBuilder.SetFeatureType(self.plot, self.featureType or featureNone)
+	if TerrainBuilder.AddIce and self.featureType == featureIce then
+		-- not necessary with vanilla rules
+		TerrainBuilder.AddIce(self.plot:GetIndex(), self.iceLossEventNum or -1); 
+	end
 end
 
 function Hex:SetRiver()
 	if self.plot == nil then return end
 	if not self.ofRiver then return end
-	if self.ofRiver[DirW] then TerrainBuilder.SetWOfRiver(self.plot, true, self.ofRiver[DirW] or FlowDirectionTypes.NO_DIRECTION, 0) end
-	if self.ofRiver[DirNW] then TerrainBuilder.SetNWOfRiver(self.plot, true, self.ofRiver[DirNW] or FlowDirectionTypes.NO_DIRECTION, 0) end
-	if self.ofRiver[DirNE] then TerrainBuilder.SetNEOfRiver(self.plot, true, self.ofRiver[DirNE] or FlowDirectionTypes.NO_DIRECTION, 0) end
+
+	-- AOM GS update
+	if self.ofRiver[DirW] then TerrainBuilder.SetWOfRiver(self.plot, true, self.ofRiver[DirW] or FlowDirectionTypes.NO_DIRECTION, self.riverId or -1) end
+	if self.ofRiver[DirNW] then TerrainBuilder.SetNWOfRiver(self.plot, true, self.ofRiver[DirNW] or FlowDirectionTypes.NO_DIRECTION, self.riverId or -1) end
+	if self.ofRiver[DirNE] then TerrainBuilder.SetNEOfRiver(self.plot, true, self.ofRiver[DirNE] or FlowDirectionTypes.NO_DIRECTION, self.riverId or -1) end
+	-- END AOM GS update
+
 	-- for d, fd in pairs(self.ofRiver) do
 		-- EchoDebug(DirName(d), FlowDirName(fd))
 	-- end
@@ -3002,6 +3012,7 @@ Space = class(function(a)
     a.lakeSubPolygons = {}
     a.inlandSeas = {}
     a.rivers = {}
+    a.nextRiverId = 0
 end)
 
 function Space:GetPlayerTeamInfo()
@@ -3538,6 +3549,7 @@ function Space:ComputeCoasts()
 	local coastHexes = {}
 	local unCoastHexes = {}
 	local unIceHexes = {}
+	self.iceSubPolygons = {}
 	for i, subPolygon in pairs(self.subPolygons) do
 		subPolygon.temperature = subPolygon.temperature or subPolygon.superPolygon.temperature or self:GetTemperature(subPolygon.latitude)
 		if (not subPolygon.superPolygon.continent or subPolygon.lake) and not subPolygon.tinyIsland then
@@ -3591,6 +3603,10 @@ function Space:ComputeCoasts()
 					if not badIce and ice then
 						if self:GimmeIce(subPolygon.oceanTemperature) then
 							hex.featureType = featureIce
+							subPolygon.hasIce = true
+							self.iceSubPolygons[subPolygon] = true
+							subPolygon.iceHexes = subPolygon.iceHexes or {}
+							tInsert(subPolygon.iceHexes, hex)
 						else
 							unIceHexes[#unIceHexes+1] = hex
 						end
@@ -3614,6 +3630,10 @@ function Space:ComputeCoasts()
 					if ice then
 						if self:GimmeIce(subPolygon.oceanTemperature) then
 							hex.featureType = featureIce
+							subPolygon.hasIce = true
+							self.iceSubPolygons[subPolygon] = true
+							subPolygon.iceHexes = subPolygon.iceHexes or {}
+							tInsert(subPolygon.iceHexes, hex)
 						else
 							unIceHexes[#unIceHexes+1] = hex
 						end
@@ -3653,6 +3673,10 @@ function Space:ComputeCoasts()
 		if not hex:FloodFillAwayFromIce() then
 			hex.featureType = featureIce
 			filledIceHexCount = filledIceHexCount + 1
+			hex.subPolygon.hasIce = true
+			self.iceSubPolygons[hex.subPolygon] = true
+			hex.subPolygon.iceHexes = hex.subPolygon.iceHexes or {}
+			tInsert(hex.subPolygon.iceHexes, hex)
 		end
 	end
 	EchoDebug("filled " .. filledIceHexCount .. " / " .. #unIceHexes .. " ice-stranded hexes with ice in " .. StopDebugTimer(iceFillTimer))
@@ -4116,7 +4140,7 @@ function Space:ShiftGlobe()
 			local shiftedX = (hex.x + shiftX) % self.iW
 			local shiftedHex = self:GetHexByXY(shiftedX, hex.y)
 			hex.plot = Map.GetPlotByIndex(shiftedHex.index-1)
-			hex.shifedX = shiftedX
+			hex.shiftedX = shiftedX
 		end
 	end
 end
@@ -4146,6 +4170,57 @@ function Space:FindOases()
 	EchoDebug(oasisCount .. " oases of " .. prescribedOases .. " prescribed and " .. #potentialOases + oasisCount .. " possible")
 end
 
+function Space:DetermineIceLossPhases()
+	if not GameInfo.RandomEvents then return end -- only necessary for Gathering Storm
+	local aPhases = {};
+	local iPhases = 0;
+	for row in GameInfo.RandomEvents() do
+		if (row.EffectOperatorType == "SEA_LEVEL") then
+			local kPhaseDetails = {};
+			kPhaseDetails.RandomEventEnum = row.Index;
+			kPhaseDetails.IceLoss = row.IceLoss;
+			table.insert(aPhases, kPhaseDetails);
+			iPhases = iPhases + 1;
+		end
+	end
+	if (iPhases <= 1) then return end
+	print("determining ice loss phases...")
+	-- count ice
+	local sps = {}
+	local iceTotal = 0
+	for subPolygon, yes in pairs(self.iceSubPolygons) do
+		tInsert(sps, subPolygon)
+		iceTotal = iceTotal + #subPolygon.iceHexes
+	end
+	-- sort subpolygons warmest to coldest
+	tSort(sps, function (a, b) return a.oceanTemperature > b.oceanTemperature end)
+	for iPhaseIndex = 1, iPhases do
+		local kPhaseDetails = aPhases[iPhaseIndex]
+		local percentInPhase = kPhaseDetails.IceLoss
+		if iPhaseIndex > 1 then
+			percentInPhase = kPhaseDetails.IceLoss - aPhases[iPhaseIndex-1].IceLoss
+		end
+		local hexesInPhase = mFloor(iceTotal * (percentInPhase / 100))
+		EchoDebug("phase", iPhaseIndex, kPhaseDetails.IceLoss, percentInPhase, hexesInPhase)
+		if hexesInPhase > 0 then
+			local hexesLeft = hexesInPhase
+			for i, subPolygon in pairs(sps) do
+				if #subPolygon.iceHexes > 0 then
+					local nmax = mMin(hexesLeft, #subPolygon.iceHexes)
+					for n = 1, nmax do
+						local hex = tRemoveRandom(subPolygon.iceHexes)
+						hex.iceLossEventNum = kPhaseDetails.RandomEventEnum
+						hexesLeft = hexesLeft - 1
+					end
+				end
+				if hexesLeft == 0 then
+					break
+				end
+			end
+		end
+	end
+end
+
 function Space:SetPlots()
 	local plotTypes = {}
 	for i, hex in pairs(self.hexes) do
@@ -4166,6 +4241,7 @@ end
 
 function Space:SetFeatures()
 	self:FindOases()
+	self:DetermineIceLossPhases()
 	for i, hex in pairs(self.hexes) do
 		hex:SetFeature()
 	end
@@ -6979,6 +7055,18 @@ function Space:InkRiver(river, seed, seedSpawns, done, landmass)
 			flow.flowDirection = GetOppositeFlowDirection(flow.flowDirection)
 		end
 		]]--
+
+		-- AOM GS update
+		if flow.hex.riverId == nil and #river > 4 then
+			if riverId == nil then
+				riverId = self.nextRiverId;
+				self.nextRiverId = self.nextRiverId +1;
+			end
+			-- print('setting hex river id = '..tostring(riverId))
+			flow.hex.riverId = riverId;
+		end
+		-- END AOM GS update
+
 		flow.hex.ofRiver[flow.direction] = flow.flowDirection
 		flow.hex.onRiver[flow.pairHex] = riverThing
 		flow.pairHex.onRiver[flow.hex] = riverThing
@@ -7614,6 +7702,32 @@ function DetermineContinents()
 	-- mySpace:PolygonDebugDisplay(mySpace.shillPolygons)-- uncomment to debug shill polygons
 end
 
+-- AOM GS update
+function AddFeaturesFromContinents(width,height)
+	print("Adding Features from Continents");
+	local featuregen = FeatureGenerator.Create(args);
+	print('Land plots (before): '.. tostring(featuregen.iNumLandPlots));
+	for y = 0, height - 1, 1 do
+		for x = 0, width - 1, 1 do
+			local i = y * width + x;
+			local plot = Map.GetPlotByIndex(i);
+			if(plot ~= nil) then
+				local featureType = plot:GetFeatureType();
+				if(plot:IsImpassable() or featureType ~= g_FEATURE_NONE) then
+					--No Feature
+				elseif(plot:IsWater() == true) then					
+					--No Feature
+				else
+					featuregen.iNumLandPlots = featuregen.iNumLandPlots + 1;
+				end
+			end
+		end
+	end
+	print('Land plots (after): '.. tostring(featuregen.iNumLandPlots));
+	featuregen:AddFeaturesFromContinents();
+end
+-- END AOM GS update
+
 
 -- ENTRY POINT:
 function GenerateMap()
@@ -7624,15 +7738,23 @@ function GenerateMap()
 	-- TestRNGs(5, 10, 2)
 	plotTypes = GeneratePlotTypes()
 	terrainTypes = GenerateTerrain()
+
+	-- AOM GS update
+	AreaBuilder.Recalculate();
+	TerrainBuilder.AnalyzeChokepoints();
+	TerrainBuilder.StampContinents();
+	-- END AOM GS update
+
 	local totalDry = (mySpace.hillCount or 0) + (mySpace.mountainCount or 0) + (mySpace.landCount or 0)
 	local hillPercent = mCeil(((mySpace.hillCount or 0) / totalDry) * 100)
 	local mountainPercent = mCeil(((mySpace.mountainCount or 0) / totalDry) * 100)
 	EchoDebug(mountainPercent, hillPercent)
 
+	AddRivers() -- comes before AddFeatures, following AOM GS update
 	AddFeatures()
-	AddRivers()
 
-	AreaBuilder.Recalculate();
+	TerrainBuilder.AnalyzeChokepoints(); -- AOM GS update
+	-- AreaBuilder.Recalculate(); -- commented out, following AOM GS update
 
 	AddCliffs()
 
@@ -7645,7 +7767,30 @@ function GenerateMap()
 	};
 	local nwGen = NaturalWonderGenerator.Create(args);
 
-	mySpace:RemoveTrickSnow()
+	mySpace:RemoveTrickSnow();
+
+	if GameInfo.RandomEvents then
+		-- AOM GS Update
+		local world_age_new = 5;
+		local world_age_normal = 3;
+		local world_age_old = 2;
+		local world_age = mySpace.mountainRatio or 0.6;
+		if (world_age > 0.06) then
+			world_age = world_age_new;
+		elseif (world_age == 0.06) then
+			world_age = world_age_normal;
+		elseif (world_age < 0.06) then
+			world_age = world_age_old;
+		end
+		local iContinentBoundaryPlots = GetContinentBoundaryPlotCount(mySpace.iW, mySpace.iH);
+		AddTerrainFromContinents(plotTypes, terrainTypes, world_age, mySpace.iW, mySpace.iH, iContinentBoundaryPlots);
+		AddFeaturesFromContinents(mySpace.iW, mySpace.iH);
+		local iMinFloodplainSize = 4;
+		local iMaxFloodplainSize = 10;
+		TerrainBuilder.GenerateFloodplains(true, iMinFloodplainSize, iMaxFloodplainSize);
+		MarkCoastalLowlands();
+		-- END AOM GS update
+	end
 
 	AreaBuilder.Recalculate();
 
@@ -7710,6 +7855,12 @@ function GenerateMap()
 		LAND = isLandMap,
 		WATER = isWaterMap,
 	};
+	if GameInfo.RandomEvents then
+		-- AOM GS update
+		args.START_MIN_Y = 15
+		args.START_MAX_Y = 15
+		-- END AOM GS update
+	end
 	local start_plot_database = AssignStartingPlots.Create(args)
 
 	local GoodyGen = AddGoodies(mySpace.iW, mySpace.iH);
