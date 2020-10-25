@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-19
+-- version 32-VI-20
 
 --------------------------------------------------------------
 if include == nil then
@@ -7044,6 +7044,13 @@ end
 
 function Space:InkRiver(river, seed, seedSpawns, done, landmass)
 	local riverThing = { path = river, seed = seed, done = done, riverLength = #river, tributaries = {} }
+	-- GS update
+	local riverId = nil
+	if #river > 3 then
+		riverId = self.nextRiverId
+		self.nextRiverId = self.nextRiverId + 1
+	end
+	-- end GS update
 	for f, flow in ipairs(river) do
 		if flow.hex.ofRiver == nil then flow.hex.ofRiver = {} end
 		if seed.reverseFlow then flow.flowDirection = GetOppositeFlowDirection(flow.flowDirection) end
@@ -7056,16 +7063,12 @@ function Space:InkRiver(river, seed, seedSpawns, done, landmass)
 		end
 		]]--
 
-		-- AOM GS update
-		if flow.hex.riverId == nil and #river > 4 then
-			if riverId == nil then
-				riverId = self.nextRiverId;
-				self.nextRiverId = self.nextRiverId +1;
-			end
-			-- print('setting hex river id = '..tostring(riverId))
-			flow.hex.riverId = riverId;
+		-- GS update
+		if flow.hex.riverId == nil then
+			-- print('setting hex river id = '..tostring(self.nextRiverId))
+			flow.hex.riverId = riverId
 		end
-		-- END AOM GS update
+		-- end GS update
 
 		flow.hex.ofRiver[flow.direction] = flow.flowDirection
 		flow.hex.onRiver[flow.pairHex] = riverThing
