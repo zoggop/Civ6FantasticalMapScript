@@ -934,7 +934,7 @@ local OptionDictionary = {
 	values = {
 			[1] = { name = "Arrakis", values = {2},
 				description = "No forest, rainforest, grassland, or plains." },
-			[2] = { name = "Parched", values = {16},
+			[2] = { name = "Parched", values = {13},
 				description = "No forest, rainforest, or grassland." },
 			[3] = { name = "Treeless", values = {29},
 				description = "No forest or rainforest." },
