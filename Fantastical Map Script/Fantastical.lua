@@ -915,7 +915,7 @@ local OptionDictionary = {
 			[1] = { name = "Snowball", values = {1.8, 0, 15, 16},
 				description = "No grassland, and very little plains. Ice sheets cover much of the oceans." },
 			[2] = { name = "Ice Age", values = {1.6, 0, 39},
-				description = "Very little grassland. Larger oceanic ice sheets than standard." },
+				description = "Very little grassland. No jungle. Larger oceanic ice sheets than standard." },
 			[3] = { name = "Cold", values = {1.4, 0, 67}, 
 				description = "Less grassland than standard." },
 			[4] = { name = "Standard", values = {1.2, 0, 99},
