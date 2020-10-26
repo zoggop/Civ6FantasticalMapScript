@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-20
+-- version 32-VI-21
 
 --------------------------------------------------------------
 if include == nil then
@@ -944,7 +944,7 @@ local OptionDictionary = {
 				description = "Similar to Earth." },
 			[6] = { name = "Damp", values = {56},
 				description = "Less desert; more forest and rainforest." },
-			[7] = { name = "Wet", values = {62},
+			[7] = { name = "Wet", values = {66},
 				description = "No desert; more forest and rainforest." },
 			[8] = { name = "Drenched", values = {79},
 				description = "No desert; lots of forest and rainforest." },
