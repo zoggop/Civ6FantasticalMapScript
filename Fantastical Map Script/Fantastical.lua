@@ -6514,6 +6514,7 @@ end
 
 function Space:DrawAllLandmassRivers()
 	EchoDebug("drawing rivers for each landmass...")
+	local riverGenTimer = StartDebugTimer()
 	local oldRiverLandRatio = self.riverLandRatio + 0
 	self.riverLandRatio = self.riverLandRatio * (self.rainfallMidpoint / 49.5)
 	EchoDebug("original riverLandRatio of " .. oldRiverLandRatio .. " modified by rainfallMidpoint of " .. self.rainfallMidpoint .. " is now " .. self.riverLandRatio)
@@ -6529,7 +6530,7 @@ function Space:DrawAllLandmassRivers()
 		self:FindLandmassRiverSeeds(landmass)
 		self:DrawLandmassRivers(landmass)
 	end
-	EchoDebug(self.riverArea .. " river tiles created of " .. realPrescribedRiverArea .. " prescribed")
+	EchoDebug(self.riverArea .. " river tiles created of " .. realPrescribedRiverArea .. " prescribed", StopDebugTimer(riverGenTimer))
 end
 
 function Space:FindLandmassRiverSeeds(landmass)
@@ -6686,7 +6687,7 @@ function Space:DrawLandmassRivers(landmass)
 						+ ((floodPlainsCount / area) * self.riverScoreFloodPlainsMult)
 						- ((mountainBlockedCount / #river) * self.riverScoreMountainBlockedMult)
 					if not bestScore or score > bestScore then
-						print(area .. "/" .. maxAreaPerRiver, #river .. "/" .. (area / 2), altitude .. "/20", rainfall .. "/1000", floodPlainsCount .. "/" .. area, mountainBlockedCount .. "/" .. #river)
+						EchoDebug(area .. "/" .. maxAreaPerRiver, #river .. "/" .. (area / 2), altitude .. "/20", rainfall .. "/1000", floodPlainsCount .. "/" .. area, mountainBlockedCount .. "/" .. #river)
 						best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done}
 						bestScore = score
 					end
@@ -7771,6 +7772,7 @@ end
 -- ENTRY POINT:
 function GenerateMap()
 	print("Generating Fantastical Map...")
+	local generationTimer = StartDebugTimer()
 
 	-- mRandSeed()
 	-- TestRNGs(5, 10)
@@ -7903,4 +7905,5 @@ function GenerateMap()
 	local start_plot_database = AssignStartingPlots.Create(args)
 
 	local GoodyGen = AddGoodies(mySpace.iW, mySpace.iH);
+	EchoDebug("map generated in", StopDebugTimer(generationTimer))
 end
