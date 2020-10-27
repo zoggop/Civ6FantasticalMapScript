@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Mod id="da552590-d30e-4aec-918f-ef947c5ddd2f" version="21">
+<Mod id="da552590-d30e-4aec-918f-ef947c5ddd2f" version="22">
   <Properties>
     <Name>Fantastical Map Script</Name>
     <Description>Maps with not much bearing on reality. Vast jungles next to icy wastes, etc. Mountains tend to divide regions of differing terrain. Number of deep oceans is controllable. The map is a rendering of a polygonal world--a smaller map is just a lower resolution, therefore has smaller continents, regions, mountain ranges, rivers, etc. The number of polygons that make up the world of is controllable with the Granularity option. It is possible to enable Climate Realism, but it's no Planet Simulator or Perfect World. The "realism" is a simple model based on latitude, with some randomness.

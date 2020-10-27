@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-21
+-- version 32-VI-22
 
 --------------------------------------------------------------
 if include == nil then
