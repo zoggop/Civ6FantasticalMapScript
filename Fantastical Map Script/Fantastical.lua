@@ -22,8 +22,8 @@ include "CoastalLowlands" -- Gathering Storm only
 
 ----------------------------------------------------------------------------------
 
-local debugEnabled = true
-local debugTimerEnabled = true -- i'm paranoid that os.clock() is causing desyncs
+local debugEnabled = false
+local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
 local firstDebugTimer
