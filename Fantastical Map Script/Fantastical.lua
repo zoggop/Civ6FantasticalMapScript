@@ -2943,7 +2943,7 @@ Space = class(function(a)
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
 	a.riverForkRatio = 0.2 -- how much of the river area should be reserved for forks
 	a.riverMaxLakeRatio = 0.5 -- over this much lake-connecting river area out of non-fork river area, stop
-	a.riverFollowPolygonChance = 0.2 -- how often out of 1 do rivers follow polygon boundaries
+	a.riverFollowPolygonChance = 0.25 -- how often out of 1 do rivers follow polygon boundaries
 	a.riverFollowSubPolygonChance = 0.5 -- how often out of 1 do rivers follow subpolygon boundaries
 	a.riverSeedSampleSize = 100 -- how many seeds from the river seeds on a landmass to grow in search of the best score for each one river actually inked
 	a.riverScoreLengthMult = 0.5 -- multiplies the river length divided by the length of a straight line (total river-adjacent tiles divided by two)
@@ -6639,34 +6639,15 @@ function Space:RiverScore(area, length, rainfall, altitude, floodPlainsCount, mo
 		- ((mountainBlockedCount / length) * self.riverScoreMountainBlockedMult)
 end
 
-function Space:DrawLandmassRivers(landmass)
-	if #landmass.riverSeeds == 0 then return end
-	landmass.rainfallFraction = landmass.rainfall / self.globalRainfall
-	landmass.prescribedRiverArea = mMax(2, mCeil(self.riverLandRatio * self.filledArea * landmass.rainfallFraction))
-	local prescribedRiverArea = landmass.prescribedRiverArea
-	local prescribedForkArea = mMax(2, mCeil(prescribedRiverArea * self.riverForkRatio))
-	local prescribedMainArea = mMax(2, prescribedRiverArea - prescribedForkArea)
-	local maxAreaPerRiver = mMax(2, mCeil(prescribedMainArea * self.maxAreaFractionPerRiver))
-	landmass.riverMaxLakeArea = mCeil(self.riverMaxLakeRatio * prescribedMainArea)
-	if prescribedMainArea < self.minMaxAreaPerRiver then
-		maxAreaPerRiver = prescribedRiverArea
-		prescribedMainArea = prescribedRiverArea
-	end
-	if prescribedMainArea == 0 then return end
-	EchoDebug("landmass fraction of global rainfall: " .. landmass.rainfallFraction)
-	EchoDebug("prescribed river area: " .. prescribedRiverArea, "prescribed fork area: " .. prescribedForkArea, "prescribedMainArea: " .. prescribedMainArea)
-	EchoDebug("max area per river: " .. maxAreaPerRiver)
-	-- draw rivers connecting lakes if possible:
-	self:DrawLandmassLakeRivers(landmass)
-	-- draw the main rivers without branches:
+function Space:DrawRiverCollectionOnLandmass(collection, maxAreaPerRiver, prescribedArea, landmass)
 	local iteration = 0
 	local deadIteration = 0
 	local lastLandmassRiverArea = landmass.riverArea + 0
-	local mainInkedCount = 0
-	local seedBucket = tDuplicate(landmass.riverSeeds)
-	local sampleSize = mMin(mMax(self.riverSeedSampleSize, maxAreaPerRiver), #landmass.riverSeeds)
+	local inkedCount = 0
+	local seedBucket = tDuplicate(collection)
+	local sampleSize = mMin(mMax(self.riverSeedSampleSize, maxAreaPerRiver), #collection)
 	repeat
-		local maxRiverArea = mMin(maxAreaPerRiver, prescribedMainArea - landmass.riverArea)
+		local maxRiverArea = mMin(maxAreaPerRiver, prescribedArea - landmass.riverArea)
 		local best
 		local bestScore
 		local worstScore
@@ -6675,7 +6656,6 @@ function Space:DrawLandmassRivers(landmass)
 		local n = 1
 		local bestArea
 		repeat
-		-- for i, seed in ipairs(landmass.riverSeeds) do
 			local seed = tRemoveRandom(seedBucket)
 			self:AnnotateRiverSeed(seed)
 			local river, done, seedSpawns, endRainfall, endAltitude, area, floodPlainsCount, mountainBlockedCount = self:DrawRiver(seed, maxRiverArea, landmass)
@@ -6704,7 +6684,7 @@ function Space:DrawLandmassRivers(landmass)
 			end
 			n = n + 1
 			if #seedBucket == 0 then
-				seedBucket = tDuplicate(landmass.riverSeeds)
+				seedBucket = tDuplicate(collection)
 			end
 		until n == sampleSize
 		if iteration == 0 and bestArea then
@@ -6716,9 +6696,10 @@ function Space:DrawLandmassRivers(landmass)
 				-- if not best.seed.growsDownstream then EchoDebug("best river grows upstream") end
 				-- if not best.done then EchoDebug("best river hasnt found target") end
 				self:InkRiver(best.river, best.seed, best.seedSpawns, best.done, landmass)
-				mainInkedCount = mainInkedCount + 1
+				inkedCount = inkedCount + 1
 			end
-			if landmass.riverArea == lastLandmassRiverArea then
+			if not best or landmass.riverArea - lastLandmassRiverArea < maxAreaPerRiver * 0.1 then
+				-- EchoDebug("dead iteration", landmass.riverArea - lastLandmassRiverArea, maxAreaPerRiver * 0.1, best)
 				deadIteration = deadIteration + 1
 			else
 				deadIteration = 0
@@ -6726,7 +6707,31 @@ function Space:DrawLandmassRivers(landmass)
 		end
 		lastLandmassRiverArea = landmass.riverArea + 0
 		iteration = iteration + 1
-	until landmass.riverArea >= prescribedMainArea or deadIteration > 5 or iteration > 50
+	until landmass.riverArea >= prescribedArea or deadIteration > 5 or iteration > 50
+	return inkedCount, iteration, deadIteration
+end
+
+function Space:DrawLandmassRivers(landmass)
+	if #landmass.riverSeeds == 0 then return end
+	landmass.rainfallFraction = landmass.rainfall / self.globalRainfall
+	landmass.prescribedRiverArea = mMax(2, mCeil(self.riverLandRatio * self.filledArea * landmass.rainfallFraction))
+	local prescribedRiverArea = landmass.prescribedRiverArea
+	local prescribedForkArea = mMax(2, mCeil(prescribedRiverArea * self.riverForkRatio))
+	local prescribedMainArea = mMax(2, prescribedRiverArea - prescribedForkArea)
+	local maxAreaPerMainRiver = mMax(2, mCeil(prescribedMainArea * self.maxAreaFractionPerRiver))
+	landmass.riverMaxLakeArea = mCeil(self.riverMaxLakeRatio * prescribedMainArea)
+	if prescribedMainArea < self.minMaxAreaPerRiver then
+		maxAreaPerMainRiver = prescribedRiverArea
+		prescribedMainArea = prescribedRiverArea
+	end
+	if prescribedMainArea == 0 then return end
+	EchoDebug("landmass fraction of global rainfall: " .. landmass.rainfallFraction)
+	EchoDebug("prescribed river area: " .. prescribedRiverArea, "prescribed fork area: " .. prescribedForkArea, "prescribedMainArea: " .. prescribedMainArea)
+	EchoDebug("max area per main river: " .. maxAreaPerMainRiver)
+	-- draw rivers connecting lakes if possible:
+	self:DrawLandmassLakeRivers(landmass)
+	-- draw the main rivers without branches:
+	local mainInkedCount, iteration, deadIteration = self:DrawRiverCollectionOnLandmass(landmass.riverSeeds, maxAreaPerMainRiver, prescribedMainArea, landmass)
 	EchoDebug(mainInkedCount .. " main rivers inked", landmass.riverArea .. " river tiles", prescribedMainArea .. " river tiles prescribed for main", iteration .. " iterations", #landmass.forkSeeds .. " fork seeds collected")
 	-- draw branches flowing into the main river channels
 	if prescribedForkArea < 2 then
@@ -6738,48 +6743,8 @@ function Space:DrawLandmassRivers(landmass)
 		return
 	end
 	local maxAreaPerFork = mMax(self.minForkLength * 2, mCeil(prescribedForkArea * self.maxAreaFractionPerForkRiver))
-	iteration = 0
-	deadIteration = 0
-	lastLandmassRiverArea = landmass.riverArea + 0
-	local forkInkedCount = 0
-	local seedBucket = tDuplicate(landmass.forkSeeds)
-	local sampleSize = mMin(mMax(self.riverSeedSampleSize, maxAreaPerFork), #landmass.forkSeeds)
-	repeat
-		local maxRiverArea = mMin(maxAreaPerFork, prescribedRiverArea - landmass.riverArea)
-		local best
-		local bestScore
-		local n = 1
-		repeat
-			local seed = tRemoveRandom(seedBucket)
-			self:AnnotateRiverSeed(seed)
-			local river, done, seedSpawns, endRainfall, endAltitude, area, floodPlainsCount, mountainBlockedCount = self:DrawRiver(seed, maxRiverArea, landmass)
-			local rainfall = endRainfall or seed.rainfall or 0
-			local altitude = endAltitude or seed.altitude or 0
-			if (seed.doneAnywhere or done) and river and #river >= self.minForkLength and area <= maxRiverArea then
-				local score = self:RiverScore(area, #river, rainfall, altitude, floodPlainsCount, mountainBlockedCount, maxRiverArea)
-				if not bestScore or score > bestScore then
-					best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done }
-					bestScore = score
-				end
-			end
-			n = n + 1
-			if #seedBucket == 0 then
-				seedBucket = tDuplicate(landmass.forkSeeds)
-			end
-		until n == sampleSize
-		if best then
-			self:InkRiver(best.river, best.seed, best.seedSpawns, best.done, landmass)
-			forkInkedCount = forkInkedCount + 1
-		end
-		if landmass.riverArea == lastLandmassRiverArea then
-			deadIteration = deadIteration + 1
-		else
-			deadIteration = 0
-		end
-		lastLandmassRiverArea = landmass.riverArea + 0
-		iteration = iteration + 1
-	until landmass.riverArea >= prescribedRiverArea or deadIteration > 5 or iteration > 50
-	EchoDebug(forkInkedCount .. " fork rivers inked", landmass.riverArea .. " river tiles", prescribedRiverArea .. " river tiles prescribed", iteration .. " iterations for forks")
+	local forkInkedCount, forkIteration, forkDeadIteration = self:DrawRiverCollectionOnLandmass(landmass.forkSeeds, maxAreaPerFork, prescribedRiverArea, landmass)
+	EchoDebug(forkInkedCount .. " fork rivers inked", landmass.riverArea .. " river tiles", prescribedRiverArea .. " river tiles prescribed", forkIteration .. " iterations for forks")
 end
 
 function Space:HillsOrMountains(...)
