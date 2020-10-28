@@ -2947,9 +2947,10 @@ Space = class(function(a)
 	a.riverFollowSubPolygonChance = 0.5 -- how often out of 1 do rivers follow subpolygon boundaries
 	a.riverSeedSampleSize = 100 -- how many seeds from the river seeds on a landmass to grow in search of the best score for each one river actually inked
 	a.riverScoreLengthMult = 0.5 -- multiplies the river length divided by the length of a straight line (total river-adjacent tiles divided by two)
-	a.riverScoreRainfallMult = 0.4 -- multiplies fraction of maximum possible rainfall
+	a.riverScoreRainfallMult = 0.67 -- multiplies fraction of maximum possible rainfall
 	a.riverScoreAltitudeMult = 0.67 -- multiplies fraction of maximum possible altitude
 	a.riverScoreFloodPlainsMult = 0.75 -- multiplies the fraction of total river tiles that are flood plains
+	a.riverScoreDistanceFromOthersMult = 2 -- multiplies shortest distance from another river on the same landmass divided by the estimated breadth of the landmass
 	a.riverScoreMountainBlockedMult = 3 -- multiplies the fraction of river length that has mountain on both sides, this subtracts from the river score
 	a.maxAreaFractionPerRiver = 0.25 -- maximum fraction of the prescribed river area per landmass for each river
 	a.maxAreaFractionPerForkRiver = 0.5 -- maximum fraction of the prescribed fork river area per landmass for each river
@@ -6488,7 +6489,7 @@ function Space:ComputeLandmassRainfalls()
 		end
 		tInsert(self.landmasses, {subPolygon = subPolygon, hexes = hexes})
 	end
-	EchoDebug("computing landmass rainfalls...")
+	EchoDebug("computing landmass rainfalls, altitudes, and breadths...")
 	self.globalRainfall = 0
 	for i, landmass in pairs(self.landmasses) do
 		local rainfall = 0
@@ -6501,10 +6502,11 @@ function Space:ComputeLandmassRainfalls()
 				altitude = altitude + 2
 			end
 		end
+		landmass.breadth = mSqrt(2 * #landmass.hexes)
 		landmass.rainfall = rainfall
 		landmass.altitude = altitude
 		landmass.canDoToHills = altitude >= 4
-		EchoDebug(#landmass.hexes .. " hex landmass with " .. rainfall .. " rainfall")
+		EchoDebug(#landmass.hexes .. " hex landmass with " .. rainfall .. " rainfall, " .. altitude .. " altitude, and " .. landmass.breadth .. " breadth")
 		self.globalRainfall = self.globalRainfall + rainfall
 		landmass.riverArea = 0
 		landmass.forkSeeds = {}
@@ -6630,19 +6632,41 @@ function Space:AnnotateRiverSeed(seed)
 	end
 end
 
-function Space:RiverScore(area, length, rainfall, altitude, floodPlainsCount, mountainBlockedCount, maxRiverArea)
+function Space:RiverDistanceFromOthers(river, landmass)
+	if self.riverScoreDistanceFromOthersMult == 0 or not landmass.rivers or #landmass.rivers == 0 then
+		return 0
+	end
+	local a = river[1].hex
+	local b = river[#river].hex
+	local shortestDist
+	for i, otherRiverThing in pairs(landmass.rivers) do
+		local otherRiver = otherRiverThing.path
+		local orA = otherRiver[1].hex
+		local orB = otherRiver[#otherRiver].hex
+		local dist = (a:Distance(orA) + a:Distance(orB) + b:Distance(orA) + b:Distance(orB)) / 4
+		if not shortestDist or dist < shortestDist then
+			shortestDist = dist
+		end
+	end
+	local distFraction = shortestDist / landmass.breadth
+	-- EchoDebug(distFraction, shortestDist, landmass.breadth)
+	return distFraction
+end
+
+function Space:RiverScore(area, length, rainfall, altitude, floodPlainsCount, mountainBlockedCount, distanceFromOthers, maxRiverArea)
 	return (area / maxRiverArea)
 		+ ((length / (area / 2)) * self.riverScoreLengthMult)
 		+ ((rainfall / 1000) * self.riverScoreRainfallMult)
 		+ ((altitude / 20) * self.riverScoreAltitudeMult)
 		+ ((floodPlainsCount / area) * self.riverScoreFloodPlainsMult)
+		+ (distanceFromOthers * self.riverScoreDistanceFromOthersMult)
 		- ((mountainBlockedCount / length) * self.riverScoreMountainBlockedMult)
 end
 
 function Space:DrawRiverCollectionOnLandmass(collection, maxAreaPerRiver, prescribedArea, landmass)
 	local iteration = 0
 	local deadIteration = 0
-	local lastLandmassRiverArea = landmass.riverArea + 0
+	local lastLandmassRiverArea = (landmass.riverArea or 0) + 0
 	local inkedCount = 0
 	local seedBucket = tDuplicate(collection)
 	local sampleSize = mMin(mMax(self.riverSeedSampleSize, maxAreaPerRiver), #collection)
@@ -6669,9 +6693,10 @@ function Space:DrawRiverCollectionOnLandmass(collection, maxAreaPerRiver, prescr
 				else
 					if not rainfall then EchoDebug("no rainfall") end
 					if not altitude then EchoDebug("no altitude") end
-					local score = self:RiverScore(area, #river, rainfall, altitude, floodPlainsCount, mountainBlockedCount, maxRiverArea)
+					local distFromOtherRivers = self:RiverDistanceFromOthers(river, landmass)
+					local score = self:RiverScore(area, #river, rainfall, altitude, floodPlainsCount, mountainBlockedCount, distFromOtherRivers, maxRiverArea)
 					if not bestScore or score > bestScore then
-						EchoDebug(area .. "/" .. maxAreaPerRiver, #river .. "/" .. (area / 2), altitude .. "/20", rainfall .. "/1000", floodPlainsCount .. "/" .. area, mountainBlockedCount .. "/" .. #river)
+						EchoDebug(area .. "/" .. maxAreaPerRiver, #river .. "/" .. (area / 2), altitude .. "/20", rainfall .. "/1000", floodPlainsCount .. "/" .. area, mountainBlockedCount .. "/" .. #river, distFromOtherRivers)
 						best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done}
 						bestScore = score
 					end
@@ -7138,6 +7163,8 @@ function Space:InkRiver(river, seed, seedSpawns, done, landmass)
 	end
 	if seed.flowsInto then tInsert(seed.flowsInto.tributaries, riverThing) end
 	tInsert(self.rivers, riverThing)
+	landmass.rivers = landmass.rivers or {}
+	tInsert(landmass.rivers, riverThing)
 end
 
 function Space:DrawRoad(origHex, destHex)
