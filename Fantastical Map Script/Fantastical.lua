@@ -1576,7 +1576,7 @@ function Hex:PseudoWatershed(pairHex)
 	return pseudoWatershed
 end
 
-function Hex:RiverScore(pairHex)
+function Hex:RiverSourceRainfallAltitude(pairHex)
 	local rainfall = 0
 	local altitude = 0
 	for i, hex in pairs(self:PseudoWatershed(pairHex)) do
@@ -2943,13 +2943,13 @@ Space = class(function(a)
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
 	a.riverForkRatio = 0.2 -- how much of the river area should be reserved for forks
 	a.riverMaxLakeRatio = 0.5 -- over this much lake-connecting river area out of non-fork river area, stop
-	a.riverFollowPolygonChance = 0.5 -- how often out of 1 do rivers follow polygon boundaries
+	a.riverFollowPolygonChance = 0.2 -- how often out of 1 do rivers follow polygon boundaries
 	a.riverFollowSubPolygonChance = 0.5 -- how often out of 1 do rivers follow subpolygon boundaries
 	a.riverSeedSampleSize = 100 -- how many seeds from the river seeds on a landmass to grow in search of the best score for each one river actually inked
 	a.riverScoreLengthMult = 0.5 -- multiplies the river length divided by the length of a straight line (total river-adjacent tiles divided by two)
 	a.riverScoreRainfallMult = 0.4 -- multiplies fraction of maximum possible rainfall
 	a.riverScoreAltitudeMult = 0.67 -- multiplies fraction of maximum possible altitude
-	a.riverScoreFloodPlainsMult = 1 -- multiplies the fraction of total river tiles that are flood plains
+	a.riverScoreFloodPlainsMult = 0.75 -- multiplies the fraction of total river tiles that are flood plains
 	a.riverScoreMountainBlockedMult = 3 -- multiplies the fraction of river length that has mountain on both sides, this subtracts from the river score
 	a.maxAreaFractionPerRiver = 0.25 -- maximum fraction of the prescribed river area per landmass for each river
 	a.maxAreaFractionPerForkRiver = 0.5 -- maximum fraction of the prescribed fork river area per landmass for each river
@@ -6626,8 +6626,17 @@ end
 
 function Space:AnnotateRiverSeed(seed)
 	if seed.growsDownstream and not seed.altitude then
-		seed.rainfall, seed.altitude = seed.hex:RiverScore(seed.pairHex)
+		seed.rainfall, seed.altitude = seed.hex:RiverSourceRainfallAltitude(seed.pairHex)
 	end
+end
+
+function Space:RiverScore(area, length, rainfall, altitude, floodPlainsCount, mountainBlockedCount, maxRiverArea)
+	return (area / maxRiverArea)
+		+ ((length / (area / 2)) * self.riverScoreLengthMult)
+		+ ((rainfall / 1000) * self.riverScoreRainfallMult)
+		+ ((altitude / 20) * self.riverScoreAltitudeMult)
+		+ ((floodPlainsCount / area) * self.riverScoreFloodPlainsMult)
+		- ((mountainBlockedCount / length) * self.riverScoreMountainBlockedMult)
 end
 
 function Space:DrawLandmassRivers(landmass)
@@ -6680,12 +6689,7 @@ function Space:DrawLandmassRivers(landmass)
 				else
 					if not rainfall then EchoDebug("no rainfall") end
 					if not altitude then EchoDebug("no altitude") end
-					local score = (area / maxRiverArea)
-						+ ((#river / (area / 2)) * self.riverScoreLengthMult)
-						+ ((rainfall / 1000) * self.riverScoreRainfallMult)
-						+ ((altitude / 20) * self.riverScoreAltitudeMult)
-						+ ((floodPlainsCount / area) * self.riverScoreFloodPlainsMult)
-						- ((mountainBlockedCount / #river) * self.riverScoreMountainBlockedMult)
+					local score = self:RiverScore(area, #river, rainfall, altitude, floodPlainsCount, mountainBlockedCount, maxRiverArea)
 					if not bestScore or score > bestScore then
 						EchoDebug(area .. "/" .. maxAreaPerRiver, #river .. "/" .. (area / 2), altitude .. "/20", rainfall .. "/1000", floodPlainsCount .. "/" .. area, mountainBlockedCount .. "/" .. #river)
 						best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done}
@@ -6729,28 +6733,40 @@ function Space:DrawLandmassRivers(landmass)
 		EchoDebug("less than 2 fork river tiles prescribed, there will be no fork rivers")
 		return
 	end
+	if #landmass.forkSeeds < 2 then
+		EchoDebug("less than 2 fork river seeds, there will be no fork rivers")
+		return
+	end
 	local maxAreaPerFork = mMax(self.minForkLength * 2, mCeil(prescribedForkArea * self.maxAreaFractionPerForkRiver))
 	iteration = 0
 	deadIteration = 0
 	lastLandmassRiverArea = landmass.riverArea + 0
 	local forkInkedCount = 0
+	local seedBucket = tDuplicate(landmass.forkSeeds)
+	local sampleSize = mMin(mMax(self.riverSeedSampleSize, maxAreaPerFork), #landmass.forkSeeds)
 	repeat
 		local maxRiverArea = mMin(maxAreaPerFork, prescribedRiverArea - landmass.riverArea)
 		local best
-		local bestScore = 0
-		for i, seed in ipairs(landmass.forkSeeds) do
+		local bestScore
+		local n = 1
+		repeat
+			local seed = tRemoveRandom(seedBucket)
 			self:AnnotateRiverSeed(seed)
 			local river, done, seedSpawns, endRainfall, endAltitude, area, floodPlainsCount, mountainBlockedCount = self:DrawRiver(seed, maxRiverArea, landmass)
 			local rainfall = endRainfall or seed.rainfall or 0
 			local altitude = endAltitude or seed.altitude or 0
 			if (seed.doneAnywhere or done) and river and #river >= self.minForkLength and area <= maxRiverArea then
-				local score = (#river * self.riverScoreLengthMult) + (rainfall * self.riverScoreRainfallMult) + (altitude * self.riverScoreAltitudeMult) + (floodPlainsCount * self.riverScoreFloodPlainsMult) - (mountainBlockedCount * self.riverScoreMountainBlockedMult)
-				if score > bestScore then
+				local score = self:RiverScore(area, #river, rainfall, altitude, floodPlainsCount, mountainBlockedCount, maxRiverArea)
+				if not bestScore or score > bestScore then
 					best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done }
 					bestScore = score
 				end
 			end
-		end
+			n = n + 1
+			if #seedBucket == 0 then
+				seedBucket = tDuplicate(landmass.forkSeeds)
+			end
+		until n == sampleSize
 		if best then
 			self:InkRiver(best.river, best.seed, best.seedSpawns, best.done, landmass)
 			forkInkedCount = forkInkedCount + 1
@@ -7073,7 +7089,7 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 	if not seed.growsDownstream and river and #river > 0 then
 		local aHex = river[#river].hex
 		local bHex = river[#river].pairHex
-		endRainfall, endAltitude = aHex:RiverScore(bHex)
+		endRainfall, endAltitude = aHex:RiverSourceRainfallAltitude(bHex)
 	end
 	-- EchoDebug(it)
 	return river, done, seedSpawns, endRainfall, endAltitude, area, floodPlainsCount, mountainBlockedCount
