@@ -2951,7 +2951,7 @@ Space = class(function(a)
 	a.riverScoreRainfallMult = 0.67 -- multiplies fraction of maximum possible rainfall
 	a.riverScoreAltitudeMult = 0.67 -- multiplies fraction of maximum possible altitude
 	a.riverScoreFloodPlainsMult = 0.75 -- multiplies the fraction of total river tiles that are flood plains
-	a.riverScoreDistanceFromOthersMult = 2 -- multiplies shortest distance from another river on the same landmass divided by the estimated breadth of the landmass
+	a.riverScoreDistanceFromOthersMult = 0 -- multiplies shortest distance from another river on the same landmass divided by the estimated breadth of the landmass
 	a.riverScoreMountainBlockedMult = 3 -- multiplies the fraction of river length that has mountain on both sides, this subtracts from the river score
 	a.maxAreaFractionPerRiver = 0.25 -- maximum fraction of the prescribed river area per landmass for each river
 	a.maxAreaFractionPerForkRiver = 0.25 -- maximum fraction of the prescribed fork river area per landmass for each river
@@ -6808,7 +6808,7 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 	isRiver[hex] = true
 	isRiver[pairHex] = true
 	if hex.plotType == plotOcean or pairHex.plotType == plotOcean then
-		EchoDebug("river will seed next to water")
+		-- EchoDebug("river will seed next to water")
 	end
 	if hex.onRiver[pairHex] or pairHex.onRiver[hex] then
 		-- EchoDebug("SEED ALREADY ON RIVER")
@@ -6897,6 +6897,7 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 				if it > 0 then
 					seedSpawns[it-1] = {}
 				end
+				break
 			end
 		end
 		if not newHex then break end
@@ -6949,10 +6950,10 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 		seedSpawns[it] = {}
 		if seed.spawnSeeds then -- use this once it works
 			local toWater, toHills, avoidConnection, avoidWater, growsDownstream, dontConnect, doneAnywhere, spawnSeeds
-			local spawnNew, spawnNewPair = true, true
 			avoidConnection, avoidWater, doneAnywhere = true, true, true
 			local rainfall = nil
 			spawnSeeds = false
+			local spawnNew, spawnNewPair = true, true
 			local spawnLast, spawnLastPair
 			if it > 0 then
 				spawnLast = true
@@ -7021,7 +7022,7 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 			lastHex = hex
 			hex = newHex
 		else
-			EchoDebug("NO WAY FORWARD")
+			-- EchoDebug("NO WAY FORWARD")
 			break
 		end
 		-- dirMinusOne = direction - 1
@@ -7120,14 +7121,28 @@ function Space:InkRiver(river, seed, seedSpawns, done, landmass)
 		flow.pairHex.isRiver[seed.flowsInto or riverThing] = true
 		-- EchoDebug(flow.hex:Locate() .. ": " .. tostring(flow.hex.plotType) .. " " .. tostring(flow.hex.subPolygon.lake) .. " " .. tostring(flow.hex.mountainRange), " / ", flow.pairHex:Locate() .. ": " .. tostring(flow.pairHex.plotType) .. " " .. tostring(flow.pairHex.subPolygon.lake).. " " .. tostring(flow.pairHex.mountainRange))
 	end
+	local ssiStart = 0
+	local ssiEnd = #river
+	if #river > 3 then
+		ssiStart = 1
+		ssiEnd = #river - 1
+	end
+	if #river > 8 then
+		ssiStart = 2
+		ssiEnd = #river - 2
+	end
+	-- for f = ssiStart, ssiEnd do
+		-- local newseeds = seedSpawns[f]
 	for f, newseeds in ipairs(seedSpawns) do
-		for nsi, newseed in ipairs(newseeds) do
-			newseed.flowsInto = riverThing
-			local riverMile = f
-			if seed.growsDownstream then riverMile = #river - (f-1) end
-			newseed.flowsIntoRiverMile = riverMile
-			if landmass then
-				tInsert(landmass.forkSeeds, newseed)
+		if newseeds then
+			for nsi, newseed in ipairs(newseeds) do
+				newseed.flowsInto = riverThing
+				local riverMile = f
+				if seed.growsDownstream then riverMile = #river - (f-1) end
+				newseed.flowsIntoRiverMile = riverMile
+				if landmass then
+					tInsert(landmass.forkSeeds, newseed)
+				end
 			end
 		end
 	end
