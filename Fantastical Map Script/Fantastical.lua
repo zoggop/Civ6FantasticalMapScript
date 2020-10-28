@@ -22,8 +22,8 @@ include "CoastalLowlands" -- Gathering Storm only
 
 ----------------------------------------------------------------------------------
 
-local debugEnabled = false
-local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
+local debugEnabled = true
+local debugTimerEnabled = true -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
 local firstDebugTimer
@@ -883,11 +883,11 @@ local OptionDictionary = {
 	values = {
 			[1] = { name = "None", values = {0.0},
 				description = "Rivers have no tributaries." },
-			[2] = { name = "Few", values = {0.1},
+			[2] = { name = "Few", values = {0.8},
 				description = "Rivers are mostly one channel." },
-			[3] = { name = "Some", values = {0.2},
+			[3] = { name = "Some", values = {0.15},
 				description = "Rivers have some tributaries." },
-			[4] = { name = "Many", values = {0.4},
+			[4] = { name = "Many", values = {0.35},
 				description = "Rivers have many tributaries." },
 			[5] = { name = "Random", values = "values", lowValues = {0.0}, highValues = {0.4},
 				description = "A random amount of river forking." },
@@ -2941,11 +2941,12 @@ Space = class(function(a)
 	a.climateAssignRainExponent = 0.33 -- curve of how much rain lessens in importance towards the poles in assigning climate voronoi to regions. 1 means no curve, 0.1 means the rain matters the normal amount until a very small portion of the pole
 	a.climateAssignTemperatureTolerance = 5 -- how far above or below the best temperature match will be allowed for finding the best rainfall match, when assigning climate voronoi to regions
 	a.riverLandRatio = 0.19 -- how much of the map to have tiles next to rivers. is modified by global rainfall
-	a.riverForkRatio = 0.2 -- how much of the river area should be reserved for forks
+	a.riverForkRatio = 0.15 -- how much of the river area should be reserved for forks
 	a.riverMaxLakeRatio = 0.5 -- over this much lake-connecting river area out of non-fork river area, stop
-	a.riverFollowPolygonChance = 0.25 -- how often out of 1 do rivers follow polygon boundaries
-	a.riverFollowSubPolygonChance = 0.5 -- how often out of 1 do rivers follow subpolygon boundaries
-	a.riverSeedSampleSize = 100 -- how many seeds from the river seeds on a landmass to grow in search of the best score for each one river actually inked
+	a.riverUseInlandSeeds = true -- draw some rivers downstream
+	a.riverFollowPolygonChance = 0 -- how often out of 1 do rivers follow polygon boundaries
+	a.riverFollowSubPolygonChance = 0 -- how often out of 1 do rivers follow subpolygon boundaries
+	a.riverSeedSampleSize = 200 -- how many seeds from the river seeds on a landmass to grow in search of the best score for each one river actually inked
 	a.riverScoreLengthMult = 0.5 -- multiplies the river length divided by the length of a straight line (total river-adjacent tiles divided by two)
 	a.riverScoreRainfallMult = 0.67 -- multiplies fraction of maximum possible rainfall
 	a.riverScoreAltitudeMult = 0.67 -- multiplies fraction of maximum possible altitude
@@ -2953,7 +2954,7 @@ Space = class(function(a)
 	a.riverScoreDistanceFromOthersMult = 2 -- multiplies shortest distance from another river on the same landmass divided by the estimated breadth of the landmass
 	a.riverScoreMountainBlockedMult = 3 -- multiplies the fraction of river length that has mountain on both sides, this subtracts from the river score
 	a.maxAreaFractionPerRiver = 0.25 -- maximum fraction of the prescribed river area per landmass for each river
-	a.maxAreaFractionPerForkRiver = 0.5 -- maximum fraction of the prescribed fork river area per landmass for each river
+	a.maxAreaFractionPerForkRiver = 0.25 -- maximum fraction of the prescribed fork river area per landmass for each river
 	a.minMaxAreaPerRiver = 16 -- if the maxAreaFractionPerRiver causes a target single river area to go below this number, the whole area prescription for the landmass is used instead
 	a.minForkLength = 2 -- forks must be at least this long to happen at all
 	a.mountainRangeMaxEdges = 4 -- how many polygon edges long can a mountain range be
@@ -6540,6 +6541,8 @@ function Space:FindLandmassRiverSeeds(landmass)
 	local lakeRiverSeeds = {}
 	local riverSeeds = {}
 	local lakeRiverSeedCount = 0
+	local oceanSeedCount = 0
+	local inlandSeedCount = 0
 	for ih, hex in ipairs(landmass.hexes) do
 		local neighs, oceanNeighs, lakeNeighs, dryNeighs = {}, {}, {}, {}
 		local dryNeighList = {}
@@ -6563,13 +6566,14 @@ function Space:FindLandmassRiverSeeds(landmass)
 				if lakeNeighs[nnhex] then
 					lakeSeed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = neighs[nnhex], lake = nnhex.subPolygon, dontConnect = true, avoidConnection = true, toWater = true, growsDownstream = true, spawnSeeds = true }
 				elseif oceanNeighs[nnhex] then
-					oceanSeed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = oceanNeighs[nnhex], dontConnect = true, avoidConnection = true, avoidWater = true, toHills = landmass.canDoToHills, doneAnywhere = true, spawnSeeds = true }
+					oceanSeed = { hex = hex, pairHex = nhex, direction = d, lastHex = nnhex, lastDirection = oceanNeighs[nnhex], dontConnect = true, avoidConnection = true, avoidWater = true, toHills = false, doneAnywhere = true, spawnSeeds = true }
 				elseif neighs[nnhex] then
 					validLastHex = nnhex
 				end
 			end
 			if oceanSeed and not lakeSeed then
 				tInsert(riverSeeds, oceanSeed)
+				oceanSeedCount = oceanSeedCount + 1
 			elseif lakeSeed and not oceanSeed then
 				if not lakeRiverSeeds[lakeSeed.lake] then
 					tInsert(lakeList, lakeSeed.lake)
@@ -6577,16 +6581,17 @@ function Space:FindLandmassRiverSeeds(landmass)
 				lakeRiverSeeds[lakeSeed.lake] = lakeRiverSeeds[lakeSeed.lake] or {}
 				tInsert(lakeRiverSeeds[lakeSeed.lake], lakeSeed)
 				lakeRiverSeedCount = lakeRiverSeedCount + 1
-			elseif validLastHex and not lakeSeed and not oceanSeed then
+			elseif self.riverUseInlandSeeds and validLastHex and not lakeSeed and not oceanSeed then
 				local seed = { hex = hex, pairHex = nhex, direction = d, lastHex = validLastHex, lastDirection = neighs[validLastHex], dontConnect = true, avoidConnection = true, toWater = true, spawnSeeds = true, growsDownstream = true }
 				tInsert(riverSeeds, seed)
+				inlandSeedCount = inlandSeedCount + 1
 			end
 		end
 	end
 	landmass.lakeRiverSeeds = lakeRiverSeeds
 	landmass.riverSeeds = riverSeeds
 	landmass.lakeList = lakeList
-	EchoDebug(#riverSeeds .. " river seeds", lakeRiverSeedCount .. " lake river seeds")
+	EchoDebug(#riverSeeds .. " river seeds", oceanSeedCount .. " ocean seeds", inlandSeedCount .. " inland seeds", lakeRiverSeedCount .. " lake river seeds")
 end
 
 function Space:FindLandmassLakeFlow(seeds, landmass)
@@ -6685,6 +6690,7 @@ function Space:DrawRiverCollectionOnLandmass(collection, maxAreaPerRiver, prescr
 			local river, done, seedSpawns, endRainfall, endAltitude, area, floodPlainsCount, mountainBlockedCount = self:DrawRiver(seed, maxRiverArea, landmass)
 			local rainfall = endRainfall or seed.rainfall
 			local altitude = endAltitude or seed.altitude
+			-- if river then EchoDebug(#river, area, "/", maxRiverArea, seed.doneAnywhere, done) end
 			if (seed.doneAnywhere or done) and river and #river > 0 and area <= maxRiverArea then
 				if iteration == 0 then
 					if not bestArea or area > bestArea then
@@ -6696,7 +6702,7 @@ function Space:DrawRiverCollectionOnLandmass(collection, maxAreaPerRiver, prescr
 					local distFromOtherRivers = self:RiverDistanceFromOthers(river, landmass)
 					local score = self:RiverScore(area, #river, rainfall, altitude, floodPlainsCount, mountainBlockedCount, distFromOtherRivers, maxRiverArea)
 					if not bestScore or score > bestScore then
-						EchoDebug(area .. "/" .. maxAreaPerRiver, #river .. "/" .. (area / 2), altitude .. "/20", rainfall .. "/1000", floodPlainsCount .. "/" .. area, mountainBlockedCount .. "/" .. #river, distFromOtherRivers)
+						-- EchoDebug(area .. "/" .. maxAreaPerRiver, #river .. "/" .. (area / 2), altitude .. "/20", rainfall .. "/1000", floodPlainsCount .. "/" .. area, mountainBlockedCount .. "/" .. #river, distFromOtherRivers)
 						best = { river = river, seed = seed, seedSpawns = seedSpawns, done = done}
 						bestScore = score
 					end
@@ -6714,10 +6720,11 @@ function Space:DrawRiverCollectionOnLandmass(collection, maxAreaPerRiver, prescr
 		until n == sampleSize
 		if iteration == 0 and bestArea then
 			-- adjust to realistic expectations of river size
-			maxAreaPerRiver = mMin(maxAreaPerRiver, bestArea * 1.1)
+			print(bestArea, "largest river area found in first iteration test")
+			maxAreaPerRiver = mMin(maxAreaPerRiver, bestArea * 1.25)
 		else
 			if best then
-				EchoDebug("best:", bestScore, "avg:", totalScore / scoredCount, "worst:", worstScore)
+				EchoDebug("best:", bestScore, "avg:", totalScore / scoredCount, "worst:", worstScore, "best length:", #best.river)
 				-- if not best.seed.growsDownstream then EchoDebug("best river grows upstream") end
 				-- if not best.done then EchoDebug("best river hasnt found target") end
 				self:InkRiver(best.river, best.seed, best.seedSpawns, best.done, landmass)
@@ -6788,6 +6795,10 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 	local direction = seed.direction or hex:GetDirectionTo(pairHex)
 	local lastHex = seed.lastHex
 	local lastDirection = seed.lastDirection or hex:GetDirectionTo(lastHex)
+	local useHexCount = 0
+	local usePairCount = 0
+	local useAlternatingCount = 0
+	local lastChoice
 	local area = 2
 	local floodPlainsCount = 0
 	local mountainBlockedCount = 0
@@ -6886,7 +6897,6 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 				if it > 0 then
 					seedSpawns[it-1] = {}
 				end
-				break
 			end
 		end
 		if not newHex then break end
@@ -6910,14 +6920,14 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 				break
 			end
 		end
-		if seed.toHills then
-			if self:HillsOrMountains(newHex, hex, pairHex) >= 2 then
-				-- EchoDebug("FOUND HILLS/MOUNTAINS", it)
-				done = newHex
-				break
-			end
-		end
-		if maxRiverArea == 2 and seed.doneAnywhere then
+		-- if seed.toHills then
+		-- 	if self:HillsOrMountains(newHex, hex, pairHex) >= 2 then
+		-- 		EchoDebug("FOUND HILLS/MOUNTAINS", it)
+		-- 		done = newHex
+		-- 		break
+		-- 	end
+		-- end
+		if maxRiverArea and maxRiverArea == 2 and seed.doneAnywhere then
 			done = newHex
 			break
 		end
@@ -6929,7 +6939,7 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 				if sourceRiverMile < seed.flowsIntoRiverMile then
 					seed.reverseFlow = true
 				end
-				EchoDebug("fork connecting to source", sourceRiverMile, seed.flowsIntoRiverMile, seed.reverseFlow)
+				-- EchoDebug("fork connecting to source", sourceRiverMile, seed.flowsIntoRiverMile, seed.reverseFlow)
 				seed.connectsToSource = true
 				done = newHex
 				break
@@ -6938,96 +6948,53 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 		-- check for potential river forking points
 		seedSpawns[it] = {}
 		if seed.spawnSeeds then -- use this once it works
-			local minor, tiny, toWater, toHills, avoidConnection, avoidWater, growsDownstream, dontConnect, doneAnywhere
-			local spawnNew, spawnNewPair, spawnLast, spawnLastPair
-			if seed.major then
-				minor, toHills, avoidConnection, avoidWater = true, true, true, true
-				if hex.polygon == newHex.polygon and hex.subPolygon ~= newHex.subPolygon then
-					spawnNew = true
-				end
-				if pairHex.polygon == newHex.polygon and pairHex.subPolygon ~= newHex.subPolygon then
-					spawnNewPair = true
-				end
-				if it > 0 then
-					if hex.polygon == lastHex.polygon and hex.subPolygon ~= lastHex.subPolygon then
-						spawnLast = true
-					end
-					if pairHex.polygon == lastHex.polygon and pairHex.subPolygon ~= lastHex.subPolygon then
-						spawnLastPair = true
-					end
-				end
-			elseif seed.minor then
-				tiny, toHills, avoidConnection, avoidWater, alwaysDraw = true, true, true, true
-				if hex.subPolygon == newHex.subPolygon then
-					spawnNew = true
-				end
-				if pairHex.subPolygon == newHex.subPolygon then
-					spawnNewPair = true
-				end
-				if it > 0 then
-					if hex.subPolygon == lastHex.subPolygon then
-						spawnLast = true
-					end
-					if pairHex.subPolygon == lastHex.subPolygon then
-						spawnLastPair = true
-					end
-				end
-			else
-				toHills, avoidConnection, avoidWater, alwaysDraw = true, true, true
-				spawnNew = true
-				spawnNewPair = true
-				if it > 0 then
-					spawnLast = true
-					spawnLastPair = true
-				end
+			local toWater, toHills, avoidConnection, avoidWater, growsDownstream, dontConnect, doneAnywhere, spawnSeeds
+			local spawnNew, spawnNewPair = true, true
+			avoidConnection, avoidWater, doneAnywhere = true, true, true
+			local rainfall = nil
+			spawnSeeds = false
+			local spawnLast, spawnLastPair
+			if it > 0 then
+				spawnLast = true
+				spawnLastPair = true
 			end
 			if spawnNew then
-				tInsert(seedSpawns[it], {hex = hex, pairHex = newHex, direction = newDirection, lastHex = pairHex, lastDirection = direction, rainfall = seed.rainfall, minor = minor, tiny = tiny, toWater = toWater, toHills = toHills, avoidConnection = avoidConnection, avoidWater = avoidWater, growsDownstream = growsDownstream, dontConnect = dontConnect, doneAnywhere = doneAnywhere, fork = true})
+				tInsert(seedSpawns[it], {hex = hex, pairHex = newHex, direction = newDirection, lastHex = pairHex, lastDirection = direction, rainfall = rainfall, toWater = toWater, toHills = toHills, avoidConnection = avoidConnection, avoidWater = avoidWater, growsDownstream = growsDownstream, dontConnect = dontConnect, doneAnywhere = doneAnywhere, spawnSeeds = spawnSeeds, fork = true})
 			end
 			if spawnNewPair then
-				tInsert(seedSpawns[it], {hex = pairHex, pairHex = newHex, direction = newDirectionPair, lastHex = hex, lastDirection = OppositeDirection(direction), rainfall = seed.rainfall, minor = minor, tiny = tiny, toWater = toWater, toHills = toHills, avoidConnection = avoidConnection, avoidWater = avoidWater, growsDownstream = growsDownstream, dontConnect = dontConnect, doneAnywhere = doneAnywhere, fork = true})
+				tInsert(seedSpawns[it], {hex = pairHex, pairHex = newHex, direction = newDirectionPair, lastHex = hex, lastDirection = OppositeDirection(direction), rainfall = rainfall, toWater = toWater, toHills = toHills, avoidConnection = avoidConnection, avoidWater = avoidWater, growsDownstream = growsDownstream, dontConnect = dontConnect, doneAnywhere = doneAnywhere, spawnSeeds = spawnSeeds, fork = true})
 			end
 			if spawnLast then
-				tInsert(seedSpawns[it], {hex = hex, pairHex = lastHex, direction = lastDirection, lastHex = pairHex, lastDirection = direction, rainfall = seed.rainfall, minor = minor, tiny = tiny, toWater = toWater, toHills = toHills, avoidConnection = avoidConnection, avoidWater = avoidWater, growsDownstream = growsDownstream, dontConnect = dontConnect, doneAnywhere = doneAnywhere, fork = true})
+				tInsert(seedSpawns[it], {hex = hex, pairHex = lastHex, direction = lastDirection, lastHex = pairHex, lastDirection = direction, rainfall = rainfall, toWater = toWater, toHills = toHills, avoidConnection = avoidConnection, avoidWater = avoidWater, growsDownstream = growsDownstream, dontConnect = dontConnect, doneAnywhere = doneAnywhere, spawnSeeds = spawnSeeds, fork = true})
 			end
 			if spawnLastPair then
-				tInsert(seedSpawns[it], {hex = pairHex, pairHex = lastHex, direction = lastDirectionPair, lastHex = hex, lastDirection = OppositeDirection(direction), rainfall = seed.rainfall, minor = minor, tiny = tiny, toWater = toWater, toHills = toHills, avoidConnection = avoidConnection, avoidWater = avoidWater, growsDownstream = growsDownstream, dontConnect = dontConnect, doneAnywhere = doneAnywhere, fork = true})
+				tInsert(seedSpawns[it], {hex = pairHex, pairHex = lastHex, direction = lastDirectionPair, lastHex = hex, lastDirection = OppositeDirection(direction), rainfall = rainfall, toWater = toWater, toHills = toHills, avoidConnection = avoidConnection, avoidWater = avoidWater, growsDownstream = growsDownstream, dontConnect = dontConnect, doneAnywhere = doneAnywhere, spawnSeeds = spawnSeeds, fork = true})
 			end
 		end
 		-- decide which direction for the river to flow into next
-		local useHex, usePair
-		if seed.major then
-			if hex.polygon ~= newHex.polygon then
-				useHex = true
-			end
-			if pairHex.polygon ~= newHex.polygon then
-				usePair = true
-			end
-		elseif seed.minor then
-			if hex.subPolygon ~= newHex.subPolygon then
-				useHex = true
-			end
-			if pairHex.subPolygon ~= newHex.subPolygon then
-				usePair = true
-			end
-		else
-			-- follow polygon boundaries or subpolygon boundaries if possible
-			useHex = hex.polygon ~= newHex.polygon and mRandom() < self.riverFollowPolygonChance
-			usePair = pairHex.polygon ~= newHex.polygon and mRandom() < self.riverFollowPolygonChance
-			if not useHex and not usePair then
-				useHex = hex.subPolygon ~= newHex.subPolygon and mRandom() < self.riverFollowSubPolygonChance
-				usePair = pairHex.subPolygon ~= newHex.subPolygon and mRandom() < self.riverFollowSubPolygonChance
-			end
-			if not useHex and not usePair then 
-				-- if there's no boundary to follow, do whatever
-				useHex = true
-				usePair = true
-			end
+		-- follow polygon boundaries or subpolygon boundaries if possible
+		local useHex = hex.polygon ~= newHex.polygon and mRandom() < self.riverFollowPolygonChance
+		local usePair = pairHex.polygon ~= newHex.polygon and mRandom() < self.riverFollowPolygonChance
+		if not useHex and not usePair then
+			useHex = hex.subPolygon ~= newHex.subPolygon and mRandom() < self.riverFollowSubPolygonChance
+			usePair = pairHex.subPolygon ~= newHex.subPolygon and mRandom() < self.riverFollowSubPolygonChance
+		end
+		if not useHex and not usePair then 
+			-- if there's no boundary to follow, do whatever
+			useHex = true
+			usePair = true
 		end
 		if (hex.onRiver[newHex] and hex.onRiver[newHex] ~= seed.flowsInto) or onRiver[hex][newHex] then
 			useHex = false
 		end
 		if (pairHex.onRiver[newHex] and pairHex.onRiver[newHex] ~= seed.flowsInto) or onRiver[pairHex][newHex] then
+			usePair = false
+		end
+		-- don't do more than a 180 degree curve
+		if useHexCount == 3 then
+			useHex = false
+		end
+		if usePairCount == 3 then
 			usePair = false
 		end
 		if useHex and usePair then
@@ -7038,20 +7005,39 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 			end
 		end
 		if useHex then
-			lastHex = pairHex
+			useHexCount = useHexCount + 1
+			usePairCount = 0
+			lastChoice = 1
 			lastDirection = direction
+			lastHex = pairHex
 			pairHex = newHex
 			direction = newDirection
 		elseif usePair then
+			usePairCount = usePairCount + 1
+			useHexCount = 0
+			lastChoice = 2
+			direction = newHex:GetDirectionTo(pairHex)
+			lastDirection = newHex:GetDirectionTo(hex)
 			lastHex = hex
-			lastDirection = OppositeDirection(direction)
-			hex = pairHex
-			pairHex = newHex
-			direction = newDirectionPair
+			hex = newHex
 		else
-			-- EchoDebug("NO WAY FORWARD")
+			EchoDebug("NO WAY FORWARD")
 			break
 		end
+		-- dirMinusOne = direction - 1
+		-- if dirMinusOne == 0 then dirMinusOne = 6 end
+		-- dirPlusOne = direction + 1
+		-- if dirPlusOne == 7 then dirPlusOne = 1 end
+		-- if dirPlusOne == previousDirection then
+		-- 	negativeRotationCount = negativeRotationCount + 1
+		-- else
+		-- 	negativeRotationCount = 0
+		-- end
+		-- if dirMinusOne == previousDirection then
+		-- 	positiveRotationCount = positiveRotationCount + 1
+		-- else
+		-- 	positiveRotationCount = 0
+		-- end
 		local mountainOneSide
 		if not isRiver[hex] then
 			area = area + 1
@@ -7075,13 +7061,13 @@ function Space:DrawRiver(seed, maxRiverArea, landmass)
 		end
 		it = it + 1
 	until not newHex or it > 1000 or (maxRiverArea and area >= maxRiverArea)
+	-- EchoDebug("river ended", it, area, maxRiverArea, newHex)
 	local endRainfall, endAltitude
 	if not seed.growsDownstream and river and #river > 0 then
 		local aHex = river[#river].hex
 		local bHex = river[#river].pairHex
 		endRainfall, endAltitude = aHex:RiverSourceRainfallAltitude(bHex)
 	end
-	-- EchoDebug(it)
 	return river, done, seedSpawns, endRainfall, endAltitude, area, floodPlainsCount, mountainBlockedCount
 end
 
@@ -7141,15 +7127,7 @@ function Space:InkRiver(river, seed, seedSpawns, done, landmass)
 			if seed.growsDownstream then riverMile = #river - (f-1) end
 			newseed.flowsIntoRiverMile = riverMile
 			if landmass then
-				newseed.minor = nil
-				newseed.tiny = nil
 				tInsert(landmass.forkSeeds, newseed)
-			else
-				if newseed.minor then
-					tInsert(self.minorForkSeeds, newseed)
-				elseif newseed.tiny then
-					tInsert(self.tinyForkSeeds, newseed)
-				end
 			end
 		end
 	end
