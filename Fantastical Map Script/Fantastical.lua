@@ -6720,7 +6720,7 @@ function Space:DrawRiverCollectionOnLandmass(collection, maxAreaPerRiver, prescr
 		until n == sampleSize
 		if iteration == 0 and bestArea then
 			-- adjust to realistic expectations of river size
-			print(bestArea, "largest river area found in first iteration test")
+			EchoDebug(bestArea, "largest river area found in first iteration test")
 			maxAreaPerRiver = mMin(maxAreaPerRiver, bestArea * 1.25)
 		else
 			if best then
@@ -7900,13 +7900,7 @@ function GenerateMap()
 		START_CONFIG = startConfig,
 		LAND = isLandMap,
 		WATER = isWaterMap,
-	};
-	if GameInfo.RandomEvents then
-		-- AOM GS update
-		args.START_MIN_Y = 15
-		args.START_MAX_Y = 15
-		-- END AOM GS update
-	end
+	}
 	local start_plot_database = AssignStartingPlots.Create(args)
 
 	local GoodyGen = AddGoodies(mySpace.iW, mySpace.iH);
