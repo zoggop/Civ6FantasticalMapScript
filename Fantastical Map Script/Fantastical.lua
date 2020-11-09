@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-22
+-- version 32-VI-23
 
 --------------------------------------------------------------
 if include == nil then
@@ -7660,8 +7660,8 @@ function GetMapInitData(worldSize)
 			local areaMult = mMin(areaMultMax, 0.75 / landPerCivNormRatio)
 			local mapSizeMult = mSqrt(areaMult)
 			print("map predicted to only have " .. landPerCivNormRatio .. " of normal land per civ, multiplying dimensions by " .. mapSizeMult)
-			grid_width = mFloor(grid_width * mapSizeMult)
-			grid_height = mFloor(grid_height * mapSizeMult)
+			grid_width = mFloor(grid_width * mapSizeMult * 0.5) * 2
+			grid_height = mFloor(grid_height * mapSizeMult * 0.5) * 2
 		end
 		if randomMapOptions then
 			baseRandFunc = TBRandom -- go back to using the usual TerrainBuilder random function
