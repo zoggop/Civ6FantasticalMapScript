@@ -926,7 +926,7 @@ local OptionDictionary = {
 			[6] = { name = "Hot", values = {0.9, 21, 99},
 				description = "No snow, and very little tundra." },
 			[7] = { name = "Jurassic", values = {0.7, 41, 99},
-				description = "No snow or tundra, and less plains than standard." },
+				description = "No snow or tundra." },
 			[8] = { name = "Eocene", values = {0.6, 99, 99},
 				description = "No snow, tundra, or plains." },
 			[9] = { name = "Random", values = "keys",
@@ -1723,6 +1723,10 @@ function Hex:SetTerrain()
 		-- self.terrainType = terrainSnow
 	-- end
 	local terrainType = self.terrainType
+	if self.featureType and FeatureDictionary[self.featureType] and FeatureDictionary[self.featureType].terrainType then
+		-- for setting plains under jungle
+		terrainType = FeatureDictionary[self.featureType].terrainType
+	end
 	if terrainType ~= terrainOcean and terrainType ~= terrainCoast then
 		if self.plotType == plotHills then
 			self.space.hillCount = (self.space.hillCount or 0) + 1
@@ -2742,7 +2746,8 @@ function Region:CreateElement(temperature, rainfall, lake)
 		if mRandom() * 100 < sFeature.percent then bestFeature = sFeature end
 	end
 	local plotType = plotLand
-	local terrainType = bestFeature.terrainType or bestTerrain.terrainType
+	-- local terrainType = bestFeature.terrainType or bestTerrain.terrainType
+	local terrainType = bestTerrain.terrainType
 	local featureType = bestFeature.featureType
 	if mountain and self.mountainCount < mCeil(self.totalSize * (self.mountainousness / 100)) then
 		plotType = plotMountain

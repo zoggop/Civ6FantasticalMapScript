@@ -442,7 +442,7 @@
 		<Row Description="Similar to Earth." Domain="FNTSTCLDomain_Temperature" Name="Standard" SortIndex="13" Value="4" />
 		<Row Description="Very little snow, and less tundra than standard." Domain="FNTSTCLDomain_Temperature" Name="Warm" SortIndex="14" Value="5" />
 		<Row Description="No snow, and very little tundra." Domain="FNTSTCLDomain_Temperature" Name="Hot" SortIndex="15" Value="6" />
-		<Row Description="No snow or tundra, and less plains than standard." Domain="FNTSTCLDomain_Temperature" Name="Jurassic" SortIndex="16" Value="7" />
+		<Row Description="No snow or tundra." Domain="FNTSTCLDomain_Temperature" Name="Jurassic" SortIndex="16" Value="7" />
 		<Row Description="No snow, tundra, or plains." Domain="FNTSTCLDomain_Temperature" Name="Eocene" SortIndex="17" Value="8" />
 		<Row Description="A random temperature." Domain="FNTSTCLDomain_Temperature" Name="Random" SortIndex="18" Value="9" />
 
