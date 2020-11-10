@@ -446,7 +446,7 @@
 		<Row Description="No snow, tundra, or plains." Domain="FNTSTCLDomain_Temperature" Name="Eocene" SortIndex="17" Value="8" />
 		<Row Description="A random temperature." Domain="FNTSTCLDomain_Temperature" Name="Random" SortIndex="18" Value="9" />
 
-		<Row Description="No forest, rainforest, grassland, or plains." Domain="FNTSTCLDomain_Rainfall" Name="Arrakis" SortIndex="10" Value="1" />
+		<Row Description="No forest, rainforest, grassland, plains, or tundra." Domain="FNTSTCLDomain_Rainfall" Name="Arrakis" SortIndex="10" Value="1" />
 		<Row Description="No forest, rainforest, or grassland." Domain="FNTSTCLDomain_Rainfall" Name="Parched" SortIndex="11" Value="2" />
 		<Row Description="No forest or rainforest." Domain="FNTSTCLDomain_Rainfall" Name="Treeless" SortIndex="12" Value="3" />
 		<Row Description="Less forest and rainforest." Domain="FNTSTCLDomain_Rainfall" Name="Arid" SortIndex="13" Value="4" />
