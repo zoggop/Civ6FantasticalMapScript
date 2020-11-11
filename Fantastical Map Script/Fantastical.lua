@@ -7669,14 +7669,17 @@ function GetMapInitData(worldSize)
 			local areaMult = mMin(areaMultMax, 0.75 / landPerCivNormRatio)
 			local mapSizeMult = mSqrt(areaMult)
 			print("map predicted to only have " .. landPerCivNormRatio .. " of normal land per civ, multiplying dimensions by " .. mapSizeMult)
-			grid_width = mFloor(grid_width * mapSizeMult * 0.5) * 2
-			grid_height = mFloor(grid_height * mapSizeMult * 0.5) * 2
+			grid_width = mFloor(grid_width * mapSizeMult)
+			grid_height = mFloor(grid_height * mapSizeMult)
 		end
 		if randomMapOptions then
 			baseRandFunc = TBRandom -- go back to using the usual TerrainBuilder random function
 		end
 	end
 	
+	-- make sure map dimensions are even
+	grid_width = mCeil(grid_width / 2) * 2
+	grid_height = mCeil(grid_height / 2) * 2
 	print(grid_width .. "x" .. grid_height .. " map")
 
 	return {
