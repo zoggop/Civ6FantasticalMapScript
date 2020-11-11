@@ -6035,6 +6035,7 @@ function Space:CreateClimateVoronoi(number, relaxations)
 end
 
 function Space:AssignClimateVoronoiToRegions(climateVoronoi)
+	EchoDebug(#climateVoronoi, "climate polygons", #self.regions, "regions")
 	self.climateAssignRainExponentNinety = 90 ^ self.climateAssignRainExponent
 	local voronoiBuffer = tDuplicate(climateVoronoi)
 	local haveRegion = {}
@@ -6077,6 +6078,10 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 	end
 	for i, region in ipairs(regionBuffer) do
 		if self.useMapLatitudes then
+			if #voronoiBuffer == 0 then
+				EchoDebug("ran out of voronoi, refilling buffer...")
+				voronoiBuffer = tDuplicate(climateVoronoi)
+			end
 			region:GiveLatitude()
 			local temp = self:GetTemperature(region.latitude)
 			local rain = self:GetRainfall(region.latitude)
@@ -6093,10 +6098,6 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 			end
 			region.point = bestPoint
 			-- EchoDebug("latitude: " .. mCeil(region.latitude), "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "vt: " .. mCeil(bestPoint.temp), "vr: " .. mCeil(bestPoint.rain))
-			if #voronoiBuffer == 0 then
-				EchoDebug("ran out of voronoi, refilling buffer...")
-				voronoiBuffer = tDuplicate(climateVoronoi)
-			end
 			tRemove(voronoiBuffer, bestIndex)
 		else
 			if #voronoiBuffer == 0 then
@@ -6531,7 +6532,7 @@ function Space:DrawAllLandmassRivers()
 	local realPrescribedRiverArea =  mCeil(self.riverLandRatio * self.filledArea)
 	local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea * 1.1) -- because the algorithm tends to underproduce by roughly 10%
 	self.riverArea = 0
-	if self.oceanNumber == -1 and #self.lakeSubPolygons == 0 then
+	if self.oceanNumber == -1 and #self.inlandSeas == 0 and #self.lakeSubPolygons == 0 then
 		-- no rivers can be drawn if there are no bodies of water on the map
 		EchoDebug("no bodies of water on the map and therefore no rivers")
 		return
