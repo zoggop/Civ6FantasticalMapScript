@@ -437,8 +437,8 @@
 		<Row Description="A random amount of mountains and hills." Domain="FNTSTCLDomain_World_Age" Name="Random" SortIndex="16" Value="7" />
 
 		<Row Description="No grassland, and very little plains. Ice sheets cover much of the oceans." Domain="FNTSTCLDomain_Temperature" Name="Snowball" SortIndex="10" Value="1" />
-		<Row Description="Very little grassland. No jungle. Larger oceanic ice sheets than standard." Domain="FNTSTCLDomain_Temperature" Name="Ice Age" SortIndex="11" Value="2" />
-		<Row Description="Less grassland than standard." Domain="FNTSTCLDomain_Temperature" Name="Cold" SortIndex="12" Value="3" />
+		<Row Description="No jungle, and very little grassland. Larger oceanic ice sheets." Domain="FNTSTCLDomain_Temperature" Name="Ice Age" SortIndex="11" Value="2" />
+		<Row Description="Less grassland than standard, and very little jungle." Domain="FNTSTCLDomain_Temperature" Name="Cold" SortIndex="12" Value="3" />
 		<Row Description="Similar to Earth." Domain="FNTSTCLDomain_Temperature" Name="Standard" SortIndex="13" Value="4" />
 		<Row Description="Very little snow, and less tundra than standard." Domain="FNTSTCLDomain_Temperature" Name="Warm" SortIndex="14" Value="5" />
 		<Row Description="No snow, and very little tundra." Domain="FNTSTCLDomain_Temperature" Name="Hot" SortIndex="15" Value="6" />
