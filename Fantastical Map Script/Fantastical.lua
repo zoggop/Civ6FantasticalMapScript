@@ -1,11 +1,12 @@
 -- Map Script: Fantastical
 -- Author: eronoobos
--- version 32-VI-25
+-- version 32-VI-26
 
 --------------------------------------------------------------
 if include == nil then
-	package.path = package.path..';C:\\Program Files (x86)\\Steam\\steamapps\\common\\Sid Meier\'s Civilization VI\\Base\\Assets\\Maps\\Utility\\?.lua'
-	include = require
+	-- package.path = package.path..';C:\\Program Files (x86)\\Steam\\steamapps\\common\\Sid Meier\'s Civilization VI\\Base\\Assets\\Maps\\Utility\\?.lua'
+	-- include = require
+	include = function() return end
 end
 include "math"
 include "bit"
@@ -22,7 +23,7 @@ include "CoastalLowlands" -- Gathering Storm only
 
 ----------------------------------------------------------------------------------
 
-local debugEnabled = false
+local debugEnabled = true
 local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
@@ -674,7 +675,7 @@ end
 
 ------------------------------------------------------------------------------
 
-local OptionDictionary = {
+OptionDictionary = {
 	{ name = "Wrapping", keys = { "wrapX" }, default = 1,
 	values = {
 			[1] = { name = "On", values = {true},
@@ -969,7 +970,7 @@ local OptionDictionary = {
 	},
 }
 
-local function OptionNameToConfigurationId(optionName)
+function OptionNameToConfigurationId(optionName)
 	return string.lower(string.gsub(optionName, " ", "_"))
 end
 
@@ -1133,7 +1134,7 @@ local function GetPlotName(plotType)
 end
 
 
-local function SetConstants()
+function SetConstants()
 	artOcean, artAmerica, artAsia, artAfrica, artEurope = 0, 1, 2, 3, 4
 
 	resourceSilver, resourceSpices = 16, 22
@@ -1165,17 +1166,21 @@ local function SetConstants()
 	terrainTundra = g_TERRAIN_TYPE_TUNDRA -- TerrainTypes.TERRAIN_TUNDRA
 	terrainSnow = g_TERRAIN_TYPE_SNOW -- TerrainTypes.TERRAIN_SNOW
 	-- EchoDebug("ocean " .. terrainOcean, "coast " .. terrainCoast, "grass " .. terrainGrass, "plains " .. terrainPlains, "desert " .. terrainDesert, "tundra " .. terrainTundra, "snow " .. terrainSnow)
-	for t in GameInfo.Terrains() do
-		if t then
-			terrainNames[t.Index] = t.TerrainType
+	if type(GameInfo.Terrains) == 'userdata' then
+		for t in GameInfo.Terrains() do
+			if t then
+				terrainNames[t.Index] = t.TerrainType
+			end
 		end
 	end
 	plotNames[plotOcean] = "ocean"
 	plotNames[plotLand] = "land"
 	plotNames[plotHills] = "hills"
 	plotNames[plotMountain] = "mountain"
-	for f in GameInfo.Features() do
-		featureNames[f.Index] = f.FeatureType
+	if type(GameInfo.Features) == 'userdata' then
+		for f in GameInfo.Features() do
+			featureNames[f.Index] = f.FeatureType
+		end
 	end
 	-- for improvement in GameInfo.Improvements() do
 	-- 	EchoDebug(improvement.Name, improvement.Index, improvement.ImprovementType)
@@ -1713,12 +1718,12 @@ function Hex:SetPlot()
 		EchoDebug("nil plot at " .. self:Locate())
 		return
 	end
-
+	return self.plotType
 	-- self.plot:SetPlotType(self.plotType)
 end
 
 function Hex:SetTerrain()
-	if self.plot == nil then return end
+	-- if self.plot == nil then return end
 	-- if self.subPolygon.polar and (self.plotType == plotLand or self.plotType == plotMountain or self.plotType == plotHills) then
 		-- self.terrainType = terrainSnow
 	-- end
@@ -1779,33 +1784,42 @@ function Hex:SetFeature()
 		-- self.featureType = featureFallout
 	end
 	-- if self.featureType == featureIce then self.featureType = featureNone elseif self.reef then self.featureType = featureIce end -- for testing reef placement without having rise and fall
-	TerrainBuilder.SetFeatureType(self.plot, self.featureType or featureNone)
-	if TerrainBuilder.AddIce and self.featureType == featureIce then
-		-- not necessary with vanilla rules
-		TerrainBuilder.AddIce(self.plot:GetIndex(), self.iceLossEventNum or -1); 
+	if TerrainBuilder then
+		TerrainBuilder.SetFeatureType(self.plot, self.featureType or featureNone)
+		if TerrainBuilder.AddIce and self.featureType == featureIce then
+			-- not necessary with vanilla rules
+			TerrainBuilder.AddIce(self.plot:GetIndex(), self.iceLossEventNum or -1); 
+		end
 	end
+	return self.featureType
 end
 
 function Hex:SetRiver()
 	if self.plot == nil then return end
 	if not self.ofRiver then return end
 
-	-- AOM GS update
-	if self.ofRiver[DirW] then TerrainBuilder.SetWOfRiver(self.plot, true, self.ofRiver[DirW] or FlowDirectionTypes.NO_DIRECTION, self.riverId or -1) end
-	if self.ofRiver[DirNW] then TerrainBuilder.SetNWOfRiver(self.plot, true, self.ofRiver[DirNW] or FlowDirectionTypes.NO_DIRECTION, self.riverId or -1) end
-	if self.ofRiver[DirNE] then TerrainBuilder.SetNEOfRiver(self.plot, true, self.ofRiver[DirNE] or FlowDirectionTypes.NO_DIRECTION, self.riverId or -1) end
-	-- END AOM GS update
+	if TerrainBuilder then
+		-- AOM GS update
+		if self.ofRiver[DirW] then TerrainBuilder.SetWOfRiver(self.plot, true, self.ofRiver[DirW] or FlowDirectionTypes.NO_DIRECTION, self.riverId or -1) end
+		if self.ofRiver[DirNW] then TerrainBuilder.SetNWOfRiver(self.plot, true, self.ofRiver[DirNW] or FlowDirectionTypes.NO_DIRECTION, self.riverId or -1) end
+		if self.ofRiver[DirNE] then TerrainBuilder.SetNEOfRiver(self.plot, true, self.ofRiver[DirNE] or FlowDirectionTypes.NO_DIRECTION, self.riverId or -1) end
+		-- END AOM GS update
+	end
 
 	-- for d, fd in pairs(self.ofRiver) do
 		-- EchoDebug(DirName(d), FlowDirName(fd))
 	-- end
+	return self.ofRiver
 end
 
 function Hex:SetRoad()
 	if self.plot == nil then return end
 	if not self.road then return end
-	RouteBuilder.SetRouteType(self.plot, routeRoad)
+	if RouteBuilder then
+		RouteBuilder.SetRouteType(self.plot, routeRoad)
+	end
 	-- EchoDebug("routeType " .. routeRoad .. " at " .. self.x .. "," .. self.y)
+	return self.road
 end
 
 function Hex:SetImprovement()
@@ -1848,7 +1862,7 @@ function Hex:Report()
 end
 
 function Hex:CanBeOasis()
-	if self.terrainType == terrainDesert and not self.isRiver then
+	if self.terrainType == terrainDesert and not self.isRiver and self.plotType ~= plotMountain and self.plotType ~= plotHills then
 		-- candidate for oasis
 		for i, nhex in pairs(self:Neighbors()) do
 			if nhex.terrainType ~= terrainDesert or nhex.isRiver or nhex.featureType == featureOasis then
@@ -3029,7 +3043,7 @@ end)
 
 function Space:GetPlayerTeamInfo()
 	-- Determine number of civilizations and city states present in this game.
-	self.iNumCivs = PlayerManager.GetAliveMajorsCount();		
+	self.iNumCivs = PlayerManager.GetAliveMajorsCount();
 	if (self.iNumCivs == 0) then
 		self.theWB = true
 		print("Player info is missing, so we're probably running in the World Builder.");
@@ -3048,7 +3062,7 @@ end
 function Space:SetOptions(optDict)
 	local keySetByOption = {}
 	for optionNumber, option in ipairs(optDict) do
-		local optionChoice = MapConfiguration.GetValue(OptionNameToConfigurationId(option.name))
+		local optionChoice = MapConfiguration.GetValue(OptionNameToConfigurationId(option.name)) or option.default
 		if option.values[optionChoice].values == "keys" then
 			-- option.randomChoice makes it possible to execute SetOptions multiple times and get the same random values
 			-- it's setup this way to allow creation of a scaled-down test map
@@ -3159,12 +3173,14 @@ function Space:DoCentuariIfActivated()
 			self.badNaturalWonders = {}
 			self.centauriNaturalWonders = {}
 			local badWonderTypes = { FEATURE_LAKE_VICTORIA = true, FEATURE_KILIMANJARO = true, FEATURE_SOLOMONS_MINES = true, FEATURE_FUJI = true }
-			for f in GameInfo.Features() do
-				if badWonderTypes[f.Type] then
-					EchoDebug(f.ID, f.Type)
-					self.badNaturalWonders[f.ID] = f.Type
+			-- if GameInfo.Features and type(GameInfo.Features) == 'function' then
+				for f in GameInfo.Features() do
+					if badWonderTypes[f.Type] then
+						EchoDebug(f.ID, f.Type)
+						self.badNaturalWonders[f.ID] = f.Type
+					end
 				end
-			end
+			-- end
 		end
 	end
 end
