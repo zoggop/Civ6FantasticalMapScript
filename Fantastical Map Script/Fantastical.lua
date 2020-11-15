@@ -2998,8 +2998,8 @@ Space = class(function(a)
 	a.marshynessMin = 5
 	a.marshynessMax = 33
 	a.marshMinHexRatio = 0.015
-	a.oasisFraction = 0.07 -- of all potential oases (empty desert surrounded by empty desert), what fraction become oases
-	a.oasisLandFraction = 0.01 -- the above number is limited to this fraction of the total land tiles
+	a.oasisFraction = 0.07 -- of all potential oases (empty desert surrounded by empty desert), what fraction become oases. modified by rainfall
+	a.oasisLandFraction = 0.01 -- the above number is limited to this fraction of the total land tiles. modified by rainfall
 	a.inlandSeaContinentRatioMin = 0.02 -- -- minimum size of each inland sea as a fraction of the polygons of the continent they're inside
 	a.inlandSeaContinentRatioMax = 0.02 -- maximum size of each inland sea as a fraction of the polygons of the continent they're inside
 	a.inlandSeasMax = 1 -- maximum number of inland seas
@@ -4186,7 +4186,8 @@ function Space:FindOases()
 			tInsert(potentialOases, hex)
 		end
 	end
-	local prescribedOases = mCeil(mMin(#potentialOases * self.oasisFraction, self.filledArea * self.oasisLandFraction))
+	local rainMult = self.rainfallMidpoint / 49.5
+	local prescribedOases = mFloor(mMin(#potentialOases * self.oasisFraction, self.filledArea * self.oasisLandFraction) * rainMult)
 	local oasisCount = 0
 	while oasisCount < prescribedOases do
 		local hex = tRemoveRandom(potentialOases)
