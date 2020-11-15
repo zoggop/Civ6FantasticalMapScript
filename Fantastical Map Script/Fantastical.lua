@@ -1482,7 +1482,7 @@ Hex = class(function(a, space, x, y, index)
 			if a.plot then
 				a.latitude = space:GetPlotLatitude(a.plot)
 			else
-				a.latitude = space:GetGameLatitudeFromY(y)
+				a.latitude = space:GetIntegerLatitudeFromY(y)
 			end
 		else
 			a.latitude = space:RealmLatitude(y)
@@ -1993,7 +1993,7 @@ Polygon = class(function(a, space, x, y)
 			if a.centerPlot then
 				a.latitude = space:GetPlotLatitude(a.centerPlot)
 			else
-				a.latitude = space:GetGameLatitudeFromY(a.y)
+				a.latitude = space:GetIntegerLatitudeFromY(a.y)
 			end
 		else
 			a.latitude = space:RealmLatitude(a.y)
@@ -7419,6 +7419,10 @@ end
 
 function Space:GetGameLatitudeFromY(y)
 	return mAbs((self.iH / 2) - y) / (self.iH / 2);
+end
+
+function Space:GetIntegerLatitudeFromY(y)
+	return mCeil(self:GetGameLatitudeFromY(y) * self.northLatitudeMult)
 end
 
 function Space:GetPlotLatitude(plot)
