@@ -1,5 +1,5 @@
 -- Map Script: Fantastical
--- Author: eronoobos
+-- Author: zoggop
 -- version 32-VI-26
 
 --------------------------------------------------------------
@@ -23,7 +23,7 @@ include "CoastalLowlands" -- Gathering Storm only
 
 ----------------------------------------------------------------------------------
 
-local debugEnabled = true
+local debugEnabled = false
 local debugTimerEnabled = false -- i'm paranoid that os.clock() is causing desyncs
 local clockEnabled = false
 local lastDebugTimer
