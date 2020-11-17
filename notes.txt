@@ -1,3 +1,7 @@
+- count distance from astronomy blob to ocean rift by flood filling polygons (the distance is the number of polygons to the ocean)
+
+	- do the same thing when drawing vertical ocean rifts to prevent unwanted astronomy basin sausaging
+
 - redo river generation as subpolygon-following between a water source and a mountain range, with randomized intermediate waypoints (subpolygon intersections). this would be faster (no blind walking or hundreds of test sketches), allow longer rivers, and would make it easier to distribute them geographically
 
 - gut markov chain region naming? 

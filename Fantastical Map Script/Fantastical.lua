@@ -2049,6 +2049,33 @@ function Polygon:Subdivide(divisionNumber, relaxations)
 	return subPolygons
 end
 
+function Polygon:PolygonDistToOtherRift(homeOceanIndex)
+	local searched = {}
+	local buffer = tDuplicate(self.neighbors)
+	local set = self.neighbors
+	local p = self
+	local awayLimit = self.space.iW / 2
+	local away = 1
+	repeat
+		searched[p] = true
+		if #buffer == 0 then
+			local newSet = {}
+			for i, setPoly in pairs(set) do
+				for ii, neighbor in pairs(setPoly.neighbors) do
+					if not searched[neighbor] then
+						tInsert(buffer, neighbor)
+						tInsert(newSet, neighbor)
+					end
+				end
+			end
+			set = newSet
+			away = away + 1
+		end
+		p = tRemoveRandom(buffer)
+	until p.oceanIndex and p.oceanIndex ~= homeOceanIndex or away > awayLimit
+	return away
+end
+
 function Polygon:FloodFillAstronomy(astronomyIndex)
 	if self.oceanIndex or self.nearOcean then
 		self.astronomyIndex = (self.oceanIndex or self.nearOcean) + 100
@@ -5057,14 +5084,14 @@ function Space:PickOceansAstronomyBlobs()
 	if self.astronomyBlobsMustConnectToOcean then
 		local chosen = {}
 		polygonBuffer = {}
-		if self.wrapX then
-			for i, polygon in pairs(self.polygons) do
-				if polygon.edgeY then
-					tInsert(polygonBuffer, polygon)
-					chosen[polygon] = true
-				end
-			end
-		end
+		-- if self.wrapX then
+		-- 	for i, polygon in pairs(self.polygons) do
+		-- 		if polygon.edgeY then
+		-- 			tInsert(polygonBuffer, polygon)
+		-- 			chosen[polygon] = true
+		-- 		end
+		-- 	end
+		-- end
 		for i, ocean in pairs(self.oceans) do
 			for ii, polygon in pairs(ocean) do
 				for iii, neighbor in pairs(polygon.neighbors) do
@@ -5097,25 +5124,40 @@ function Space:PickOceansAstronomyBlobs()
 			-- polygon = self:GetPolygonByXY(self.halfWidth, self.halfHeight)
 			polygonIndex = tRemoveRandom(polygonIndexBuffer)
 			polygon = polygonBuffer[polygonIndex]
-			if not self.astronomyBlobsMustConnectToOcean and (self.oceanNumber > 0 or self.astronomyBlobsAtMaxDistFromOceans) then
+			local connectedOceanIndex
+			if self.astronomyBlobsMustConnectToOcean then
+				for i, neighbor in pairs(polygon.neighbors) do
+					if neighbor.oceanIndex then
+						connectedOceanIndex = neighbor.oceanIndex
+						break
+					end
+				end
+			end
+			if self.oceanNumber > 0 or self.astronomyBlobsAtMaxDistFromOceans or (self.astronomyBlobsMustConnectToOcean and self.oceanNumber > 1) then
 				local minOceanDist
-				for i, ocean in pairs(self.oceans) do
-					for ii, poly in pairs(ocean) do
-						local dist = self:HexDistance(polygon.x, polygon.y, poly.x, poly.y)
-						if not minOceanDist or dist < minOceanDist then
-							minOceanDist = dist
+				if self.astronomyBlobsMustConnectToOcean then
+					minOceanDist = polygon:PolygonDistToOtherRift(connectedOceanIndex)
+				else
+					for i, ocean in pairs(self.oceans) do
+						if not connectedOceanIndex or i ~= connectedOceanIndex then
+							for ii, poly in pairs(ocean) do
+								local dist = self:HexDistance(polygon.x, polygon.y, poly.x, poly.y)
+								if not minOceanDist or dist < minOceanDist then
+									minOceanDist = dist
+								end
+							end
+						end
+					end
+					if not self.astronomyBlobsAtMaxDistFromOceans and self.wrapX then
+						for i, poly in pairs(self.edgeYPolygons) do
+							local dist = self:HexDistance(polygon.x, polygon.y, poly.x, poly.y)
+							if not minOceanDist or dist < minOceanDist then
+								minOceanDist = dist
+							end
 						end
 					end
 				end
-				if not self.astronomyBlobsAtMaxDistFromOceans and self.wrapX then
-					for i, poly in pairs(self.edgeYPolygons) do
-						local dist = self:HexDistance(polygon.x, polygon.y, poly.x, poly.y)
-						if not minOceanDist or dist < minOceanDist then
-							minOceanDist = dist
-						end
-					end
-				end
-				if self.astronomyBlobsAtMaxDistFromOceans then
+				if self.astronomyBlobsAtMaxDistFromOceans or self.astronomyBlobsMustConnectToOcean then
 					if not maxOceanDist or minOceanDist > maxOceanDist then
 						maxOceanDist = minOceanDist
 						maxOceanDistPolyIndex = polygonIndex
@@ -5125,14 +5167,19 @@ function Space:PickOceansAstronomyBlobs()
 				end
 			end
 			iterations = iterations + 1
-		until (not polygon.oceanIndex and minOceanDistRatio <= maxDistRatioFromOceans and not self.astronomyBlobsAtMaxDistFromOceans) or #polygonIndexBuffer == 0
+		until (not polygon.oceanIndex and minOceanDistRatio <= maxDistRatioFromOceans and not self.astronomyBlobsAtMaxDistFromOceans and not self.astronomyBlobsMustConnectToOcean) or #polygonIndexBuffer == 0
 		if maxOceanDistPolyIndex then
+			if self.astronomyBlobsMustConnectToOcean and maxOceanDist < 4 then
+				return
+			end
 			polygon = tRemove(polygonBuffer, maxOceanDistPolyIndex)
+			if self.astronomyBlobsMustConnectToOcean then
+				polygon.otherOceanDist = maxOceanDist
+			end
 		else
 			tRemove(polygonBuffer, polygonIndex)
 		end
 		EchoDebug("minOceanDistRatio: " .. minOceanDistRatio, "iterations: " .. iterations, "at: " .. polygon.x .. ", " .. polygon.y)
-		-- if #polygonBuffer == 0 then break end
 		local blob = { polygon }
 		polygon.astronomyBlob = blob
 		while #blob < size do
@@ -5233,7 +5280,7 @@ function Space:PickContinents()
 	local largeEnoughBasinIndices = {}
 	local basinSizeMin = 0
 	if self.largestAstronomyBasin then
-		basinSizeMin = #self.largestAstronomyBasin / 2
+		basinSizeMin = #self.largestAstronomyBasin / 3
 	end
 	for astronomyIndex, basin in pairs(self.astronomyBasins) do
 		self.majorContinentsInBasin[astronomyIndex] = 0
