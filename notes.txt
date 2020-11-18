@@ -1,6 +1,4 @@
-- count distance from astronomy blob to ocean rift by flood filling polygons (the distance is the number of polygons to the ocean)
-
-	- do the same thing when drawing vertical ocean rifts to prevent unwanted astronomy basin sausaging
+- determine which astronomy basins to place continents in by sorting basins by polygon size, not by randomly rotating through those of enough size
 
 - redo river generation as subpolygon-following between a water source and a mountain range, with randomized intermediate waypoints (subpolygon intersections). this would be faster (no blind walking or hundreds of test sketches), allow longer rivers, and would make it easier to distribute them geographically
 
@@ -9,6 +7,10 @@
 ---
 DONE:
 ---
+
+- count distance from astronomy blob to ocean rift by flood filling polygons (the distance is the number of polygons to the ocean)
+
+	- do the same thing when drawing vertical ocean rifts to prevent unwanted astronomy basin sausaging
 
 - stop having jungles at higher latitudes (are they getting put on plains?)
 

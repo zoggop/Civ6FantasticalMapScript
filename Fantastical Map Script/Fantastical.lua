@@ -5318,23 +5318,28 @@ function Space:PickContinents()
 	-- decide where islands and continents go
 	self.majorContinentsInBasin = {}
 	local islandsInBasin = {}
-	local largeEnoughBasinIndices = {}
-	local basinSizeMin = 0
-	if self.largestAstronomyBasin then
-		basinSizeMin = #self.largestAstronomyBasin / 5
-	end
+	local totalSize = 0
 	for astronomyIndex, basin in pairs(self.astronomyBasins) do
 		self.majorContinentsInBasin[astronomyIndex] = 0
 		islandsInBasin[astronomyIndex] = 0
-		if #basin > basinSizeMin then
+		totalSize = totalSize + #basin
+	end
+	local avgSize = totalSize / #self.astronomyBasins
+	local basinSizeMin = mCeil(avgSize / 2)
+	print("average size:", avgSize, "large size min:", basinSizeMin)
+	local largeEnoughBasinIndices = {}
+	for astronomyIndex, basin in pairs(self.astronomyBasins) do
+		if #basin >= basinSizeMin then
 			tInsert(largeEnoughBasinIndices, astronomyIndex)
 		end
 	end
 	-- decide where continents go
-	local lebi = mRandom(1, #largeEnoughBasinIndices)
+	tSort(largeEnoughBasinIndices, function (a, b) return #self.astronomyBasins[a] > #self.astronomyBasins[b] end)
+	local lebi = 1
 	local continentCount = 0
 	while continentCount < self.majorContinentNumber do
 		local astronomyIndex = largeEnoughBasinIndices[lebi]
+		-- print(lebi, #self.astronomyBasins[astronomyIndex])
 		self.majorContinentsInBasin[astronomyIndex] = self.majorContinentsInBasin[astronomyIndex] + 1
 		continentCount = continentCount + 1
 		lebi = lebi + 1
