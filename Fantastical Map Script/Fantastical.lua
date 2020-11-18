@@ -4831,40 +4831,32 @@ function Space:PickOceanBottomToTop(x, oceanIndex, useNeighborBottomY)
 			EchoDebug("topY found, stopping ocean #" .. oceanIndex .. " at " .. iterations .. " iterations")
 			break
 		end
-		local goodUpNeighbors, goodDownNeighbors, okUpNeighbors, okDownNeighbors = {}, {}, {}, {}
+		local goodUpNeighbors, goodDownNeighbors, okNeighbors = {}, {}, {}
 		for ni, neighbor in pairs(polygon.neighbors) do
 			if not neighbor.oceanIndex and not chosen[neighbor] and not neighbor:NearOther(oceanIndex, "oceanIndex") then
-				if neighbor.maxY > polygon.maxY then
-					tInsert(okUpNeighbors, neighbor)
-				else
-					tInsert(okDownNeighbors, neighbor)
-				end
 				if neighbor:PolygonDistanceToOtherRift(oceanIndex) >= 4 then
 					if neighbor.maxY > polygon.maxY then
 						tInsert(goodUpNeighbors, neighbor)
 					else
 						tInsert(goodDownNeighbors, neighbor)
 					end
+				else
+					tInsert(okNeighbors, neighbor)
 				end
 			end
 		end
 		local useNeighbors = goodUpNeighbors
 		if #goodUpNeighbors == 0 then
 			if #goodDownNeighbors == 0 then
-				if #okUpNeighbors == 0 then
-					if #okDownNeighbors == 0 then
-						EchoDebug("no valid neighbors!, stopping ocean #" .. oceanIndex .. " at " .. iterations .. " iterations")
-						break
-					else
-						EchoDebug("no ok up neighbors, using ok down")
-						useNeighbors = okDownNeighbors
-					end
+				if #okNeighbors == 0 then
+					EchoDebug("no good or ok neighbors!, stopping ocean #" .. oceanIndex .. " at " .. iterations .. " iterations")
+					break
 				else
-					EchoDebug("no good up or down neighbors, using ok up")
-					useNeighbors = okUpNeighbors
+					EchoDebug("no good up or down neighbors, using ok neighbors")
+					useNeighbors = okNeighbors
 				end
 			else
-				EchoDebug("no good up neighbors, using good down")
+				EchoDebug("no good up neighbors, using good down neighbors")
 				useNeighbors = goodDownNeighbors
 			end
 		end
@@ -5325,7 +5317,7 @@ function Space:PickContinents()
 		totalSize = totalSize + #basin
 	end
 	local avgSize = totalSize / #self.astronomyBasins
-	local basinSizeMin = mCeil(avgSize / 2)
+	local basinSizeMin = mFloor(avgSize * 0.45)
 	print("average size:", avgSize, "large size min:", basinSizeMin)
 	local largeEnoughBasinIndices = {}
 	for astronomyIndex, basin in pairs(self.astronomyBasins) do
@@ -5333,6 +5325,7 @@ function Space:PickContinents()
 			tInsert(largeEnoughBasinIndices, astronomyIndex)
 		end
 	end
+	self.largeEnoughBasinNumber = #largeEnoughBasinIndices
 	-- decide where continents go
 	tSort(largeEnoughBasinIndices, function (a, b) return #self.astronomyBasins[a] > #self.astronomyBasins[b] end)
 	local lebi = 1
