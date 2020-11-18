@@ -61,7 +61,7 @@ local function StopDebugTimer(timer)
 	return string.format(format, multiplier * time) .. " " .. unit
 end
 
-local function EchoDebug(...)
+function EchoDebug(...)
 	if debugEnabled then
 		local printResult = ""
 		if clockEnabled then
@@ -581,7 +581,7 @@ local SpecialLabelTypesCentauri = {
 	Cape = "MapWaterSmallMedium"
 }
 
-local LabelDefinitions -- has to be set in SetConstants()
+local LabelDefinitions -- has to be set in SetConstantsFantastical()
 
 local LabelDefinitionsCentauri -- has to be set in Space:Compute()
 
@@ -1134,7 +1134,7 @@ local function GetPlotName(plotType)
 end
 
 
-function SetConstants()
+function SetConstantsFantastical()
 	artOcean, artAmerica, artAsia, artAfrica, artEurope = 0, 1, 2, 3, 4
 
 	resourceSilver, resourceSpices = 16, 22
@@ -2049,7 +2049,8 @@ function Polygon:Subdivide(divisionNumber, relaxations)
 	return subPolygons
 end
 
-function Polygon:PolygonDistToOtherRift(homeOceanIndex)
+function Polygon:PolygonDistanceToOtherRift(homeOceanIndex)
+	if #self.space.oceans == 0 then return 100 end
 	local searched = {}
 	local buffer = tDuplicate(self.neighbors)
 	local set = self.neighbors
@@ -2068,10 +2069,13 @@ function Polygon:PolygonDistToOtherRift(homeOceanIndex)
 					end
 				end
 			end
+			if #newSet == 0 then
+				return away
+			end
 			set = newSet
 			away = away + 1
 		end
-		p = tRemoveRandom(buffer)
+		p = tRemove(buffer)
 	until p.oceanIndex and p.oceanIndex ~= homeOceanIndex or away > awayLimit
 	return away
 end
@@ -4659,7 +4663,15 @@ function Space:PickOceansCylinder()
 	for oceanIndex = 1, self.oceanNumber do
 		local ocean
 		if oceanIndex < 4 then
-			ocean = self:PickOceanBottomToTop(x, oceanIndex)
+			local foundTopY
+			ocean, foundTopY = self:PickOceanBottomToTop(x, oceanIndex)
+			if not foundTopY then
+				for i, polygon in pairs(ocean) do
+					EchoDebug("undo incomplete ocean")
+					polygon.oceanIndex = nil
+				end
+				ocean, foundTopY = self:PickOceanBottomToTop(x, oceanIndex, true)
+			end
 			x = mCeil(x + xDiv) % self.iW
 		else
 			if not self.oceans[firstOcean] or not self.oceans[secondOcean] then
@@ -4790,8 +4802,22 @@ function Space:PickOceanToOcean(firstOcean, secondOcean, x1, y1, x2, y2, oceanIn
 	return ocean
 end
 
-function Space:PickOceanBottomToTop(x, oceanIndex)
+function Space:PickOceanBottomToTop(x, oceanIndex, useNeighborBottomY)
 	local polygon = self:GetPolygonByXY(x, 0)
+	if useNeighborBottomY then
+		local bottomYs = {}
+		for i, neighbor in pairs(polygon.neighbors) do
+			if neighbor.bottomY and not neighbor.oceanIndex and not neighbor:NearOther(oceanIndex, "oceanIndex") then
+				tInsert(bottomYs, neighbor)
+			end
+		end
+		if #bottomYs > 0 then
+			polygon = tGetRandom(bottomYs)
+		else
+			EchoDebug("no bottomYs available, cant draw ocean")
+			return
+		end
+	end
 	local ocean = {}
 	local iterations = 0
 	local chosen = {}
@@ -4802,62 +4828,77 @@ function Space:PickOceanBottomToTop(x, oceanIndex)
 		self.nonOceanArea = self.nonOceanArea - #polygon.hexes
 		self.nonOceanPolygons = self.nonOceanPolygons - 1
 		if polygon.topY then
-				EchoDebug("topY found, stopping ocean #" .. oceanIndex .. " at " .. iterations .. " iterations")
-				break
+			EchoDebug("topY found, stopping ocean #" .. oceanIndex .. " at " .. iterations .. " iterations")
+			break
 		end
-		local upNeighbors = {}
-		local downNeighbors = {}
+		local goodUpNeighbors, goodDownNeighbors, okUpNeighbors, okDownNeighbors = {}, {}, {}, {}
 		for ni, neighbor in pairs(polygon.neighbors) do
-			if not neighbor:NearOther(oceanIndex, "oceanIndex") and not chosen[neighbor] then
+			if not neighbor.oceanIndex and not chosen[neighbor] and not neighbor:NearOther(oceanIndex, "oceanIndex") then
 				if neighbor.maxY > polygon.maxY then
-					tInsert(upNeighbors, neighbor)
+					tInsert(okUpNeighbors, neighbor)
 				else
-					tInsert(downNeighbors, neighbor)
+					tInsert(okDownNeighbors, neighbor)
+				end
+				if neighbor:PolygonDistanceToOtherRift(oceanIndex) >= 4 then
+					if neighbor.maxY > polygon.maxY then
+						tInsert(goodUpNeighbors, neighbor)
+					else
+						tInsert(goodDownNeighbors, neighbor)
+					end
 				end
 			end
 		end
-		if #upNeighbors == 0 then
-			if #downNeighbors == 0 then
-				if #polygon.neighbors == 0 then
-					EchoDebug("no neighbors!, stopping ocean #" .. oceanIndex .. " at " .. iterations .. " iterations")
-					break
+		local useNeighbors = goodUpNeighbors
+		if #goodUpNeighbors == 0 then
+			if #goodDownNeighbors == 0 then
+				if #okUpNeighbors == 0 then
+					if #okDownNeighbors == 0 then
+						EchoDebug("no valid neighbors!, stopping ocean #" .. oceanIndex .. " at " .. iterations .. " iterations")
+						break
+					else
+						EchoDebug("no ok up neighbors, using ok down")
+						useNeighbors = okDownNeighbors
+					end
 				else
-					upNeighbors = polygon.neighbors
+					EchoDebug("no good up or down neighbors, using ok up")
+					useNeighbors = okUpNeighbors
 				end
 			else
-				upNeighbors = downNeighbors
+				EchoDebug("no good up neighbors, using good down")
+				useNeighbors = goodDownNeighbors
 			end
 		end
 		local highestNeigh
-		if #self.oceans == 0 or self.oceanNumber ~= 2 then
-			-- local highestY = 0
-			-- local neighsByY = {}
-			-- for ni, neighbor in pairs(upNeighbors) do
-			-- 	neighsByY[neighbor.y] = neighsByY[neighbor.y] or {}
-			-- 	tInsert(neighsByY[neighbor.y], neighbor)
-			-- 	if neighbor.y > highestY then
-			-- 		highestY = neighbor.y
-			-- 		highestNeigh = neighbor
-			-- 	end
-			-- end
-			-- if #neighsByY[highestY] > 1 then
-			-- 	highestNeigh = tRemoveRandom(neighsByY[highestY])
-			-- end
-			highestNeigh = tGetRandom(upNeighbors)
+		if oceanIndex < self.oceanNumber then
+			local highestY = 0
+			local neighsByY = {}
+			for ni, neighbor in pairs(useNeighbors) do
+				neighsByY[neighbor.maxY] = neighsByY[neighbor.maxY] or {}
+				tInsert(neighsByY[neighbor.maxY], neighbor)
+				if neighbor.maxY > highestY then
+					highestY = neighbor.maxY
+					highestNeigh = neighbor
+				end
+			end
+			if #neighsByY[highestY] > 1 then
+				highestNeigh = tRemoveRandom(neighsByY[highestY])
+			end
+			-- highestNeigh = tGetRandom(useNeighbors)
 		else
 			local highestDist = 0
 			local neighsByDist = {}
-			for ni, neighbor in pairs(upNeighbors) do
-				local totalDist = 0
-				for oi, ocea in pairs(self.oceans) do
-					for pi, poly in pairs(ocea) do
-						local dx, dy = self:WrapDistance(neighbor.x, neighbor.y, poly.x, poly.y)
-						totalDist = totalDist + dx
-					end
-				end
+			for ni, neighbor in pairs(useNeighbors) do
+				-- local totalDist = 0
+				-- for oi, ocea in pairs(self.oceans) do
+				-- 	for pi, poly in pairs(ocea) do
+				-- 		local dx, dy = self:WrapDistance(neighbor.x, neighbor.y, poly.x, poly.y)
+				-- 		totalDist = totalDist + dx
+				-- 	end
+				-- end
+				local totalDist = (neighbor:PolygonDistanceToOtherRift(oceanIndex) or 0) + (neighbor.maxY - polygon.maxY)
 				neighsByDist[totalDist] = neighsByDist[totalDist] or {}
 				tInsert(neighsByDist[totalDist], neighbor)
-				if totalDist > highestDist then
+				if not highestNeigh or totalDist > highestDist then
 					highestDist = totalDist
 					highestNeigh = neighbor
 				end
@@ -4866,10 +4907,10 @@ function Space:PickOceanBottomToTop(x, oceanIndex)
 				highestNeigh = tGetRandom(neighsByDist[highestDist])
 			end
 		end
-		polygon = highestNeigh or tGetRandom(upNeighbors)
+		polygon = highestNeigh or tGetRandom(useNeighbors)
 		iterations = iterations + 1
 	end
-	return ocean
+	return ocean, polygon.topY
 end
 
 function Space:PickOceansRectangle()
@@ -5136,7 +5177,7 @@ function Space:PickOceansAstronomyBlobs()
 			if self.oceanNumber > 0 or self.astronomyBlobsAtMaxDistFromOceans or (self.astronomyBlobsMustConnectToOcean and self.oceanNumber > 1) then
 				local minOceanDist
 				if self.astronomyBlobsMustConnectToOcean then
-					minOceanDist = polygon:PolygonDistToOtherRift(connectedOceanIndex)
+					minOceanDist = polygon:PolygonDistanceToOtherRift(connectedOceanIndex)
 				else
 					for i, ocean in pairs(self.oceans) do
 						if not connectedOceanIndex or i ~= connectedOceanIndex then
@@ -5280,7 +5321,7 @@ function Space:PickContinents()
 	local largeEnoughBasinIndices = {}
 	local basinSizeMin = 0
 	if self.largestAstronomyBasin then
-		basinSizeMin = #self.largestAstronomyBasin / 3
+		basinSizeMin = #self.largestAstronomyBasin / 5
 	end
 	for astronomyIndex, basin in pairs(self.astronomyBasins) do
 		self.majorContinentsInBasin[astronomyIndex] = 0
@@ -7724,7 +7765,7 @@ function GetMapInitData(worldSize)
 		local testDivisor = mSqrt(testAreaDivisor)
 		local testWidth = mCeil(grid_width / testDivisor)
 		local testHeight = mCeil(grid_height / testDivisor)
-		SetConstants()
+		SetConstantsFantastical()
 		local testSpace = Space()
 		testSpace:GetPlayerTeamInfo()
 		testSpace:SetOptions(OptionDictionary)
@@ -7763,7 +7804,7 @@ local mySpace
 
 function GeneratePlotTypes()
     print("Generating Plot Types (Fantastical) ...")
-	SetConstants()
+	SetConstantsFantastical()
     mySpace = Space()
     mySpace:GetPlayerTeamInfo()
     mySpace:SetOptions(OptionDictionary)
