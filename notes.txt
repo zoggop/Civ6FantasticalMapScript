@@ -1,6 +1,3 @@
-- fix southern pole being one hex larger than northern pole
-
-- with climate realism check to make sure climate polygons aren't *too* far away from their latitude
 
 - another way to determine astronomy basins and ocean rifts: pick origin polygons for each desired astronomy basin, and grow them evenly (all neighbors of already added) all at the same time, stopping where one runs into the other, until all polygons are covered. then choose the ocean rifts by painting along the borders between the grown astronomy basins. this would prevent tiny or nonexistant astronomy basins when ocean rifts get drawn weird.
 
@@ -11,6 +8,10 @@
 ---
 DONE:
 ---
+
+- with climate realism check to make sure climate polygons aren't *too* far away from their latitude
+
+- fix southern pole being one hex larger than northern pole
 
 - determine which astronomy basins to place continents in by sorting basins by polygon size, not by randomly rotating through those of enough size
 

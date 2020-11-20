@@ -6190,9 +6190,7 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 			local rain = self:GetRainfall(region.latitude)
 			local bestDist, bestPoint, bestIndex
 			for ii, point in ipairs(voronoiBuffer) do
-				local dt = mAbs(temp - point.temp)
-				local dr = mAbs(rain - point.rain)
-				local dist = dt + dr
+				local dist = self:TempRainDist(temp, rain, point.temp, point.rain, true)
 				if not bestDist or dist < bestDist then
 					bestDist = dist
 					bestPoint = point
@@ -6200,6 +6198,7 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 				end
 			end
 			region.point = bestPoint
+			region.tempRainDist = bestDist
 			-- EchoDebug("latitude: " .. mCeil(region.latitude), "y: " .. region.representativePolygon.y, "t: " .. temp, "r: " .. rain, "vt: " .. mCeil(bestPoint.temp), "vr: " .. mCeil(bestPoint.rain))
 			tRemove(voronoiBuffer, bestIndex)
 		else
@@ -6212,11 +6211,59 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 		region.temperature = region.point.temp
 		region.rainfall = region.point.rain
 	end
+	if self.useMapLatitudes then
+		-- swap some climate regions that are too far off
+		tSort(regionBuffer, function (a, b) return a.tempRainDist > b.tempRainDist end)
+		local i = 1
+		repeat
+			local region = regionBuffer[i]
+			-- print(region.tempRainDist, region.latitude, region.temperature, region.rainfall, self:GetTemperature(region.latitude), self:GetRainfall(region.latitude))
+			if not region.swapped and region.tempRainDist > 300 and #regionBuffer > i then
+				local bestImprovement = 0
+				local bestReg
+				local lTemp = self:GetTemperature(region.latitude)
+				local lRain = self:GetRainfall(region.latitude)
+				local reg
+				local ii = i+1
+				repeat
+					reg = regionBuffer[ii]
+					if not reg.swapped then
+						local lRegTemp = self:GetTemperature(reg.latitude)
+						local lRegRain = self:GetRainfall(reg.latitude)
+						local regionDist = self:TempRainDist(lTemp, lRain, reg.temperature, reg.rainfall, true)
+						local regDist = self:TempRainDist(lRegTemp, lRegRain, region.temperature, region.rainfall, true)
+						local improvement = (region.tempRainDist + reg.tempRainDist) - (regionDist + regDist)
+						if improvement > 0 and improvement > bestImprovement then
+							bestImprovement = improvement
+							bestReg = reg
+						end
+					end
+					ii = ii + 1
+				until ii > #regionBuffer
+				if bestReg then
+					-- EchoDebug(mFloor(bestImprovement), mFloor(region.tempRainDist), mFloor(bestReg.tempRainDist), region.latitude, region.temperature, region.rainfall, bestReg.latitude, bestReg.temperature, bestReg.rainfall)
+					local origPoint = region.point
+					region.point = bestReg.point
+					bestReg.point = origPoint
+					region.temperature = region.point.temp
+					region.rainfall = region.point.rain
+					bestReg.temperature = bestReg.point.temp
+					bestReg.rainfall = bestReg.point.rain
+					region.swapped = true
+					bestReg.swapped = true
+				end
+			end
+			i = i + 1
+		until region.tempRainDist <= 300 or i > #regionBuffer
+	end
 end
 
-function Space:TempRainDist(t1, r1, t2, r2)
+function Space:TempRainDist(t1, r1, t2, r2, desertWeighted)
 	local tdist = mAbs(t2 - t1)
 	local rdist = mAbs(r2 - r1)
+	if desertWeighted then
+		rdist = rdist * (((1 - (r1 / 99)) * 0.5) + 0.5)
+	end
 	return tdist^2 + rdist^2
 end
 
