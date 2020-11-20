@@ -6215,6 +6215,7 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 		-- swap some climate regions that are too far off
 		tSort(regionBuffer, function (a, b) return a.tempRainDist > b.tempRainDist end)
 		local i = 1
+		self.highestTempRainDist = regionBuffer[1].tempRainDist
 		repeat
 			local region = regionBuffer[i]
 			-- print(region.tempRainDist, region.latitude, region.temperature, region.rainfall, self:GetTemperature(region.latitude), self:GetRainfall(region.latitude))
@@ -6228,10 +6229,8 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 				repeat
 					reg = regionBuffer[ii]
 					if not reg.swapped then
-						local lRegTemp = self:GetTemperature(reg.latitude)
-						local lRegRain = self:GetRainfall(reg.latitude)
 						local regionDist = self:TempRainDist(lTemp, lRain, reg.temperature, reg.rainfall, true)
-						local regDist = self:TempRainDist(lRegTemp, lRegRain, region.temperature, region.rainfall, true)
+						local regDist = self:LatitudeTempRainDist(reg.latitude, region.temperature, region.rainfall)
 						local improvement = (region.tempRainDist + reg.tempRainDist) - (regionDist + regDist)
 						if improvement > 0 and improvement > bestImprovement then
 							bestImprovement = improvement
@@ -6249,6 +6248,14 @@ function Space:AssignClimateVoronoiToRegions(climateVoronoi)
 					region.rainfall = region.point.rain
 					bestReg.temperature = bestReg.point.temp
 					bestReg.rainfall = bestReg.point.rain
+					region.tempRainDist = self:LatitudeTempRainDist(region.latitude, region.temperature, region.rainfall)
+					bestReg.tempRainDist = self:LatitudeTempRainDist(bestReg.latitude, bestReg.temperature, bestReg.rainfall)
+					if region.tempRainDist > self.highestTempRainDist then
+						self.highestTempRainDist = region.tempRainDist
+					end
+					if bestReg.tempRainDist > self.highestTempRainDist then 
+						self.highestTempRainDist = bestReg.tempRainDist
+					end
 					region.swapped = true
 					bestReg.swapped = true
 				end
@@ -6265,6 +6272,12 @@ function Space:TempRainDist(t1, r1, t2, r2, desertWeighted)
 		rdist = rdist * (((1 - (r1 / 99)) * 0.5) + 0.5)
 	end
 	return tdist^2 + rdist^2
+end
+
+function Space:LatitudeTempRainDist(latitude, t2, r2)
+	local t1 = self:GetTemperature(latitude)
+	local r1 = self:GetRainfall(latitude)
+	return self:TempRainDist(t1, r1, t2, r2, true)
 end
 
 function Space:NearestTempRainThing(temperature, rainfall, things, oneTtwoF)
