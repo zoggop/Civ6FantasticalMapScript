@@ -1,3 +1,7 @@
+- fix southern pole being one hex larger than northern pole
+
+- with climate realism check to make sure climate polygons aren't *too* far away from their latitude
+
 - another way to determine astronomy basins and ocean rifts: pick origin polygons for each desired astronomy basin, and grow them evenly (all neighbors of already added) all at the same time, stopping where one runs into the other, until all polygons are covered. then choose the ocean rifts by painting along the borders between the grown astronomy basins. this would prevent tiny or nonexistant astronomy basins when ocean rifts get drawn weird.
 
 - redo river generation as subpolygon-following between a water source and a mountain range, with randomized intermediate waypoints (subpolygon intersections). this would be faster (no blind walking or hundreds of test sketches), allow longer rivers, and would make it easier to distribute them geographically

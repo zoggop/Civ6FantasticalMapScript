@@ -2253,7 +2253,7 @@ function Polygon:CheckBottomTop(hex)
 	if y == space.h-1 and self.y >= space.halfHeight then
 		self.betaTopY = true
 	end
-	if self.space.useMapLatitudes and self.space.polarExponent >= 1.0 and hex.latitude > 89 then
+	if self.space.useMapLatitudes and self.space.polarExponent >= 1.0 and hex.latitude >= 89 then
 		self.polar = true
 	end
 	if not self.edgeY then
@@ -7504,7 +7504,7 @@ end
 -- INTERNAL FUNCTIONS: --
 
 function Space:GetGameLatitudeFromY(y)
-	return mAbs((self.iH / 2) - y) / (self.iH / 2);
+	return mAbs((self.h / 2) - y) / (self.h / 2);
 end
 
 function Space:GetIntegerLatitudeFromY(y)
