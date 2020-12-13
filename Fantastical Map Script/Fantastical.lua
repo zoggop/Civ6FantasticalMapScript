@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: zoggop
--- version 32-VI-26
+-- version 32-VI-27
 
 --------------------------------------------------------------
 if include == nil then
@@ -3097,6 +3097,7 @@ function Space:SetOptions(optDict)
 		if option.values[optionChoice].values == "keys" then
 			-- option.randomChoice makes it possible to execute SetOptions multiple times and get the same random values
 			-- it's setup this way to allow creation of a scaled-down test map
+			print(option.name, option.randomChoice)
 			if option.values[optionChoice].randomKeys then
 				optionChoice = option.randomChoice or tGetRandom(option.values[optionChoice].randomKeys)
 				option.randomChoice = optionChoice
@@ -4649,6 +4650,88 @@ function Space:PickOceans()
 end
 
 function Space:PickOceansCylinder()
+	if self.oceanNumber > 2 then
+		self:PickOceansAstronomyBasinGrow()
+	else
+		self:PickOceansPolygonPaint()
+	end
+end
+
+function Space:PickOceansAstronomyBasinGrow()
+	-- calculate starting polygons for each basin
+	local basins = {}
+	local xDiv = self.w / mMin(3, self.oceanNumber)
+	local x = mFloor(xDiv / 2)
+	local rows = mCeil(self.oceanNumber / 3)
+	local yDiv = mCeil(self.h / rows)
+	local y = mFloor(yDiv / 2)
+	for oceanIndex = 1, self.oceanNumber do
+		local hex = self:GetHexByXY(x, y)
+		local basin = {new = {}, current = {hex.polygon}, all = {hex.polygon}}
+		tInsert(basins, basin)
+		hex.polygon.basin = basin
+		x = mCeil(x + xDiv)
+		if oceanIndex == 4 then
+			y = mCeil(y + yDiv)
+			x = mFloor(xDiv / 2)
+		end
+	end
+	-- grow basins simulataneously and find borders
+	local iterations = 0
+	local borders = {}
+	local lastTotal
+	repeat
+		local anyCanGrow = false
+		-- tShuffle(basins)
+		local totalSoFar = 0
+		for i, basin in pairs(basins) do
+			print(#basin.all, (lastTotal or 1000) / #basins)
+			if #basin.current > 0 and #basin.all < ((lastTotal or 1000) / #basins) * 1 then
+				local polygon = tRemoveRandom(basin.current)
+				local isBorder = {}
+				local hasBorder = false
+				for ii, neighbor in pairs(polygon.neighbors) do
+					if not neighbor.basin then
+						neighbor.basin = basin
+						tInsert(basin.new, neighbor)
+						tInsert(basin.all, neighbor)
+					elseif neighbor.basin ~= basin then
+						isBorder[neighbor.basin] = true
+						hasBorder = true
+					end
+				end
+				if hasBorder then
+					borders[basin] = borders[basin] or {}
+					for borderBasin, yes in pairs(isBorder) do
+						if not borders[basin][borderBasin] then
+							borders[basin][borderBasin] = basin
+							borders[borderBasin] = borders[borderBasin] or {}
+							borders[borderBasin][basin] = basin
+						end
+						if borders[basin][borderBasin] == basin then
+							polygon.oceanIndex = 1
+						end
+					end
+				end
+			end
+			if #basin.current == 0 then
+				print(i, "refill", #basin.new)
+				basin.current = basin.new
+				basin.new = {}
+				print(#basin.current, #basin.new)
+			end
+			if #basin.current > 0 or #basin.new > 0 then
+				anyCanGrow = true
+			end
+			totalSoFar = totalSoFar + #basin.all
+		end
+		lastTotal = totalSoFar
+		iterations = iterations + 1
+	until not anyCanGrow
+	print(iterations, "basin grow iterations")
+end
+
+function Space:PickOceansPolygonPaint()
 	local xDiv = self.w / mMin(3, self.oceanNumber)
 	local x = 0
 	local horizOceans = self.oceanNumber - 3
@@ -7775,6 +7858,17 @@ function GetMapInitData(worldSize)
 	local grid_width, grid_height
 
 	for m in GameInfo.Maps() do
+		-- print('\t{')
+		-- for k, v in pairs(m) do
+		-- 	if type(v) ~= 'table' then
+		-- 		if type(v) == 'string' then
+		-- 			print("\t\t" .. k, "= '" .. v .. "',")
+		-- 		else
+		-- 			print("\t\t" .. k, '=', tostring(v) .. ',')
+		-- 		end
+		-- 	end
+		-- end
+		-- print('\t},')
 		if m.Hash == worldSize then
 			grid_width = m.GridWidth
 			grid_height = m.GridHeight
@@ -8073,7 +8167,7 @@ function GenerateMap()
 	-- START_MIN_Y and START_MAX_Y is the percent of the map ignored for major civs' starting positions.
 	local args = {
 		MIN_MAJOR_CIV_FERTILITY = minMajorCivFert,
-		MIN_MINOR_CIV_FERTILITY = minMinorCivFert, 
+		MIN_MINOR_CIV_FERTILITY = minMinorCivFert,
 		MIN_BARBARIAN_FERTILITY = 1,
 		START_MIN_Y = 0, -- 15,
 		START_MAX_Y = 0, -- 15,
