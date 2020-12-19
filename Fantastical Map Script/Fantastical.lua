@@ -2717,9 +2717,12 @@ function Region:CreateCollection()
 		local polar
 		-- local lake = i > 1 and mRandom(1, 100) < self.lakeyness
 		local lake = i > 1 and i > lakeI
-		local subSize = mMin(self.space:GetSubCollectionSize(), #subPoint.pixels)
+		local subSize = self.space:GetSubCollectionSize() -- mMin(self.space:GetSubCollectionSize(), #subPoint.pixels)
 		local subPixelBuffer = tDuplicate(subPoint.pixels)
 		for ii = 1, subSize do
+			if #subPixelBuffer == 0 then
+				subPixelBuffer = tDuplicate(subPoint.pixels)
+			end
 			local pixel
 			if ii == 1 or #subPixelBuffer == 1 then
 				pixel = tRemoveRandom(subPixelBuffer)
@@ -2774,8 +2777,8 @@ end
 function Region:CreateElement(temperature, rainfall, lake)
 	temperature = temperature or mRandom(self.temperatureMin, self.temperatureMax)
 	rainfall = rainfall or mRandom(self.rainfallMin, self.rainfallMax)
-	local mountain = mRandom(1, 100) < self.mountainousness
-	local hill = mRandom(1, 100) < self.hillyness
+	local mountain = self.mountainCount < mCeil(self.totalSize * (self.mountainousness / 100)) and mRandom(1, 100) < self.mountainousness
+	local hill = self.hillCount < mCeil(self.totalSize * (self.hillyness / 100)) and mRandom(1, 100) < self.hillyness
 	local marsh = not hill and not mountain and mRandom(1, 100) < self.marshyness
 	if lake then
 		mountain = false
@@ -2794,7 +2797,9 @@ function Region:CreateElement(temperature, rainfall, lake)
 	-- local terrainType = bestFeature.terrainType or bestTerrain.terrainType
 	local terrainType = bestTerrain.terrainType
 	local featureType = bestFeature.featureType
-	if mountain and self.mountainCount < mCeil(self.totalSize * (self.mountainousness / 100)) then
+	-- print(mountain, self.mountainCount, self.totalSize, self.totalSize * (self.mountainousness / 100), hill, bestFeature.hill, self.hillCount, self.totalSize * (self.hillyness / 100))
+	if mountain then
+		-- print("mountain")
 		plotType = plotMountain
 		featureType = featureNone
 		self.mountainCount = self.mountainCount + 1
@@ -2802,7 +2807,8 @@ function Region:CreateElement(temperature, rainfall, lake)
 		plotType = plotOcean
 		terrainType = terrainCoast -- will become coast later
 		featureType = featureNone
-	elseif hill and bestFeature.hill and self.hillCount < mCeil(self.totalSize * (self.hillyness / 100)) then
+	elseif hill and bestFeature.hill then
+		-- print("hill")
 		plotType = plotHills
 		self.hillCount = self.hillCount + 1
 	elseif marsh and terrainType == terrainGrass then
@@ -7700,8 +7706,8 @@ function Space:GetHillyness()
 	local hillyness = mMax(0, mCeil(100 * (1 - (self.totalRegionHills / self.hillRegionArea))))
 	if self.totalRegionHills < self.hillRegionArea then
 		hillyness = mMax(20, hillyness)
+		EchoDebug(hillyness, "hillyness", self.hillRegionArea - self.totalRegionHills, "hill deficit")
 	end
-	-- EchoDebug(hillyness, self.hillRegionArea - self.totalRegionHills)
 	return hillyness
 end
 
