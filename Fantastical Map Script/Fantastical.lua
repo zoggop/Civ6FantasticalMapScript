@@ -2772,13 +2772,14 @@ function Region:CreateCollection()
 		tInsert(collection, subCollection)
 	end
 	self.collection = collection
+	-- EchoDebug(mFloor(self.hillCount / self.totalSize * 100), "percent hill", mFloor(self.mountainCount / self.totalSize * 100), "percent mountain")
 end
 
 function Region:CreateElement(temperature, rainfall, lake)
 	temperature = temperature or mRandom(self.temperatureMin, self.temperatureMax)
 	rainfall = rainfall or mRandom(self.rainfallMin, self.rainfallMax)
-	local mountain = self.mountainCount < mCeil(self.totalSize * (self.mountainousness / 100)) and mRandom(1, 100) < self.mountainousness
-	local hill = self.hillCount < mCeil(self.totalSize * (self.hillyness / 100)) and mRandom(1, 100) < self.hillyness
+	local mountain = self.mountainCount < mCeil(self.totalSize * (self.mountainousness / 100)) -- and mRandom(1, 100) < self.mountainousness
+	local hill = self.hillCount < mCeil(self.totalSize * (self.hillyness / 100)) -- and mRandom(1, 100) < self.hillyness
 	local marsh = not hill and not mountain and mRandom(1, 100) < self.marshyness
 	if lake then
 		mountain = false
