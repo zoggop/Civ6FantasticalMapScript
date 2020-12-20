@@ -7845,7 +7845,7 @@ function Space:GetSubPolygonByXY(x, y)
 end
 
 function Space:GetHexByXY(x, y)
-	x = mFloor(x + (self.shiftX or 0)) % self.iW
+	x = mFloor(x)
 	y = mFloor(y)
 	return self.hexes[self:GetIndex(x, y)]
 end
