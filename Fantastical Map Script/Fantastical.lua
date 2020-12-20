@@ -8064,16 +8064,16 @@ end
 -- replaces function in FeatureGenerator.lua because it adds mountains on top of features, and hills where not wanted
 function AddTerrainFromContinents(plotTypes, terrainTypes, world_age, iW, iH, iContinentBoundaryPlots)
 
-	local iMountainPercentByDistance:table = {42, 24, 6}; 
-	local iHillPercentByDistance:table = {50, 40, 30};
-	local aLonelyMountainIndices:table = {};
-	local aPlacedVolcanoes:table = {};
+	local iMountainPercentByDistance = {42, 24, 6}; 
+	local iHillPercentByDistance = {50, 40, 30};
+	local aLonelyMountainIndices = {};
+	local aPlacedVolcanoes = {};
 
 	-- Split Lonely Mountain into Continents: we need to fight the RNG, splitting volcanoes between continents where it would clump them otherwise
 	local vContinents = Map.GetContinentsInUse();
 
 	for i, index in ipairs(vContinents) do
-		local aTable:table = {}
+		local aTable = {}
 		aLonelyMountainIndices[index] = aTable;
 	end
 
