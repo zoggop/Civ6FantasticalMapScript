@@ -1123,14 +1123,19 @@ local terrainNames = {}
 local plotNames = {}
 local featureNames = {}
 
+local function GetFeatureName(featureType)
+	if not featureType then return "nil" end
+	return featureNames[featureType] or "no name (" .. tostring(featureType) .. ")"
+end
+
 local function GetTerrainName(terrainType)
 	if not terrainType then return "nil" end
-	return terrainNames[terrainType] or "no name"
+	return terrainNames[terrainType] or "no name (" .. tostring(terrainType) .. ")"
 end
 
 local function GetPlotName(plotType)
 	if not plotType then return "nil" end
-	return plotNames[plotType] or "no name"
+	return plotNames[plotType] or "no name (" .. tostring(plotType) .. ")"
 end
 
 
@@ -4209,6 +4214,7 @@ function Space:ShiftGlobe()
 			hex.plot = Map.GetPlotByIndex(shiftedHex.index-1)
 			hex.shiftedX = shiftedX
 		end
+		self.shiftX = shiftX
 	end
 end
 
@@ -7839,7 +7845,7 @@ function Space:GetSubPolygonByXY(x, y)
 end
 
 function Space:GetHexByXY(x, y)
-	x = mFloor(x)
+	x = mFloor(x + (self.shiftX or 0)) % self.iW
 	y = mFloor(y)
 	return self.hexes[self:GetIndex(x, y)]
 end
@@ -8050,9 +8056,115 @@ function AddFeaturesFromContinents(width,height)
 		end
 	end
 	print('Land plots (after): '.. tostring(featuregen.iNumLandPlots));
+	featuregen.iOasisCount = 1000 -- so that it doesn't add more oases than this script has already added
 	featuregen:AddFeaturesFromContinents();
 end
 -- END AOM GS update
+
+-- replaces function in FeatureGenerator.lua because it adds mountains on top of features, and hills where not wanted
+function AddTerrainFromContinents(plotTypes, terrainTypes, world_age, iW, iH, iContinentBoundaryPlots)
+
+	local iMountainPercentByDistance:table = {42, 24, 6}; 
+	local iHillPercentByDistance:table = {50, 40, 30};
+	local aLonelyMountainIndices:table = {};
+	local aPlacedVolcanoes:table = {};
+
+	-- Split Lonely Mountain into Continents: we need to fight the RNG, splitting volcanoes between continents where it would clump them otherwise
+	local vContinents = Map.GetContinentsInUse();
+
+	for i, index in ipairs(vContinents) do
+		local aTable:table = {}
+		aLonelyMountainIndices[index] = aTable;
+	end
+
+	-- Compute target number of volcanoes
+	local iTotalLandPlots = 0;
+	for iX = 0, iW - 1 do
+		for iY = 0, iH - 1 do
+			local index = (iY * iW) + iX;
+			if (plotTypes[index] ~= g_PLOT_TYPE_OCEAN) then
+				iTotalLandPlots = iTotalLandPlots + 1;
+			end
+		end
+	end
+	local iDivisor = 8;
+	if (world_age < 8) then
+		iDivisor = 8 - world_age;  -- iDivisor should be 3 for new, 6 for old
+	end
+	local iDesiredVolcanoes = iTotalLandPlots / (iDivisor * 50);
+
+	print ("Desired Volcanoes: " .. iDesiredVolcanoes);
+
+	-- 2/3rds of Earth's volcanoes are near continent boundaries
+	print ("Continent Boundary Plots: " .. iContinentBoundaryPlots);
+	local iDesiredNearBoundaries = iDesiredVolcanoes * 2 / 3;
+
+	if (iDesiredNearBoundaries > 0) then
+		local iBoundaryPlotsPerVolcano = iContinentBoundaryPlots / iDesiredNearBoundaries;
+
+		print ("Boundary Plots Per Volcano: " .. iBoundaryPlotsPerVolcano);
+
+		for iX = 0, iW - 1 do
+			for iY = 0, iH - 1 do
+				local index = (iY * iW) + iX;
+				if (plotTypes[index] ~= g_PLOT_TYPE_OCEAN) then
+					local pPlot = Map.GetPlotByIndex(index);
+					local iNumAdjacentMountains = GetNumberAdjacentMountains(iX, iY);
+					-- Changes: no longer place inaccessible volcanoes, and no longer place volcanoes along continent boundaries too near each other
+					if (iNumAdjacentMountains ~= 6 and GetNumberNearbyVolcanoes(iX, iY, 3, aPlacedVolcanoes) == 0) then
+						if not Map.FindSecondContinent(pPlot, 3) and (plotTypes[index] == g_PLOT_TYPE_MOUNTAIN) then
+							if (iNumAdjacentMountains == 0 or (iNumAdjacentMountains > 1 and iNumAdjacentMountains < 4 )) then
+								local iContinentType = pPlot:GetContinentType();
+								table.insert(aLonelyMountainIndices[pPlot:GetContinentType()], index);
+							end
+						end
+					end
+				end
+			end
+		end
+		print ("Continent Edge Volcanoes Placed: " .. #aPlacedVolcanoes);
+	end
+	
+	if (GameCapabilities.HasCapability("CAPABILITY_MEGADISASTERS")) then
+		iDesiredVolcanoes = iDesiredVolcanoes * 2 + 2;
+	end
+
+	local iLonelyVolcanoes = iDesiredVolcanoes - #aPlacedVolcanoes;
+	local iTempVolcCount = 0;
+	
+	local iTotalMountains = 0;
+
+	for i, Indices in pairs(aLonelyMountainIndices) do
+		iTotalMountains = iTotalMountains + #Indices;
+	end
+
+	if (iTotalMountains > 0 and iLonelyVolcanoes > 0) then
+		for i, Indices in pairs(aLonelyMountainIndices) do
+			local iNumVolcanoes = iLonelyVolcanoes * #Indices/iTotalMountains
+			if (iNumVolcanoes > 0) then
+				aShuffledIndices =  GetShuffledCopyOfTable(Indices);
+				iTempVolcCount = 0;
+
+				for i, index in ipairs(aShuffledIndices) do
+					local pPlot = Map.GetPlotByIndex(index);
+					local iNearby = GetNumberNearbyVolcanoes(pPlot:GetX(),  pPlot:GetY(), 4, aPlacedVolcanoes);
+					if (iNearby == 0) then
+						TerrainBuilder.SetFeatureType(pPlot, g_FEATURE_VOLCANO);
+						print ("Volcano Placed at (x, y): " .. pPlot:GetX() .. ", " .. pPlot:GetY());
+						table.insert(aPlacedVolcanoes, index);
+						iTempVolcCount = iTempVolcCount + 1;
+						if (iTempVolcCount >= iNumVolcanoes) then
+							break
+						end
+					end
+				end
+
+			end
+		end
+	end
+
+	print ("Total Volcanoes Placed: " .. #aPlacedVolcanoes);
+end
 
 
 -- ENTRY POINT:
@@ -8079,6 +8191,17 @@ function GenerateMap()
 
 	AddRivers() -- comes before AddFeatures, following AOM GS update
 	AddFeatures()
+
+	for i = 0, (mySpace.iW * mySpace.iH) - 1, 1 do
+		local pPlot = Map.GetPlotByIndex(i)
+		local tType = pPlot:GetTerrainType()
+		if tType == g_TERRAIN_TYPE_GRASS_MOUNTAIN or tType == g_TERRAIN_TYPE_PLAINS_MOUNTAIN or tType == g_TERRAIN_TYPE_DESERT_MOUNTAIN or tType == g_TERRAIN_TYPE_TUNDRA_MOUNTAIN or tType == g_TERRAIN_TYPE_SNOW_MOUNTAIN then
+			local fType = pPlot:GetFeatureType()
+			if fType ~= g_FEATURE_NONE then
+				print("preGS mountain has feature", pPlot:GetX(), pPlot:GetY())
+			end
+		end
+	end
 
 	TerrainBuilder.AnalyzeChokepoints(); -- AOM GS update
 	-- AreaBuilder.Recalculate(); -- commented out, following AOM GS update
@@ -8110,8 +8233,10 @@ function GenerateMap()
 			world_age = world_age_old;
 		end
 		local iContinentBoundaryPlots = GetContinentBoundaryPlotCount(mySpace.iW, mySpace.iH);
+
 		AddTerrainFromContinents(plotTypes, terrainTypes, world_age, mySpace.iW, mySpace.iH, iContinentBoundaryPlots);
 		AddFeaturesFromContinents(mySpace.iW, mySpace.iH);
+
 		local iMinFloodplainSize = 4;
 		local iMaxFloodplainSize = 10;
 		TerrainBuilder.GenerateFloodplains(true, iMinFloodplainSize, iMaxFloodplainSize);
