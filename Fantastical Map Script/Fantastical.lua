@@ -4663,11 +4663,11 @@ function Space:PickOceans()
 end
 
 function Space:PickOceansCylinder()
-	if self.oceanNumber > 2 then
-		self:PickOceansAstronomyBasinGrow()
-	else
+	-- if self.oceanNumber > 2 then
+		-- self:PickOceansAstronomyBasinGrow()
+	-- else
 		self:PickOceansPolygonPaint()
-	end
+	-- end
 end
 
 function Space:PickOceansAstronomyBasinGrow()
