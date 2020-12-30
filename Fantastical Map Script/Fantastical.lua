@@ -1,6 +1,6 @@
 -- Map Script: Fantastical
 -- Author: zoggop
--- version 32-VI-27
+-- version 32-VI-28
 
 --------------------------------------------------------------
 if include == nil then
@@ -1642,7 +1642,8 @@ function Hex:FindSubPolygonNeighbors()
 	for direction, nhex in pairs(self:Neighbors()) do -- 3 and 4 are are never there yet?
 		if nhex.subPolygon ~= self.subPolygon then
 			self.subPolygon:SetNeighbor(nhex.subPolygon)
-			local subEdge = self.subPolygon.edges[nhex.subPolygon] or SubEdge(self.subPolygon, nhex.subPolygon)
+			local subEdge = self.subPolygon.subEdges[nhex.subPolygon] or SubEdge(self.subPolygon, nhex.subPolygon)
+			-- local subEdge = self.subPolygon.edges[nhex.subPolygon] or SubEdge(self.subPolygon, nhex.subPolygon)
 			subEdge:AddHexPair(self, nhex, direction)
 		end
 	end
@@ -3451,6 +3452,10 @@ function Space:Compute(setWidth, setHeight, stopAfterPickCoasts, stopAfterLandfo
     self.hexesPerSubPolygon = (1.05292 * math.log(self.iA)) - 5.74245
     self.hexesPerSubPolygon = mMax(1, self.hexesPerSubPolygon)
     self.subPolygonCount = mCeil(self.iA / self.hexesPerSubPolygon)
+    if self.wrapX and self.oceanNumber > 2 then
+    	-- increase granularity when there are a lot of ocean rifts
+    	self.polygonCount = self.polygonCount + 50
+    end
 	EchoDebug(self.polygonCount .. " polygons", self.subPolygonCount .. " subpolygons", self.iA .. " hexes", self.hexesPerSubPolygon .. " hexes per subpolygon")
     local subPolyTimer = StartDebugTimer()
     EchoDebug("creating shill polygons...")
@@ -4618,12 +4623,6 @@ end
 function Space:FindPolygonNeighbors()
 	for spi, subPolygon in pairs(self.subPolygons) do
 		subPolygon:FindPolygonNeighbors()
-	end
-end
-
-function Space:AssembleSubEdges()
-	for i, subEdge in pairs(self.subEdges) do
-		subEdge:Assemble()
 	end
 end
 
@@ -6739,36 +6738,54 @@ function Space:ComputeLandmassRainfalls()
 	self.landmasses = {}
 	for i, continent in ipairs(self.continents) do
 		local hexes = {}
+		local subpolys = {}
 		for ii, polygon in ipairs(continent) do
 			for iii, hex in ipairs(polygon.hexes) do
 				if not hex.subPolygon.lake then
 					tInsert(hexes, hex)
 				end
 			end
+			for iii, subPolygon in ipairs(polygon.subPolygons) do
+				if not subPolygon.lake then
+					tInsert(subpolys, subPolygon)
+				end
+			end
 		end
-		tInsert(self.landmasses, {continent = continent, hexes = hexes})
+		tInsert(self.landmasses, {continent = continent, hexes = hexes, subPolygons = subpolys})
 	end
 	for i, subPolygon in ipairs(self.tinyIslandSubPolygons) do
 		local hexes = {}
-		for ii, hex in ipairs(subPolygon.hexes) do
-			if not hex.subPolygon.lake then
+		local subpolys = {}
+		if not subPolygon.lake then
+			for ii, hex in ipairs(subPolygon.hexes) do
 				tInsert(hexes, hex)
 			end
+			tInsert(subpolys, subPolygon)
 		end
-		tInsert(self.landmasses, {subPolygon = subPolygon, hexes = hexes})
+		tInsert(self.landmasses, {subPolygon = subPolygon, hexes = hexes, subPolygons = subpolys})
 	end
 	EchoDebug("computing landmass rainfalls, altitudes, and breadths...")
 	self.globalRainfall = 0
 	for i, landmass in pairs(self.landmasses) do
 		local rainfall = 0
 		local altitude = 0
-		for ii, hex in pairs(landmass.hexes) do
-			rainfall = rainfall + hex.rainfall
-			if hex.plotType == plotHills then
-				altitude = altitude + 1
-			elseif hex.plotType == plotMountain then
-				altitude = altitude + 2
+		for ii, subPolygon in pairs(landmass.subPolygons) do
+			local spRain = 0
+			local spAlt = 0
+			for iii, hex in pairs(subPolygon.hexes) do
+				spRain = spRain + hex.rainfall
+				if hex.plotType == plotHills then
+					spAlt = spAlt + 1
+				elseif hex.plotType == plotMountain then
+					spAlt = spAlt + 2
+				end
 			end
+			subPolygon.rainfall = spRain
+			subPolygon.altitude = spAlt
+			subPolygon.proportionalRainfall = spRain / #subPolygon.hexes
+			subPolygon.proportionalAltitude = spAlt / #subPolygon.hexes
+			rainfall = rainfall + spRain
+			altitude = altitude + spAlt
 		end
 		landmass.breadth = mSqrt(2 * #landmass.hexes)
 		landmass.rainfall = rainfall
@@ -6782,7 +6799,109 @@ function Space:ComputeLandmassRainfalls()
 	EchoDebug("global rainfall: " .. self.globalRainfall)
 end
 
+function Space:MutualNeighbors(polygonA, polygonB)
+	local neighborsA = {}
+	local mutual = {}
+	for i, neighbor in pairs(polygonA.neighbors) do
+		neighborsA[neighbor] = true
+	end
+	for i, neighbor in pairs(polygonB.neighbors) do
+		if neighborsA[neighbor] then
+			tInsert(mutual, neighbor)
+		end
+	end
+	return mutual
+end
+
+function Space:DrawSubEdgeRiver(sourceEdge)
+	local river = {sourceEdge}
+	local onRiver = {[sourceEdge] = true}
+	local edge = sourceEdge
+	repeat
+		-- edge.polygons[1].onTestRiver = 1
+		-- edge.polygons[2].onTestRiver = 2
+		local possibleEdges = {}
+		local finalEdges = {}
+		for i, conEdge in pairs(edge.connectList) do
+			if not onRiver[conEdge] then
+				local connectsToWater = false
+				local connectsToRiver = false
+				for ii, conSubPoly in pairs(self:MutualNeighbors(conEdge.polygons[1], conEdge.polygons[2])) do
+					if conSubPoly.lake or (not conSubPoly.superPolygon.continent and not conSubPoly.tinyIsland) then
+						connectsToWater = true
+						break
+					end
+				end
+				if not connectsToWater then
+					for ii, conConEdge in pairs(conEdge.connectList) do
+						if conConEdge ~= edge and onRiver[conConEdge] then
+							connectsToRiver = true
+							break
+						end
+					end
+					if not connectsToRiver then
+						tInsert(possibleEdges, conEdge)
+					end
+				end
+				if connectsToWater and not connectsToRiver then
+					tInsert(finalEdges, conEdge)
+				end
+			end
+		end
+		if #possibleEdges > 0 then
+			edge = tGetRandom(possibleEdges)
+			onRiver[edge] = true
+			tInsert(river, edge)
+		elseif #finalEdges > 0 then
+			edge = tGetRandom(finalEdges)
+			tInsert(river, edge)
+		end
+	until #possibleEdges == 0
+	return river
+end
+
+function Space:DrawTestRiver()
+	for i, subPolygon in pairs(self.landmasses[1].subPolygons) do
+		local neighborsWater = false
+		for ii, neighbor in pairs(subPolygon.neighbors) do
+			if neighbor.lake or (not neighbor.superPolygon.continent and not neighbor.tinyIsland) then
+				neighborsWater = true
+				break
+			end
+		end
+		if not neighborsWater then
+			for ii, neighbor in pairs(subPolygon.neighbors) do
+				local neighborNeighborsWater = false
+				for ii, neighborNeighbor in pairs(neighbor.neighbors) do
+					if neighborNeighbor.lake or (not neighborNeighbor.superPolygon.continent and not neighborNeighbor.tinyIsland) then
+						neighborNeighborsWater = true
+						break
+					end
+				end
+				if not neighborNeighborsWater then
+					local connectsToWater = false
+					for i, conEdge in pairs(subPolygon.subEdges[neighbor].connectList) do
+						for ii, conSubPoly in pairs(self:MutualNeighbors(conEdge.polygons[1], conEdge.polygons[2])) do
+							if conSubPoly.lake or (not conSubPoly.superPolygon.continent and not conSubPoly.tinyIsland) then
+								connectsToWater = true
+								break
+							end
+						end
+						if connectsToWater then break end
+					end
+					if not connectsToWater then
+						subPolygon.onTestRiver = 1
+						neighbor.onTestRiver = 2
+						return self:DrawSubEdgeRiver(subPolygon.subEdges[neighbor])
+					end
+				end
+			end
+		end
+	end
+end
+
 function Space:DrawAllLandmassRivers()
+	self.testRiver = self:DrawTestRiver()
 	EchoDebug("drawing rivers for each landmass...")
 	local riverGenTimer = StartDebugTimer()
 	local oldRiverLandRatio = self.riverLandRatio + 0
