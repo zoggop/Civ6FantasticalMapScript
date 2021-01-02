@@ -235,6 +235,7 @@ local function tRemoveRandom(fromTable)
 end
 
 local function tGetRandom(fromTable)
+	if not fromTable then return end
 	local i = mRandom(1, #fromTable)
 	return fromTable[i], i
 end
@@ -2549,22 +2550,95 @@ function SubEdge:FindConnections()
 	local mutuals = {}
 	for i, neighbor in ipairs(self.polygons[2].neighbors) do
 		if neighs[neighbor] then
-			tInsert(mutuals, neighbor)
+			mutuals[neighbor] = true
 		end
 	end
-	for i, neighbor in ipairs(mutuals) do
-		for p, polygon in ipairs(self.polygons) do
-			local subEdge = neighbor.subEdges[polygon] or polygon.subEdges[neighbor]
-			if not self.connections[subEdge] then
-				tInsert(self.connectList, subEdge)
+	local connectedSubPolys = {}
+	for aHex, bHexes in pairs(self.pairings) do
+		local adjacent = {}
+		for d, adjHex in pairs(aHex:Neighbors()) do
+			adjacent[adjHex] = true
+		end
+		for bHex, d in pairs(bHexes) do
+			for d, adjHex in pairs(bHex:Neighbors()) do
+				if adjacent[adjHex] then
+					if adjHex.subPolygon ~= self.polygons[1] and adjHex.subPolygon ~= self.polygons[2] and mutuals[adjHex.subPolygon] then
+						for se, yes in pairs(adjHex.subEdges) do
+							if se ~= self and (se.polygons[1] == self.polygons[1] or se.polygons[1] == self.polygons[2] or se.polygons[2] == self.polygons[1] or se.polygons[2] == self.polygons[2]) then
+								if not self.connections[se] then
+									tInsert(self.connectList, se)
+									self.connections[se] = true
+								end
+								if not se.connections[self] then
+									tInsert(se.connectList, self)
+									se.connections[self] = true
+								end
+							end
+						end
+					end
+				end
 			end
-			self.connections[subEdge] = true
-			if not subEdge.connections[self] then
-				tInsert(subEdge.connectList, self)
-			end
-			subEdge.connections[self] = true
 		end
 	end
+end
+
+function SubEdge:DFS(evalFunc, limitFunc, visited, path)
+	local thePath
+	visited = visited or {}
+	path = path or {}
+	if evalFunc(self) then
+		table.insert(path, self)
+		print("found path")
+		return path
+	end
+	visited[self] = true
+	for i, cse in pairs(self.connectList) do
+		if not visited[cse] and limitFunc(cse) then
+			local connectsToPath = false
+			for ii, ccse in pairs(cse.connectList) do
+				if ccse ~= self and visited[ccse] then
+					connectsToPath = true
+					break
+				end
+			end
+			if not connectsToPath then
+				table.insert(path, self)
+				local thePath = cse:DFS(evalFunc, limitFunc, visited, path)
+				if thePath then return thePath end
+				table.remove(path, #path)
+			end
+		end
+	end
+	visited[self] = nil
+end
+
+function SubEdge:BFSCollect(collectFunc, limitFunc)
+	local buffer = {self}
+	local nextBuffer = {}
+	local visited = {}
+	local collection = {}
+	local wave = 0
+	local lastWaveWithCollection
+	while #buffer > 0 do
+		local se = table.remove(buffer)
+		visited[se] = true
+		if collectFunc(se) then
+			collection[wave] = collection[wave] or {}
+			table.insert(collection[wave], se)
+			lastWaveWithCollection = wave
+		end
+		for i, cse in pairs(se.connectList) do
+			if not visited[cse] and limitFunc(cse) then
+				table.insert(nextBuffer, cse)
+			end
+		end
+		if #buffer == 0 then
+			buffer = nextBuffer
+			nextBuffer = {}
+			wave = wave + 1
+		end
+	end
+	return collection, lastWaveWithCollection
 end
 
 ------------------------------------------------------------------------------
@@ -6814,50 +6888,30 @@ function Space:MutualNeighbors(polygonA, polygonB)
 end
 
 function Space:DrawSubEdgeRiver(sourceEdge)
-	local river = {sourceEdge}
-	local onRiver = {[sourceEdge] = true}
-	local edge = sourceEdge
-	repeat
-		-- edge.polygons[1].onTestRiver = 1
-		-- edge.polygons[2].onTestRiver = 2
-		local possibleEdges = {}
-		local finalEdges = {}
-		for i, conEdge in pairs(edge.connectList) do
-			if not onRiver[conEdge] then
-				local connectsToWater = false
-				local connectsToRiver = false
-				for ii, conSubPoly in pairs(self:MutualNeighbors(conEdge.polygons[1], conEdge.polygons[2])) do
-					if conSubPoly.lake or (not conSubPoly.superPolygon.continent and not conSubPoly.tinyIsland) then
-						connectsToWater = true
-						break
-					end
-				end
-				if not connectsToWater then
-					for ii, conConEdge in pairs(conEdge.connectList) do
-						if conConEdge ~= edge and onRiver[conConEdge] then
-							connectsToRiver = true
-							break
-						end
-					end
-					if not connectsToRiver then
-						tInsert(possibleEdges, conEdge)
-					end
-				end
-				if connectsToWater and not connectsToRiver then
-					tInsert(finalEdges, conEdge)
-				end
+	local collectFunc = function(edge)
+		for i, conSubPoly in pairs(edge.space:MutualNeighbors(edge.polygons[1], edge.polygons[2])) do
+			if conSubPoly.lake or (not conSubPoly.superPolygon.continent and not conSubPoly.tinyIsland) then
+				return true
 			end
 		end
-		if #possibleEdges > 0 then
-			edge = tGetRandom(possibleEdges)
-			onRiver[edge] = true
-			tInsert(river, edge)
-		elseif #finalEdges > 0 then
-			edge = tGetRandom(finalEdges)
-			tInsert(river, edge)
+	end
+	local limitFunc = function(edge)
+		for i, subPoly in pairs(edge.polygons) do
+			if subPoly.lake or not subPoly.superPolygon.continent then
+				return false
+			end
 		end
-	until #possibleEdges == 0
-	return river
+		return true
+	end
+	local mouthCollection, lastWave = sourceEdge:BFSCollect(collectFunc, limitFunc)
+	if mouthCollection and lastWave then
+		print(lastWave, #mouthCollection[lastWave])
+		local DFStarget = tGetRandom(mouthCollection[lastWave])
+		local evalFunc = function(edge)
+			return edge == DFStarget
+		end
+		return sourceEdge:DFS(evalFunc, limitFunc)
+	end
 end
 
 function Space:DrawTestRiver()

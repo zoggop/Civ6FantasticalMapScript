@@ -1,3 +1,4 @@
+- https://www.baeldung.com/cs/simple-paths-between-two-vertices use to find all possible paths from mountains to any ocean for rivers
 
 - another way to determine astronomy basins and ocean rifts: pick origin polygons for each desired astronomy basin, and grow them evenly (all neighbors of already added) all at the same time, stopping where one runs into the other, until all polygons are covered. then choose the ocean rifts by painting along the borders between the grown astronomy basins. this would prevent tiny or nonexistant astronomy basins when ocean rifts get drawn weird.
 
