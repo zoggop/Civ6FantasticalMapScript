@@ -2582,18 +2582,36 @@ function SubEdge:FindConnections()
 	end
 end
 
-function SubEdge:DFS(evalFunc, limitFunc, visited, path)
-	local thePath
+function SubEdge:DFS(evalFunc, limitFunc, fallbackFunc, visited, path, hexDirs)
+	if not hexDirs then fallbackPath = nil end
+	fallbackFunc = fallbackFunc or function(subEdge) return end
 	visited = visited or {}
 	path = path or {}
-	if evalFunc(self) then
+	hexDirs = hexDirs or {}
+	if path and #path > 50 then return end
+	local terminate, notFinished = evalFunc(self)
+	if terminate then
 		table.insert(path, self)
-		print("found path")
-		return path
+		if notFinished then
+			if fallbackPath then
+				print(#path, "DFS terminated before finding path, using fallback", #fallbackPath)
+				return fallbackPath
+			else
+				print(#path, "DFS terminated before finding path and not fallback")
+			end
+		else
+			print("DFS found path", #path)
+			return path
+		end
+	end
+	if fallbackFunc(self) then
+		table.insert(path, self)
+		fallbackPath = tDuplicate(path)
+		table.remove(path, #path)
 	end
 	visited[self] = true
 	for i, cse in pairs(self.connectList) do
-		if not visited[cse] and limitFunc(cse) then
+		if not visited[cse] and limitFunc(cse, path, hexDirs) then
 			local connectsToPath = false
 			for ii, ccse in pairs(cse.connectList) do
 				if ccse ~= self and visited[ccse] then
@@ -2603,8 +2621,19 @@ function SubEdge:DFS(evalFunc, limitFunc, visited, path)
 			end
 			if not connectsToPath then
 				table.insert(path, self)
-				local thePath = cse:DFS(evalFunc, limitFunc, visited, path)
+				for aHex, bHexes in pairs(self.pairings) do
+					hexDirs[aHex] = hexDirs[aHex] or {}
+					for bHex, d in pairs(bHexes) do
+						hexDirs[aHex][d] = true
+					end
+				end
+				local thePath = cse:DFS(evalFunc, limitFunc, fallbackFunc, visited, path, hexDirs)
 				if thePath then return thePath end
+				for aHex, bHexes in pairs(self.pairings) do
+					for bHex, d in pairs(bHexes) do
+						hexDirs[aHex][d] = nil
+					end
+				end
 				table.remove(path, #path)
 			end
 		end
@@ -2613,23 +2642,26 @@ function SubEdge:DFS(evalFunc, limitFunc, visited, path)
 end
 
 function SubEdge:BFSCollect(collectFunc, limitFunc)
-	local buffer = {self}
+	local buffer = {{subEdge = self}}
 	local nextBuffer = {}
 	local visited = {}
 	local collection = {}
 	local wave = 0
 	local lastWaveWithCollection
-	while #buffer > 0 do
-		local se = table.remove(buffer)
+	local icount = 0
+	while #buffer > 0 and icount < 10000 and wave < 100 do
+		local entry = table.remove(buffer)
+		local se = entry.subEdge
 		visited[se] = true
 		if collectFunc(se) then
 			collection[wave] = collection[wave] or {}
-			table.insert(collection[wave], se)
+			table.insert(collection[wave], entry)
 			lastWaveWithCollection = wave
-		end
-		for i, cse in pairs(se.connectList) do
-			if not visited[cse] and limitFunc(cse) then
-				table.insert(nextBuffer, cse)
+		else
+			for i, cse in pairs(se.connectList) do
+				if not visited[cse] and (not entry.parent or not cse.connections[entry.parent.subEdge]) and limitFunc(cse) then
+					table.insert(nextBuffer, {subEdge = cse, parent = entry})
+				end
 			end
 		end
 		if #buffer == 0 then
@@ -2637,7 +2669,9 @@ function SubEdge:BFSCollect(collectFunc, limitFunc)
 			nextBuffer = {}
 			wave = wave + 1
 		end
+		icount = icount + 1
 	end
+	print(icount, "bfs icount", wave, "bfs wave count", #collection[lastWaveWithCollection], "number in last wave with any")
 	return collection, lastWaveWithCollection
 end
 
@@ -5901,7 +5935,7 @@ function Space:PickMountainRanges()
 			end
 		until edge or #edgeBuffer == 0
 		if not edge then break end
-		local range = { edges = {}, subPolygons = {}, isCoreHex = {}, area = 0, estimate = 0, passHexes = {}, mountainHexCount = 0, typeString = "interior" }
+		local range = { edges = {}, subPolygons = {}, isCoreHex = {}, area = 0, estimate = 0, passHexes = {}, passSubPolygons = {}, mountainHexCount = 0, typeString = "interior" }
 		local continent = edge.polygons[1].continent or edge.polygons[2].continent
 		local maxEdges -- = mMax(2, mCeil(mSqrt(#continent) * 0.75))
 		if coastRange then
@@ -6026,13 +6060,18 @@ end
 
 function Space:PickRangeMountains(range)
 	local rangeSubPolyNum = mFloor((1-self.mountainPassSubPolygonRatio) * #range.subPolygons)
-	-- EchoDebug(rangeSubPolyNum .. " / " .. #range.subPolygons)
+	-- EchoDebug("nonpass range subpolygons", rangeSubPolyNum .. " / " .. #range.subPolygons)
+	local subPolyBuffer = tDuplicate(range.subPolygons)
 	local i = 1
-	while #range.subPolygons > 0 do
-		local subPolygon = tRemoveRandom(range.subPolygons)
+	range.mountainSubPolygons = {}
+	while #subPolyBuffer > 0 do
+		local subPolygon = tRemoveRandom(subPolyBuffer)
 		local isPassSubPolygon = i > rangeSubPolyNum
 		if isPassSubPolygon then
 			subPolygon.mountainPass = true
+			tInsert(range.passSubPolygons, subPolygon)
+		else
+			tInsert(range.mountainSubPolygons, subPolygon)
 		end
 		subPolygon.mountainRange = true
 		for ih, hex in ipairs(subPolygon.hexes) do
@@ -6050,6 +6089,7 @@ function Space:PickRangeMountains(range)
 		end
 		i = i + 1
 	end
+	print(#range.passSubPolygons, #range.passHexes)
 end
 
 function Space:FillMountainRangeHills()
@@ -6887,75 +6927,161 @@ function Space:MutualNeighbors(polygonA, polygonB)
 	return mutual
 end
 
+function Space:GetPathFromLineage(entry)
+	local reversePath = {}
+	local cur = entry
+	while cur do
+		table.insert(reversePath, cur.subEdge)
+		cur = cur.parent
+	end
+	local path = {}
+	for i = #reversePath, 1, -1 do
+		local subEdge = reversePath[i]
+		table.insert(path, subEdge)
+	end
+	return path
+end
+
 function Space:DrawSubEdgeRiver(sourceEdge)
 	local collectFunc = function(edge)
 		for i, conSubPoly in pairs(edge.space:MutualNeighbors(edge.polygons[1], edge.polygons[2])) do
-			if conSubPoly.lake or (not conSubPoly.superPolygon.continent and not conSubPoly.tinyIsland) then
+			if not conSubPoly.superPolygon.continent then
 				return true
 			end
 		end
 	end
-	local limitFunc = function(edge)
+	local limitFunc = function(edge, path, hexDirs)
 		for i, subPoly in pairs(edge.polygons) do
 			if subPoly.lake or not subPoly.superPolygon.continent then
 				return false
+			end
+		end
+		-- don't go in parallel to the path on the same hex
+		if hexDirs then
+			for aHex, bHexes in pairs(edge.pairings) do
+				if hexDirs[aHex] then
+					for bHex, d in pairs(bHexes) do
+						if hexDirs[aHex][OppositeDirection(d)] then
+							return false
+						end
+					end
+				end
 			end
 		end
 		return true
 	end
 	local mouthCollection, lastWave = sourceEdge:BFSCollect(collectFunc, limitFunc)
 	if mouthCollection and lastWave then
-		print(lastWave, #mouthCollection[lastWave])
-		local DFStarget = tGetRandom(mouthCollection[lastWave])
-		local evalFunc = function(edge)
-			return edge == DFStarget
+		print(#mouthCollection[lastWave])
+		local targetBuffer = {}
+		local target = tGetRandom(mouthCollection[lastWave])
+		local highestLandCount = 0
+		for i, entry in pairs(mouthCollection[lastWave]) do
+			local subEdge = entry.subEdge
+			for ii, conSubPoly in pairs(subEdge.space:MutualNeighbors(subEdge.polygons[1], subEdge.polygons[2])) do
+				if not conSubPoly.superPolygon.continent then
+					local landCount = 0
+					local waterCount = 0
+					for ii, neighbor in pairs(conSubPoly.superPolygon.neighbors) do
+						if neighbor.continent then
+							landCount = landCount + 1
+						else
+							waterCount = waterCount + 1
+						end
+					end
+					if landCount > highestLandCount then
+						highestLandCount = landCount
+						target = entry
+					end
+				end
+			end
 		end
-		return sourceEdge:DFS(evalFunc, limitFunc)
+		print(highestLandCount, "highest land count", #targetBuffer, "target buffer size")
+		table.sort(targetBuffer, function (a, b) return a.landCount + a.wave < b.landCount + b.wave end)
+		print("getting path from target BFS lineage", target.wave, "wave", target.landCount, "land count", #targetBuffer, "left in buffer", tries, "tries left")
+		local path = Space:GetPathFromLineage(target)
+		-- path = sourceEdge:DFS(evalFunc, limitFunc, collectFunc)
+		return path
 	end
 end
 
 function Space:DrawTestRiver()
-	for i, subPolygon in pairs(self.landmasses[1].subPolygons) do
-		local neighborsWater = false
-		for ii, neighbor in pairs(subPolygon.neighbors) do
-			if neighbor.lake or (not neighbor.superPolygon.continent and not neighbor.tinyIsland) then
-				neighborsWater = true
-				break
-			end
-		end
-		if not neighborsWater then
-			for ii, neighbor in pairs(subPolygon.neighbors) do
-				local neighborNeighborsWater = false
-				for ii, neighborNeighbor in pairs(neighbor.neighbors) do
-					if neighborNeighbor.lake or (not neighborNeighbor.superPolygon.continent and not neighborNeighbor.tinyIsland) then
-						neighborNeighborsWater = true
-						break
-					end
-				end
-				if not neighborNeighborsWater then
-					local connectsToWater = false
-					for i, conEdge in pairs(subPolygon.subEdges[neighbor].connectList) do
-						for ii, conSubPoly in pairs(self:MutualNeighbors(conEdge.polygons[1], conEdge.polygons[2])) do
-							if conSubPoly.lake or (not conSubPoly.superPolygon.continent and not conSubPoly.tinyIsland) then
-								connectsToWater = true
+	for i, range in pairs(self.mountainRanges) do
+		if range.typeString == 'interior' and #range.subPolygons[1].superPolygon.continent > 4 then
+			for ii, subPolygon in pairs(range.mountainSubPolygons) do
+				-- print("range mountain subpoly")
+				local nearWater = false
+				local rangeNeighbor = nil
+				for iii, neighbor in pairs(subPolygon.neighbors) do
+					-- print("range subpoly neighbor")
+					if neighbor.mountainRange and not neighbor.mountainPass then
+						-- print("range subpoly range neighbor")
+						for iiii, neighborNeighbor in pairs(neighbor.neighbors) do
+							if not neighborNeighbor.superPolygon.continent then
+								-- print("neighbor near water")
+								nearWater = true
 								break
 							end
 						end
-						if connectsToWater then break end
+						if not nearWater then
+							rangeNeighbor = neighbor
+						end
 					end
-					if not connectsToWater then
-						subPolygon.onTestRiver = 1
-						neighbor.onTestRiver = 2
-						return self:DrawSubEdgeRiver(subPolygon.subEdges[neighbor])
+					if not neighbor.superPolygon.continent then
+						-- print("subpoly near water")
+						nearWater = true
+						break
 					end
+				end
+				if not nearWater and rangeNeighbor then
+					print("found river source")
+					subPolygon.testRiverSource = 1
+					rangeNeighbor.testRiverSource = 2
+					return self:DrawSubEdgeRiver(subPolygon.subEdges[rangeNeighbor])
 				end
 			end
 		end
 	end
+	-- for i, subPolygon in pairs(self.landmasses[1].subPolygons) do
+	-- 	local neighborsWater = false
+	-- 	for ii, neighbor in pairs(subPolygon.neighbors) do
+	-- 		if neighbor.lake or (not neighbor.superPolygon.continent and not neighbor.tinyIsland) then
+	-- 			neighborsWater = true
+	-- 			break
+	-- 		end
+	-- 	end
+	-- 	if not neighborsWater then
+	-- 		for ii, neighbor in pairs(subPolygon.neighbors) do
+	-- 			local neighborNeighborsWater = false
+	-- 			for ii, neighborNeighbor in pairs(neighbor.neighbors) do
+	-- 				if neighborNeighbor.lake or (not neighborNeighbor.superPolygon.continent and not neighborNeighbor.tinyIsland) then
+	-- 					neighborNeighborsWater = true
+	-- 					break
+	-- 				end
+	-- 			end
+	-- 			if not neighborNeighborsWater then
+	-- 				local connectsToWater = false
+	-- 				for i, conEdge in pairs(subPolygon.subEdges[neighbor].connectList) do
+	-- 					for ii, conSubPoly in pairs(self:MutualNeighbors(conEdge.polygons[1], conEdge.polygons[2])) do
+	-- 						if conSubPoly.lake or (not conSubPoly.superPolygon.continent and not conSubPoly.tinyIsland) then
+	-- 							connectsToWater = true
+	-- 							break
+	-- 						end
+	-- 					end
+	-- 					if connectsToWater then break end
+	-- 				end
+	-- 				if not connectsToWater then
+	-- 					return self:DrawSubEdgeRiver(subPolygon.subEdges[neighbor])
+	-- 				end
+	-- 			end
+	-- 		end
+	-- 	end
+	-- end
 end
 
 function Space:DrawAllLandmassRivers()
-	self.testRiver = self:DrawTestRiver()
+	self.testRiver = self:DrawTestRiver() or {}
+	print(DFSicount, "dfs icount", #self.testRiver, "river subedges")
 	EchoDebug("drawing rivers for each landmass...")
 	local riverGenTimer = StartDebugTimer()
 	local oldRiverLandRatio = self.riverLandRatio + 0
