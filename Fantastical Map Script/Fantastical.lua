@@ -2659,7 +2659,7 @@ function SubEdge:BFSCollect(collectFunc, limitFunc)
 			lastWaveWithCollection = wave
 		else
 			for i, cse in pairs(se.connectList) do
-				if not visited[cse] and (not entry.parent or not cse.connections[entry.parent.subEdge]) and limitFunc(cse) then
+				if not visited[cse] and (not entry.parent or not cse.connections[entry.parent.subEdge]) and limitFunc(cse, wave) then
 					table.insert(nextBuffer, {subEdge = cse, parent = entry})
 				end
 			end
@@ -2671,7 +2671,9 @@ function SubEdge:BFSCollect(collectFunc, limitFunc)
 		end
 		icount = icount + 1
 	end
-	print(icount, "bfs icount", wave, "bfs wave count", #collection[lastWaveWithCollection], "number in last wave with any")
+	if lastWaveWithCollection then
+		print(icount, "bfs icount", wave, "bfs wave count", #collection[lastWaveWithCollection], "number in last wave with any")
+	end
 	return collection, lastWaveWithCollection
 end
 
@@ -6927,38 +6929,62 @@ function Space:MutualNeighbors(polygonA, polygonB)
 	return mutual
 end
 
-function Space:GetPathFromLineage(entry)
-	local reversePath = {}
+function Space:RiverFromLineage(entry, reverse)
+	local river = {}
 	local cur = entry
 	while cur do
-		table.insert(reversePath, cur.subEdge)
+		table.insert(river, cur.subEdge)
+		if not reverse then
+			cur.subEdge.river = river
+		end
 		cur = cur.parent
 	end
-	local path = {}
-	for i = #reversePath, 1, -1 do
-		local subEdge = reversePath[i]
-		table.insert(path, subEdge)
+	if reverse then
+		local reversedRiver = {}
+		for i = #river, 1, -1 do
+			local subEdge = river[i]
+			subEdge.river = reversedRiver
+			table.insert(reversedRiver, subEdge)
+		end
+		return reversedRiver
+	else
+		return river
 	end
-	return path
 end
 
-function Space:DrawSubEdgeRiver(sourceEdge)
-	local collectFunc = function(edge)
-		for i, conSubPoly in pairs(edge.space:MutualNeighbors(edge.polygons[1], edge.polygons[2])) do
-			if not conSubPoly.superPolygon.continent then
-				return true
+function Space:DrawSubEdgeRiver(mouthEdge)
+	-- local collectFunc = function(subEdge)
+	-- 	for i, conSubPoly in pairs(subEdge.space:MutualNeighbors(subEdge.polygons[1], subEdge.polygons[2])) do
+	-- 		if not conSubPoly.superPolygon.continent then
+	-- 			return true
+	-- 		end
+	-- 	end
+	-- end
+	local mountainCollectFunc = function(subEdge)
+		if subEdge.polygons[1].mountainRange and subEdge.polygons[2].mountainRange then
+			for i, conSubPoly in pairs(subEdge.space:MutualNeighbors(subEdge.polygons[1], subEdge.polygons[2])) do
+				if conSubPoly.mountainRange then
+					return true
+				end
 			end
 		end
 	end
-	local limitFunc = function(edge, path, hexDirs)
-		for i, subPoly in pairs(edge.polygons) do
+	self.riverLimitFunc = function(subEdge, wave)
+		for i, subPoly in pairs(subEdge.polygons) do
 			if subPoly.lake or not subPoly.superPolygon.continent then
 				return false
 			end
 		end
+		if wave > 0 then
+			for i, conSubEdge in pairs(subEdge.connectList) do
+				if conSubEdge.river then
+					return false
+				end
+			end
+		end
 		-- don't go in parallel to the path on the same hex
 		if hexDirs then
-			for aHex, bHexes in pairs(edge.pairings) do
+			for aHex, bHexes in pairs(subEdge.pairings) do
 				if hexDirs[aHex] then
 					for bHex, d in pairs(bHexes) do
 						if hexDirs[aHex][OppositeDirection(d)] then
@@ -6970,118 +6996,181 @@ function Space:DrawSubEdgeRiver(sourceEdge)
 		end
 		return true
 	end
-	local mouthCollection, lastWave = sourceEdge:BFSCollect(collectFunc, limitFunc)
-	if mouthCollection and lastWave then
-		print(#mouthCollection[lastWave])
-		local targetBuffer = {}
-		local target = tGetRandom(mouthCollection[lastWave])
-		local highestLandCount = 0
-		for i, entry in pairs(mouthCollection[lastWave]) do
-			local subEdge = entry.subEdge
-			for ii, conSubPoly in pairs(subEdge.space:MutualNeighbors(subEdge.polygons[1], subEdge.polygons[2])) do
-				if not conSubPoly.superPolygon.continent then
-					local landCount = 0
-					local waterCount = 0
-					for ii, neighbor in pairs(conSubPoly.superPolygon.neighbors) do
-						if neighbor.continent then
-							landCount = landCount + 1
-						else
-							waterCount = waterCount + 1
+	local sourceCollection, lastWave = mouthEdge:BFSCollect(mountainCollectFunc, self.riverLimitFunc)
+	print(#sourceCollection, "source collection waves")
+	if sourceCollection and lastWave then
+		local river = Space:RiverFromLineage(tGetRandom(sourceCollection[lastWave]))
+		return river
+	end
+	-- if mouthCollection and lastWave then
+	-- 	print(#mouthCollection[lastWave])
+	-- 	local target = tGetRandom(mouthCollection[lastWave])
+	-- 	local highestLandCount = 0
+	-- 	for i, entry in pairs(mouthCollection[lastWave]) do
+	-- 		local subEdge = entry.subEdge
+	-- 		for ii, conSubPoly in pairs(subEdge.space:MutualNeighbors(subEdge.polygons[1], subEdge.polygons[2])) do
+	-- 			if not conSubPoly.superPolygon.continent then
+	-- 				local landCount = 0
+	-- 				local waterCount = 0
+	-- 				for ii, neighbor in pairs(conSubPoly.superPolygon.neighbors) do
+	-- 					if neighbor.continent then
+	-- 						landCount = landCount + 1
+	-- 					else
+	-- 						waterCount = waterCount + 1
+	-- 					end
+	-- 				end
+	-- 				local landVsWater = landCount - waterCount
+	-- 				if landVsWater > highestLandCount then
+	-- 					highestLandCount = landVsWater
+	-- 					target = entry
+	-- 				end
+	-- 			end
+	-- 		end
+	-- 	end
+	-- 	print(highestLandCount, "highest land vs water")
+	-- 	local path = Space:RiverFromLineage(target, true)
+	-- 	return path
+	-- end
+end
+
+function Space:GetMouthSubEdge(continent)
+	self.continentCoasts = self.continentCoasts or {}
+	self.continentCoasts[continent] = self.continentCoasts[continent] or {}
+	for i, polygon in pairs(continent) do
+		for ii, neighbor in pairs(polygon.neighbors) do
+			if not neighbor.continent and not neighbor.coastOfContinent then
+				neighbor.coastOfContinent = continent
+				table.insert(self.continentCoasts[continent], neighbor)
+			end
+		end
+	end
+	local highestLandVsWater
+	local bestPolygon
+	for i, polygon in pairs(self.continentCoasts[continent]) do
+		local landCount = 0
+		local waterCount = 0
+		for ii, neighbor in pairs(polygon.neighbors) do
+			if neighbor.continent then
+				landCount = landCount + 1
+			else
+				waterCount = waterCount + 1
+			end
+		end
+		local landVsWater = landCount - waterCount
+		if not highestLandVsWater or landVsWater > highestLandVsWater then
+			highestLandVsWater = landVsWater
+			bestPolygon = polygon
+		end
+	end
+	if bestPolygon then
+		local subHighestLandVsWater
+		local bestSubPolygon
+		for i, subPolygon in pairs(bestPolygon.subPolygons) do
+			local landCount = 0
+			local waterCount = 0
+			for ii, neighbor in pairs(subPolygon.neighbors) do
+				if neighbor.superPolygon.continent then
+					landCount = landCount + 1
+				else
+					waterCount = waterCount + 1
+				end
+			end
+			local landVsWater = landCount - waterCount
+			if not subHighestLandVsWater or landVsWater > subHighestLandVsWater then
+				subHighestLandVsWater = landVsWater
+				bestSubPolygon = subPolygon
+			end
+		end
+		if bestSubPolygon then
+			for otherSubPolygon, subEdge in pairs(bestSubPolygon.subEdges) do
+				if otherSubPolygon.superPolygon.continent then
+					for i, conSubEdge in pairs(subEdge.connectList) do
+						if conSubEdge.polygons[1].superPolygon.continent and conSubEdge.polygons[2].superPolygon.continent then
+							return conSubEdge
 						end
-					end
-					if landCount > highestLandCount then
-						highestLandCount = landCount
-						target = entry
 					end
 				end
 			end
 		end
-		print(highestLandCount, "highest land count", #targetBuffer, "target buffer size")
-		table.sort(targetBuffer, function (a, b) return a.landCount + a.wave < b.landCount + b.wave end)
-		print("getting path from target BFS lineage", target.wave, "wave", target.landCount, "land count", #targetBuffer, "left in buffer", tries, "tries left")
-		local path = Space:GetPathFromLineage(target)
-		-- path = sourceEdge:DFS(evalFunc, limitFunc, collectFunc)
-		return path
 	end
 end
 
 function Space:DrawTestRiver()
-	for i, range in pairs(self.mountainRanges) do
-		if range.typeString == 'interior' and #range.subPolygons[1].superPolygon.continent > 4 then
-			for ii, subPolygon in pairs(range.mountainSubPolygons) do
-				-- print("range mountain subpoly")
-				local nearWater = false
-				local rangeNeighbor = nil
-				for iii, neighbor in pairs(subPolygon.neighbors) do
-					-- print("range subpoly neighbor")
-					if neighbor.mountainRange and not neighbor.mountainPass then
-						-- print("range subpoly range neighbor")
-						for iiii, neighborNeighbor in pairs(neighbor.neighbors) do
-							if not neighborNeighbor.superPolygon.continent then
-								-- print("neighbor near water")
-								nearWater = true
-								break
-							end
-						end
-						if not nearWater then
-							rangeNeighbor = neighbor
-						end
-					end
-					if not neighbor.superPolygon.continent then
-						-- print("subpoly near water")
-						nearWater = true
-						break
-					end
-				end
-				if not nearWater and rangeNeighbor then
-					print("found river source")
-					subPolygon.testRiverSource = 1
-					rangeNeighbor.testRiverSource = 2
-					return self:DrawSubEdgeRiver(subPolygon.subEdges[rangeNeighbor])
-				end
-			end
-		end
-	end
-	-- for i, subPolygon in pairs(self.landmasses[1].subPolygons) do
-	-- 	local neighborsWater = false
-	-- 	for ii, neighbor in pairs(subPolygon.neighbors) do
-	-- 		if neighbor.lake or (not neighbor.superPolygon.continent and not neighbor.tinyIsland) then
-	-- 			neighborsWater = true
-	-- 			break
-	-- 		end
-	-- 	end
-	-- 	if not neighborsWater then
-	-- 		for ii, neighbor in pairs(subPolygon.neighbors) do
-	-- 			local neighborNeighborsWater = false
-	-- 			for ii, neighborNeighbor in pairs(neighbor.neighbors) do
-	-- 				if neighborNeighbor.lake or (not neighborNeighbor.superPolygon.continent and not neighborNeighbor.tinyIsland) then
-	-- 					neighborNeighborsWater = true
-	-- 					break
-	-- 				end
-	-- 			end
-	-- 			if not neighborNeighborsWater then
-	-- 				local connectsToWater = false
-	-- 				for i, conEdge in pairs(subPolygon.subEdges[neighbor].connectList) do
-	-- 					for ii, conSubPoly in pairs(self:MutualNeighbors(conEdge.polygons[1], conEdge.polygons[2])) do
-	-- 						if conSubPoly.lake or (not conSubPoly.superPolygon.continent and not conSubPoly.tinyIsland) then
-	-- 							connectsToWater = true
+	-- for i, range in pairs(self.mountainRanges) do
+	-- 	if range.typeString == 'interior' and #range.subPolygons[1].superPolygon.continent > 4 then
+	-- 		for ii, subPolygon in pairs(range.mountainSubPolygons) do
+	-- 			-- print("range mountain subpoly")
+	-- 			local nearWater = false
+	-- 			local rangeNeighbor = nil
+	-- 			for iii, neighbor in pairs(subPolygon.neighbors) do
+	-- 				-- print("range subpoly neighbor")
+	-- 				if neighbor.mountainRange and not neighbor.mountainPass then
+	-- 					-- print("range subpoly range neighbor")
+	-- 					for iiii, neighborNeighbor in pairs(neighbor.neighbors) do
+	-- 						if not neighborNeighbor.superPolygon.continent then
+	-- 							-- print("neighbor near water")
+	-- 							nearWater = true
 	-- 							break
 	-- 						end
 	-- 					end
-	-- 					if connectsToWater then break end
+	-- 					if not nearWater then
+	-- 						rangeNeighbor = neighbor
+	-- 					end
 	-- 				end
-	-- 				if not connectsToWater then
-	-- 					return self:DrawSubEdgeRiver(subPolygon.subEdges[neighbor])
+	-- 				if not neighbor.superPolygon.continent then
+	-- 					-- print("subpoly near water")
+	-- 					nearWater = true
+	-- 					break
 	-- 				end
+	-- 			end
+	-- 			if not nearWater and rangeNeighbor then
+	-- 				print("found river source")
+	-- 				subPolygon.testRiverSource = 1
+	-- 				rangeNeighbor.testRiverSource = 2
+	-- 				return self:DrawSubEdgeRiver(subPolygon.subEdges[rangeNeighbor])
 	-- 			end
 	-- 		end
 	-- 	end
 	-- end
+	local mouthSubEdge = self:GetMouthSubEdge(tGetRandom(self.continents))
+	print(mouthSubEdge, "mouth sub edge")
+	return self:DrawSubEdgeRiver(mouthSubEdge)
+end
+
+function Space:DrawTestRiverBranch(river)
+	if not river then return end
+	if #river < 6 then return end
+	local startingIndex = mRandom(3, #river-2)
+	local startingEdge = river[startingIndex]
+	local collectFunc = function(subEdge)
+		if not subEdge.river and subEdge.polygons[1].mountainRange and subEdge.polygons[2].mountainRange then
+			for i, subPolygon in pairs(subEdge.polygons) do
+				for ii, neighbor in pairs(subPolygon.neighbors) do
+					if not neighbor.superPolygon.continent then
+						return false
+					end
+				end
+			end
+			return true
+		end
+	end
+	local collection, lastWave = startingEdge:BFSCollect(collectFunc, self.riverLimitFunc)
+	if collection and lastWave and #collection > 0 then
+		print(#collection[lastWave], "in last wave")
+		local sourceEntry = tGetRandom(collection[lastWave])
+		return self:RiverFromLineage(sourceEntry)
+	end
 end
 
 function Space:DrawAllLandmassRivers()
-	self.testRiver = self:DrawTestRiver() or {}
-	print(DFSicount, "dfs icount", #self.testRiver, "river subedges")
+	self.testRivers = {}
+	table.insert(self.testRivers, self:DrawTestRiver())
+	print(#self.testRivers[1], "river subedges")
+	local branch = self:DrawTestRiverBranch(self.testRivers[1])
+	if branch then
+		print(#branch, "branch subedges")
+		table.insert(self.testRivers, branch)
+	end
 	EchoDebug("drawing rivers for each landmass...")
 	local riverGenTimer = StartDebugTimer()
 	local oldRiverLandRatio = self.riverLandRatio + 0
