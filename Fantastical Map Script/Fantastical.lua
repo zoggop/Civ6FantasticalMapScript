@@ -6952,21 +6952,73 @@ function Space:RiverFromLineage(entry, reverse)
 	end
 end
 
-function Space:DrawSubEdgeRiver(mouthEdge)
-	-- local collectFunc = function(subEdge)
-	-- 	for i, conSubPoly in pairs(subEdge.space:MutualNeighbors(subEdge.polygons[1], subEdge.polygons[2])) do
-	-- 		if not conSubPoly.superPolygon.continent then
-	-- 			return true
-	-- 		end
-	-- 	end
-	-- end
-	local mountainCollectFunc = function(subEdge)
-		if subEdge.polygons[1].mountainRange and subEdge.polygons[2].mountainRange then
-			for i, conSubPoly in pairs(subEdge.space:MutualNeighbors(subEdge.polygons[1], subEdge.polygons[2])) do
-				if conSubPoly.mountainRange then
+function Space:SetRiverFuncs()
+	self.mountainCollectFunc = function(subEdge)
+		if not subEdge.river and subEdge.polygons[1].mountainRange and subEdge.polygons[2].mountainRange then
+			for i, subPolygon in pairs(subEdge.polygons) do
+				for ii, neighbor in pairs(subPolygon.neighbors) do
+					if not neighbor.superPolygon.continent then
+						return false
+					end
+				end
+			end
+			return true
+		end
+	end
+	self.mountainConnectCollectFunc = function(subEdge)
+		if not subEdge.river then
+			for i, neighbor in pairs(subEdge.space:MutualNeighbors(subEdge.polygons[1], subEdge.polygons[2])) do
+				if neighbor.mountainRange then
+					for ii, subPolygon in pairs(subEdge.polygons) do
+						for iii, neighbor in pairs(subPolygon.neighbors) do
+							if not neighbor.superPolygon.continent then
+								return false
+							end
+						end
+					end
 					return true
 				end
 			end
+		end
+	end
+	self.mountainRegionCollectFunc = function(subEdge)
+		if not subEdge.river then
+			if subEdge.polygons[1].region and subEdge.polygons[2].region and subEdge.polygons[1].region.mountainCount > 0 and subEdge.polygons[2].region.mountainCount > 0 then
+				for i, subPolygon in pairs(subEdge.polygons) do
+					for iii, neighbor in pairs(subPolygon.neighbors) do
+						if not neighbor.superPolygon.continent then
+							return false
+						end
+					end
+				end
+				return true
+			end
+		end
+	end
+	self.highRainfallCollectFunc = function(subEdge)
+		if not subEdge.river then
+			if subEdge.polygons[1].proportionalRainfall and subEdge.polygons[2].proportionalRainfall and subEdge.polygons[1].proportionalRainfall > 50 and subEdge.polygons[2].proportionalRainfall > 50 then
+				for i, subPolygon in pairs(subEdge.polygons) do
+					for iii, neighbor in pairs(subPolygon.neighbors) do
+						if not neighbor.superPolygon.continent then
+							return false
+						end
+					end
+				end
+				return true
+			end
+		end
+	end
+	self.landCollectFunc = function(subEdge)
+		if not subEdge.river then
+			for i, subPolygon in pairs(subEdge.polygons) do
+				for iii, neighbor in pairs(subPolygon.neighbors) do
+					if not neighbor.superPolygon.continent then
+						return false
+					end
+				end
+			end
+			return true
 		end
 	end
 	self.riverLimitFunc = function(subEdge, wave)
@@ -6975,7 +7027,7 @@ function Space:DrawSubEdgeRiver(mouthEdge)
 				return false
 			end
 		end
-		if wave > 0 then
+		if wave and wave > 0 then
 			for i, conSubEdge in pairs(subEdge.connectList) do
 				if conSubEdge.river then
 					return false
@@ -6996,41 +7048,31 @@ function Space:DrawSubEdgeRiver(mouthEdge)
 		end
 		return true
 	end
-	local sourceCollection, lastWave = mouthEdge:BFSCollect(mountainCollectFunc, self.riverLimitFunc)
-	print(#sourceCollection, "source collection waves")
+end
+
+function Space:DrawSubEdgeRiver(mouthEdge)
+	if not mouthEdge then return end
+	local sourceCollection, lastWave = mouthEdge:BFSCollect(self.mountainCollectFunc, self.riverLimitFunc)
+	if not lastWave or #sourceCollection == 0 or #sourceCollection[lastWave] == 0 then
+		sourceCollection, lastWave = mouthEdge:BFSCollect(self.mountainConnectCollectFunc, self.riverLimitFunc)
+		EchoDebug("no mountain subedges collected, using mountain-connect")
+		if not lastWave or #sourceCollection == 0 or #sourceCollection[lastWave] == 0 then
+			EchoDebug("no mountain-connect subedges collected, using mountain region")
+			sourceCollection, lastWave = mouthEdge:BFSCollect(self.mountainRegionCollectFunc, self.riverLimitFunc)
+			if not lastWave or #sourceCollection == 0 or #sourceCollection[lastWave] == 0 then
+				EchoDebug("no mountain region subedges collected, using high rainfall")
+				sourceCollection, lastWave = mouthEdge:BFSCollect(self.highRainfallCollectFunc, self.riverLimitFunc)
+				if not lastWave or #sourceCollection == 0 or #sourceCollection[lastWave] == 0 then
+					EchoDebug("no high rainfall subedges collected, using land")
+					sourceCollection, lastWave = mouthEdge:BFSCollect(self.landCollectFunc, self.riverLimitFunc)
+				end
+			end
+		end
+	end
 	if sourceCollection and lastWave then
 		local river = Space:RiverFromLineage(tGetRandom(sourceCollection[lastWave]))
 		return river
 	end
-	-- if mouthCollection and lastWave then
-	-- 	print(#mouthCollection[lastWave])
-	-- 	local target = tGetRandom(mouthCollection[lastWave])
-	-- 	local highestLandCount = 0
-	-- 	for i, entry in pairs(mouthCollection[lastWave]) do
-	-- 		local subEdge = entry.subEdge
-	-- 		for ii, conSubPoly in pairs(subEdge.space:MutualNeighbors(subEdge.polygons[1], subEdge.polygons[2])) do
-	-- 			if not conSubPoly.superPolygon.continent then
-	-- 				local landCount = 0
-	-- 				local waterCount = 0
-	-- 				for ii, neighbor in pairs(conSubPoly.superPolygon.neighbors) do
-	-- 					if neighbor.continent then
-	-- 						landCount = landCount + 1
-	-- 					else
-	-- 						waterCount = waterCount + 1
-	-- 					end
-	-- 				end
-	-- 				local landVsWater = landCount - waterCount
-	-- 				if landVsWater > highestLandCount then
-	-- 					highestLandCount = landVsWater
-	-- 					target = entry
-	-- 				end
-	-- 			end
-	-- 		end
-	-- 	end
-	-- 	print(highestLandCount, "highest land vs water")
-	-- 	local path = Space:RiverFromLineage(target, true)
-	-- 	return path
-	-- end
 end
 
 function Space:GetMouthSubEdge(continent)
@@ -7086,7 +7128,11 @@ function Space:GetMouthSubEdge(continent)
 				if otherSubPolygon.superPolygon.continent then
 					for i, conSubEdge in pairs(subEdge.connectList) do
 						if conSubEdge.polygons[1].superPolygon.continent and conSubEdge.polygons[2].superPolygon.continent then
-							return conSubEdge
+							for ii, conConSubEdge in pairs(conSubEdge.connectList) do
+								if self.riverLimitFunc(conConSubEdge) then
+									return conSubEdge
+								end
+							end
 						end
 					end
 				end
@@ -7096,45 +7142,18 @@ function Space:GetMouthSubEdge(continent)
 end
 
 function Space:DrawTestRiver()
-	-- for i, range in pairs(self.mountainRanges) do
-	-- 	if range.typeString == 'interior' and #range.subPolygons[1].superPolygon.continent > 4 then
-	-- 		for ii, subPolygon in pairs(range.mountainSubPolygons) do
-	-- 			-- print("range mountain subpoly")
-	-- 			local nearWater = false
-	-- 			local rangeNeighbor = nil
-	-- 			for iii, neighbor in pairs(subPolygon.neighbors) do
-	-- 				-- print("range subpoly neighbor")
-	-- 				if neighbor.mountainRange and not neighbor.mountainPass then
-	-- 					-- print("range subpoly range neighbor")
-	-- 					for iiii, neighborNeighbor in pairs(neighbor.neighbors) do
-	-- 						if not neighborNeighbor.superPolygon.continent then
-	-- 							-- print("neighbor near water")
-	-- 							nearWater = true
-	-- 							break
-	-- 						end
-	-- 					end
-	-- 					if not nearWater then
-	-- 						rangeNeighbor = neighbor
-	-- 					end
-	-- 				end
-	-- 				if not neighbor.superPolygon.continent then
-	-- 					-- print("subpoly near water")
-	-- 					nearWater = true
-	-- 					break
-	-- 				end
-	-- 			end
-	-- 			if not nearWater and rangeNeighbor then
-	-- 				print("found river source")
-	-- 				subPolygon.testRiverSource = 1
-	-- 				rangeNeighbor.testRiverSource = 2
-	-- 				return self:DrawSubEdgeRiver(subPolygon.subEdges[rangeNeighbor])
-	-- 			end
-	-- 		end
-	-- 	end
-	-- end
-	local mouthSubEdge = self:GetMouthSubEdge(tGetRandom(self.continents))
-	print(mouthSubEdge, "mouth sub edge")
-	return self:DrawSubEdgeRiver(mouthSubEdge)
+	local mouthContinent
+	for i, continent in pairs(self.continents) do
+		if #continent > 2 then
+			mouthContinent = continent
+		end
+	end
+	if mouthContinent then
+		local mouthSubEdge = self:GetMouthSubEdge(mouthContinent)
+		mouthSubEdge.polygons[1].testRiverMouth = 1
+		mouthSubEdge.polygons[2].testRiverMouth = 2
+		return self:DrawSubEdgeRiver(mouthSubEdge)
+	end
 end
 
 function Space:DrawTestRiverBranch(river)
@@ -7142,19 +7161,7 @@ function Space:DrawTestRiverBranch(river)
 	if #river < 6 then return end
 	local startingIndex = mRandom(3, #river-2)
 	local startingEdge = river[startingIndex]
-	local collectFunc = function(subEdge)
-		if not subEdge.river and subEdge.polygons[1].mountainRange and subEdge.polygons[2].mountainRange then
-			for i, subPolygon in pairs(subEdge.polygons) do
-				for ii, neighbor in pairs(subPolygon.neighbors) do
-					if not neighbor.superPolygon.continent then
-						return false
-					end
-				end
-			end
-			return true
-		end
-	end
-	local collection, lastWave = startingEdge:BFSCollect(collectFunc, self.riverLimitFunc)
+	local collection, lastWave = startingEdge:BFSCollect(self.mountainCollectFunc, self.riverLimitFunc)
 	if collection and lastWave and #collection > 0 then
 		print(#collection[lastWave], "in last wave")
 		local sourceEntry = tGetRandom(collection[lastWave])
@@ -7163,13 +7170,17 @@ function Space:DrawTestRiverBranch(river)
 end
 
 function Space:DrawAllLandmassRivers()
+	self:SetRiverFuncs()
 	self.testRivers = {}
-	table.insert(self.testRivers, self:DrawTestRiver())
-	print(#self.testRivers[1], "river subedges")
-	local branch = self:DrawTestRiverBranch(self.testRivers[1])
-	if branch then
-		print(#branch, "branch subedges")
-		table.insert(self.testRivers, branch)
+	local river = self:DrawTestRiver()
+	if river then
+		table.insert(self.testRivers, river)
+		print(#self.testRivers[1], "river subedges")
+		local branch = self:DrawTestRiverBranch(self.testRivers[1])
+		if branch then
+			print(#branch, "branch subedges")
+			table.insert(self.testRivers, branch)
+		end
 	end
 	EchoDebug("drawing rivers for each landmass...")
 	local riverGenTimer = StartDebugTimer()
