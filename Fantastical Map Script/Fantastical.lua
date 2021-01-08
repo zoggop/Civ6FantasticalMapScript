@@ -2582,6 +2582,23 @@ function SubEdge:FindConnections()
 	end
 end
 
+function SubEdge:FindVerticalSubPolygons()
+	local verticalSubPolygons = {}
+	local isVertical = {}
+	for i, conSubEdge in pairs(self.connectList) do
+		for ii, subPolygon in pairs(conSubEdge.polygons) do
+			if subPolygon ~= self.polygons[1] and subPolygon ~= self.polygons[2] then
+				isVertical[subPolygon] = true
+			end
+		end
+	end
+	for subPolygon, yes in pairs(isVertical) do
+		table.insert(verticalSubPolygons, subPolygon)
+	end
+	self.verticalSubPolygons = verticalSubPolygons
+	self.isVertical = isVertical
+end
+
 function SubEdge:DFS(evalFunc, limitFunc, fallbackFunc, visited, path, hexDirs)
 	if not hexDirs then fallbackPath = nil end
 	fallbackFunc = fallbackFunc or function(subEdge) return end
@@ -3615,6 +3632,8 @@ function Space:Compute(setWidth, setHeight, stopAfterPickCoasts, stopAfterLandfo
     self:FindSubEdgeConnections()
     EchoDebug("finding edge connections...")
     self:FindEdgeConnections()
+    EchoDebug("finding subedge vertical subpolygons...")
+    self:FindSubEdgeVerticalSubPolygons()
     EchoDebug("picking oceans...")
     self:PickOceans()
     EchoDebug("flooding astronomy basins...")
@@ -4745,6 +4764,12 @@ end
 function Space:FindEdgeConnections()
 	for i, edge in pairs(self.edges) do
 		edge:FindConnections()
+	end
+end
+
+function Space:FindSubEdgeVerticalSubPolygons()
+	for i, subEdge in pairs(self.subEdges) do
+		subEdge:FindVerticalSubPolygons()
 	end
 end
 
@@ -6900,9 +6925,11 @@ function Space:ComputeLandmassRainfalls()
 			subPolygon.altitude = spAlt
 			subPolygon.proportionalRainfall = spRain / #subPolygon.hexes
 			subPolygon.proportionalAltitude = spAlt / #subPolygon.hexes
+			subPolygon.riverSourceScore = subPolygon.proportionalRainfall + (50 *subPolygon.proportionalAltitude)
 			rainfall = rainfall + spRain
 			altitude = altitude + spAlt
 		end
+		table.sort(landmass.subPolygons, function(a, b) return a.riverSourceScore > b.riverSourceScore end)
 		landmass.breadth = mSqrt(2 * #landmass.hexes)
 		landmass.rainfall = rainfall
 		landmass.altitude = altitude
@@ -6953,6 +6980,13 @@ function Space:RiverFromLineage(entry, reverse)
 end
 
 function Space:SetRiverFuncs()
+	self.oceanCollectFunc = function(subEdge)
+		for subPolygon, yes in pairs(subEdge.isVertical) do
+			if not subPolygon.superPolygon.continent then
+				return true
+			end
+		end
+	end
 	self.mountainCollectFunc = function(subEdge)
 		if not subEdge.river and subEdge.polygons[1].mountainRange and subEdge.polygons[2].mountainRange then
 			for i, subPolygon in pairs(subEdge.polygons) do
@@ -6967,7 +7001,7 @@ function Space:SetRiverFuncs()
 	end
 	self.mountainConnectCollectFunc = function(subEdge)
 		if not subEdge.river then
-			for i, neighbor in pairs(subEdge.space:MutualNeighbors(subEdge.polygons[1], subEdge.polygons[2])) do
+			for i, neighbor in pairs(subEdge.verticalSubPolygons) do
 				if neighbor.mountainRange then
 					for ii, subPolygon in pairs(subEdge.polygons) do
 						for iii, neighbor in pairs(subPolygon.neighbors) do
@@ -7022,6 +7056,7 @@ function Space:SetRiverFuncs()
 		end
 	end
 	self.riverLimitFunc = function(subEdge, wave)
+		if subEdge.river then return false end
 		for i, subPoly in pairs(subEdge.polygons) do
 			if subPoly.lake or not subPoly.superPolygon.continent then
 				return false
@@ -7034,125 +7069,71 @@ function Space:SetRiverFuncs()
 				end
 			end
 		end
-		-- don't go in parallel to the path on the same hex
-		if hexDirs then
-			for aHex, bHexes in pairs(subEdge.pairings) do
-				if hexDirs[aHex] then
-					for bHex, d in pairs(bHexes) do
-						if hexDirs[aHex][OppositeDirection(d)] then
-							return false
-						end
-					end
-				end
-			end
-		end
 		return true
 	end
 end
 
-function Space:DrawSubEdgeRiver(mouthEdge)
-	if not mouthEdge then return end
-	local sourceCollection, lastWave = mouthEdge:BFSCollect(self.mountainCollectFunc, self.riverLimitFunc)
-	if not lastWave or #sourceCollection == 0 or #sourceCollection[lastWave] == 0 then
-		sourceCollection, lastWave = mouthEdge:BFSCollect(self.mountainConnectCollectFunc, self.riverLimitFunc)
-		EchoDebug("no mountain subedges collected, using mountain-connect")
-		if not lastWave or #sourceCollection == 0 or #sourceCollection[lastWave] == 0 then
-			EchoDebug("no mountain-connect subedges collected, using mountain region")
-			sourceCollection, lastWave = mouthEdge:BFSCollect(self.mountainRegionCollectFunc, self.riverLimitFunc)
-			if not lastWave or #sourceCollection == 0 or #sourceCollection[lastWave] == 0 then
-				EchoDebug("no mountain region subedges collected, using high rainfall")
-				sourceCollection, lastWave = mouthEdge:BFSCollect(self.highRainfallCollectFunc, self.riverLimitFunc)
-				if not lastWave or #sourceCollection == 0 or #sourceCollection[lastWave] == 0 then
-					EchoDebug("no high rainfall subedges collected, using land")
-					sourceCollection, lastWave = mouthEdge:BFSCollect(self.landCollectFunc, self.riverLimitFunc)
-				end
-			end
-		end
-	end
-	if sourceCollection and lastWave then
-		local river = Space:RiverFromLineage(tGetRandom(sourceCollection[lastWave]))
+function Space:DrawSubEdgeRiver(sourceEdge)
+	if not sourceEdge then return end
+	local mouthCollection, lastWave = sourceEdge:BFSCollect(self.oceanCollectFunc, self.riverLimitFunc)
+	if mouthCollection and lastWave then
+		local river = Space:RiverFromLineage(tGetRandom(mouthCollection[lastWave]), true)
 		return river
 	end
 end
 
-function Space:GetMouthSubEdge(continent)
-	self.continentCoasts = self.continentCoasts or {}
-	self.continentCoasts[continent] = self.continentCoasts[continent] or {}
-	for i, polygon in pairs(continent) do
-		for ii, neighbor in pairs(polygon.neighbors) do
-			if not neighbor.continent and not neighbor.coastOfContinent then
-				neighbor.coastOfContinent = continent
-				table.insert(self.continentCoasts[continent], neighbor)
-			end
-		end
-	end
-	local highestLandVsWater
-	local bestPolygon
-	for i, polygon in pairs(self.continentCoasts[continent]) do
-		local landCount = 0
-		local waterCount = 0
-		for ii, neighbor in pairs(polygon.neighbors) do
-			if neighbor.continent then
-				landCount = landCount + 1
-			else
-				waterCount = waterCount + 1
-			end
-		end
-		local landVsWater = landCount - waterCount
-		if not highestLandVsWater or landVsWater > highestLandVsWater then
-			highestLandVsWater = landVsWater
-			bestPolygon = polygon
-		end
-	end
-	if bestPolygon then
-		local subHighestLandVsWater
-		local bestSubPolygon
-		for i, subPolygon in pairs(bestPolygon.subPolygons) do
-			local landCount = 0
-			local waterCount = 0
+function Space:GetSourceSubEdge(landmass)
+	-- subPolygons are already sorted by descending riverSourceScore
+	for i, subPolygon in ipairs(landmass.subPolygons) do
+		print("landmass subpolygon")
+		if not subPolygon.isRiverSource and not subPolygon.lake then
+			print("landmass available subpolygon")
+			local nearWater = false
 			for ii, neighbor in pairs(subPolygon.neighbors) do
-				if neighbor.superPolygon.continent then
-					landCount = landCount + 1
-				else
-					waterCount = waterCount + 1
+				if not neighbor.superPolygon.continent or neighbor.lake then
+					nearWater = true
+					break
 				end
 			end
-			local landVsWater = landCount - waterCount
-			if not subHighestLandVsWater or landVsWater > subHighestLandVsWater then
-				subHighestLandVsWater = landVsWater
-				bestSubPolygon = subPolygon
-			end
-		end
-		if bestSubPolygon then
-			for otherSubPolygon, subEdge in pairs(bestSubPolygon.subEdges) do
-				if otherSubPolygon.superPolygon.continent then
-					for i, conSubEdge in pairs(subEdge.connectList) do
-						if conSubEdge.polygons[1].superPolygon.continent and conSubEdge.polygons[2].superPolygon.continent then
-							for ii, conConSubEdge in pairs(conSubEdge.connectList) do
-								if self.riverLimitFunc(conConSubEdge) then
-									return conSubEdge
-								end
+			if not nearWater then
+				local bestSubEdge, highestScore
+				for otherSubPolygon, subEdge in pairs(subPolygon.subEdges) do
+					print("landmass available subpolygon subedge")
+					if not otherSubPolygon.lake and otherSubPolygon.riverSourceScore then
+						for ii, neighbor in pairs(otherSubPolygon.neighbors) do
+							if not neighbor.superPolygon.continent or neighbor.lake then
+								nearWater = true
+								break
+							end
+						end
+						if not nearWater then
+							print("landmass available subpolygon subedge othersubpolygon has score")
+							if not highestScore or otherSubPolygon.riverSourceScore > highestScore then
+								highestScore = otherSubPolygon.riverSourceScore
+								bestSubEdge = subEdge
 							end
 						end
 					end
+				end
+				if bestSubEdge then
+					return bestSubEdge
 				end
 			end
 		end
 	end
 end
 
-function Space:DrawTestRiver()
-	local mouthContinent
-	for i, continent in pairs(self.continents) do
-		if #continent > 2 then
-			mouthContinent = continent
+function Space:DrawTestRiver(landmass)
+	local sourceSubEdge = self:GetSourceSubEdge(landmass)
+	if sourceSubEdge then
+		local river = self:DrawSubEdgeRiver(sourceSubEdge)
+		if river then
+			sourceSubEdge.polygons[1].isRiverSource = 1
+			sourceSubEdge.polygons[2].isRiverSource = 2
+			sourceSubEdge.verticalSubPolygons[1].isRiverSource = 3
+			sourceSubEdge.verticalSubPolygons[2].isRiverSource = 4
+			return river
 		end
-	end
-	if mouthContinent then
-		local mouthSubEdge = self:GetMouthSubEdge(mouthContinent)
-		mouthSubEdge.polygons[1].testRiverMouth = 1
-		mouthSubEdge.polygons[2].testRiverMouth = 2
-		return self:DrawSubEdgeRiver(mouthSubEdge)
 	end
 end
 
@@ -7172,14 +7153,16 @@ end
 function Space:DrawAllLandmassRivers()
 	self:SetRiverFuncs()
 	self.testRivers = {}
-	local river = self:DrawTestRiver()
-	if river then
-		table.insert(self.testRivers, river)
-		print(#self.testRivers[1], "river subedges")
-		local branch = self:DrawTestRiverBranch(self.testRivers[1])
-		if branch then
-			print(#branch, "branch subedges")
-			table.insert(self.testRivers, branch)
+	for i, landmass in pairs(self.landmasses) do
+		local river = self:DrawTestRiver(landmass)
+		if river then
+			table.insert(self.testRivers, river)
+			print(#river, "river subedges")
+			local branch = self:DrawTestRiverBranch(river)
+			if branch then
+				print(#branch, "branch subedges")
+				table.insert(self.testRivers, branch)
+			end
 		end
 	end
 	EchoDebug("drawing rivers for each landmass...")
