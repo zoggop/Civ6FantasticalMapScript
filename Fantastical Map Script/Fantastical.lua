@@ -2012,6 +2012,7 @@ Polygon = class(function(a, space, x, y)
 	a.subEdges = {}
 	a.isNeighbor = {}
 	a.neighbors = {}
+	a.verticalSubEdges = {}
 	a.minX = space.w
 	a.maxX = 0
 	a.minY = space.h
@@ -2522,6 +2523,7 @@ SubEdge = class(function(a, polygon1, polygon2)
 	a.pairings = {}
 	a.connections = {}
 	a.connectList = {}
+	a.verticalSubPolygons = {}
 	polygon1.subEdges[polygon2] = a
 	polygon2.subEdges[polygon1] = a
 	tInsert(a.space.subEdges, a)
@@ -2584,19 +2586,15 @@ end
 
 function SubEdge:FindVerticalSubPolygons()
 	local verticalSubPolygons = {}
-	local isVertical = {}
 	for i, conSubEdge in pairs(self.connectList) do
 		for ii, subPolygon in pairs(conSubEdge.polygons) do
 			if subPolygon ~= self.polygons[1] and subPolygon ~= self.polygons[2] then
-				isVertical[subPolygon] = true
+				verticalSubPolygons[subPolygon] = true
+				subPolygon.verticalSubEdges[self] = true
 			end
 		end
 	end
-	for subPolygon, yes in pairs(isVertical) do
-		table.insert(verticalSubPolygons, subPolygon)
-	end
 	self.verticalSubPolygons = verticalSubPolygons
-	self.isVertical = isVertical
 end
 
 function SubEdge:DFS(evalFunc, limitFunc, fallbackFunc, visited, path, hexDirs)
@@ -2676,7 +2674,7 @@ function SubEdge:BFSCollect(collectFunc, limitFunc)
 			lastWaveWithCollection = wave
 		else
 			for i, cse in pairs(se.connectList) do
-				if not visited[cse] and (not entry.parent or not cse.connections[entry.parent.subEdge]) and limitFunc(cse, wave) then
+				if not visited[cse] and (not entry.parent or not cse.connections[entry.parent.subEdge]) and limitFunc(cse, wave, se) then
 					table.insert(nextBuffer, {subEdge = cse, parent = entry})
 				end
 			end
@@ -6911,9 +6909,11 @@ function Space:ComputeLandmassRainfalls()
 		local rainfall = 0
 		local altitude = 0
 		for ii, subPolygon in pairs(landmass.subPolygons) do
+			subPolygon.landmass = landmass
 			local spRain = 0
 			local spAlt = 0
 			for iii, hex in pairs(subPolygon.hexes) do
+				hex.landmass = landmass
 				spRain = spRain + hex.rainfall
 				if hex.plotType == plotHills then
 					spAlt = spAlt + 1
@@ -6963,6 +6963,8 @@ function Space:RiverFromLineage(entry, reverse)
 		table.insert(river, cur.subEdge)
 		if not reverse then
 			cur.subEdge.river = river
+			cur.subEdge.polygons[1].river = river
+			cur.subEdge.polygons[2].river = river
 		end
 		cur = cur.parent
 	end
@@ -6971,6 +6973,8 @@ function Space:RiverFromLineage(entry, reverse)
 		for i = #river, 1, -1 do
 			local subEdge = river[i]
 			subEdge.river = reversedRiver
+			subEdge.polygons[1].river = reversedRiver
+			subEdge.polygons[2].river = reversedRiver
 			table.insert(reversedRiver, subEdge)
 		end
 		return reversedRiver
@@ -6981,11 +6985,23 @@ end
 
 function Space:SetRiverFuncs()
 	self.oceanCollectFunc = function(subEdge)
-		for subPolygon, yes in pairs(subEdge.isVertical) do
+		connectsToOcean = false
+		for subPolygon, yes in pairs(subEdge.verticalSubPolygons) do
 			if not subPolygon.superPolygon.continent then
-				return true
+				connectsToOcean = true
+				break
 			end
 		end
+		if not connectsToOcean then return false end
+		local altitude = 0
+		for i, subPolygon in pairs(subEdge.polygons) do
+			if subPolygon.proportionalAltitude then
+				altitude = altitude + subPolygon.proportionalAltitude
+			else
+				return false
+			end
+		end
+		if altitude < 1 then return true end
 	end
 	self.mountainCollectFunc = function(subEdge)
 		if not subEdge.river and subEdge.polygons[1].mountainRange and subEdge.polygons[2].mountainRange then
@@ -7001,7 +7017,7 @@ function Space:SetRiverFuncs()
 	end
 	self.mountainConnectCollectFunc = function(subEdge)
 		if not subEdge.river then
-			for i, neighbor in pairs(subEdge.verticalSubPolygons) do
+			for neighbor, yes in pairs(subEdge.verticalSubPolygons) do
 				if neighbor.mountainRange then
 					for ii, subPolygon in pairs(subEdge.polygons) do
 						for iii, neighbor in pairs(subPolygon.neighbors) do
@@ -7055,20 +7071,37 @@ function Space:SetRiverFuncs()
 			return true
 		end
 	end
-	self.riverLimitFunc = function(subEdge, wave)
+	self.riverLimitFunc = function(subEdge, wave, parentSubEdge)
 		if subEdge.river then return false end
 		for i, subPoly in pairs(subEdge.polygons) do
-			if subPoly.lake or not subPoly.superPolygon.continent then
+			if subPoly.lake or not subPoly.superPolygon.continent or subPoly.river then
 				return false
 			end
 		end
-		if wave and wave > 0 then
-			for i, conSubEdge in pairs(subEdge.connectList) do
-				if conSubEdge.river then
-					return false
-				end
+		for i, conSubEdge in pairs(subEdge.connectList) do
+			if conSubEdge.river then
+				return false
 			end
 		end
+		-- if parentSubEdge then
+		-- 	if subEdge.polygons[1].proportionalAltitude + subEdge.polygons[2].proportionalAltitude > parentSubEdge.polygons[1].proportionalAltitude + parentSubEdge.polygons[2].proportionalAltitude + 0.5 then
+		-- 		return false
+		-- 	end
+		-- end
+		return true
+	end
+	self.branchLimitFunc = function(subEdge, wave, parentSubEdge)
+		if subEdge.river then return false end
+		for i, subPoly in pairs(subEdge.polygons) do
+			if subPoly.lake or not subPoly.superPolygon.continent or subPoly.isRiverSource then -- or (subPoly.river and not BFSbranchEndSubPolygons[subPoly]) then
+				return false
+			end
+		end
+		-- if parentSubEdge then
+		-- 	if subEdge.polygons[1].proportionalAltitude + subEdge.polygons[2].proportionalAltitude > parentSubEdge.polygons[1].proportionalAltitude + parentSubEdge.polygons[2].proportionalAltitude + 0.5 then
+		-- 		return false
+		-- 	end
+		-- end
 		return true
 	end
 end
@@ -7085,33 +7118,37 @@ end
 function Space:GetSourceSubEdge(landmass)
 	-- subPolygons are already sorted by descending riverSourceScore
 	for i, subPolygon in ipairs(landmass.subPolygons) do
-		print("landmass subpolygon")
-		if not subPolygon.isRiverSource and not subPolygon.lake then
-			print("landmass available subpolygon")
-			local nearWater = false
+		if not subPolygon.isRiverSource and not subPolygon.lake and not subPolygon.river then
+			local nearWaterOrSource = false
 			for ii, neighbor in pairs(subPolygon.neighbors) do
-				if not neighbor.superPolygon.continent or neighbor.lake then
-					nearWater = true
+				if not neighbor.superPolygon.continent or neighbor.lake or neighbor.isRiverSource or neighbor.river then
+					nearWaterOrSource = true
 					break
 				end
 			end
-			if not nearWater then
+			if not nearWaterOrSource then
 				local bestSubEdge, highestScore
-				for otherSubPolygon, subEdge in pairs(subPolygon.subEdges) do
-					print("landmass available subpolygon subedge")
-					if not otherSubPolygon.lake and otherSubPolygon.riverSourceScore then
-						for ii, neighbor in pairs(otherSubPolygon.neighbors) do
-							if not neighbor.superPolygon.continent or neighbor.lake then
-								nearWater = true
+				for subEdge, yes in pairs(subPolygon.verticalSubEdges) do
+					local okay = true
+					local score = 0
+					for ii, pairSubPolygon in pairs(subEdge.polygons) do
+						if pairSubPolygon.lake or pairSubPolygon.isRiverSource or pairSubPolygon.river or not pairSubPolygon.riverSourceScore then
+							okay = false
+							break
+						end
+						for iii, neighbor in pairs(pairSubPolygon.neighbors) do
+							if not neighbor.superPolygon.continent or neighbor.lake or neighbor.isRiverSource or neighbor.river then
+								okay = false
 								break
 							end
 						end
-						if not nearWater then
-							print("landmass available subpolygon subedge othersubpolygon has score")
-							if not highestScore or otherSubPolygon.riverSourceScore > highestScore then
-								highestScore = otherSubPolygon.riverSourceScore
-								bestSubEdge = subEdge
-							end
+						if not okay then break end
+						score = score + pairSubPolygon.riverSourceScore
+					end
+					if okay then
+						if not highestScore	or score > highestScore then
+							highestScore = score
+							bestSubEdge = subEdge
 						end
 					end
 				end
@@ -7129,9 +7166,10 @@ function Space:DrawTestRiver(landmass)
 		local river = self:DrawSubEdgeRiver(sourceSubEdge)
 		if river then
 			sourceSubEdge.polygons[1].isRiverSource = 1
-			sourceSubEdge.polygons[2].isRiverSource = 2
-			sourceSubEdge.verticalSubPolygons[1].isRiverSource = 3
-			sourceSubEdge.verticalSubPolygons[2].isRiverSource = 4
+			sourceSubEdge.polygons[2].isRiverSource = 1
+			for subPoly, yes in pairs(sourceSubEdge.verticalSubPolygons) do
+				subPoly.isRiverSource = 2
+			end
 			return river
 		end
 	end
@@ -7140,13 +7178,40 @@ end
 function Space:DrawTestRiverBranch(river)
 	if not river then return end
 	if #river < 6 then return end
-	local startingIndex = mRandom(3, #river-2)
-	local startingEdge = river[startingIndex]
-	local collection, lastWave = startingEdge:BFSCollect(self.mountainCollectFunc, self.riverLimitFunc)
-	if collection and lastWave and #collection > 0 then
-		print(#collection[lastWave], "in last wave")
-		local sourceEntry = tGetRandom(collection[lastWave])
-		return self:RiverFromLineage(sourceEntry)
+	local branchIndex = mRandom(3, #river-2)
+	BFSbranchEdge = river[branchIndex]
+	BFSbranchEndSubPolygons = {}
+	BFSbranchEndSubPolygons[BFSbranchEdge.polygons[1]] = true
+	BFSbranchEndSubPolygons[BFSbranchEdge.polygons[2]] = true
+	local collectFunc = function(subEdge)
+		for conSubEdge, yes in pairs(subEdge.connections) do
+			-- if conSubEdge == BFSbranchEdge then
+			-- 	return true
+			-- end
+			if conSubEdge.river == river then
+				return true
+			end
+		end
+	end
+	local sourceEdge = self:GetSourceSubEdge(river[1].polygons[1].landmass)
+	if sourceEdge then
+		EchoDebug("got source edge for branch")
+		local collection, lastWave = sourceEdge:BFSCollect(collectFunc, self.branchLimitFunc)
+		if collection and lastWave and collection[lastWave] and #collection[lastWave] > 0 then
+			EchoDebug(#collection[lastWave], "in last wave for branch")
+			local possibleWaves = {}
+			for wave, waveCollection in pairs(collection) do
+				if wave > 2 and #waveCollection > 0 then
+					table.insert(possibleWaves, wave)
+				end
+			end
+			local entry = tGetRandom(collection[tGetRandom(possibleWaves)])
+			return self:RiverFromLineage(entry, true)
+		else
+			EchoDebug("BFS collection failed for branch", #collection, lastWave)
+		end
+	else
+		EchoDebug("no source edge for branch")
 	end
 end
 
