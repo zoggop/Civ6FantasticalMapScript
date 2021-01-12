@@ -1093,6 +1093,23 @@ local function GetFlowDirection(direction1, direction2)
 	return -1
 end
 
+local function GetOppositeFlowDirection(flowDirection)
+	if flowDirection == FlowDirS then
+		return FlowDirN
+	elseif flowDirection == FlowDirN then
+		return FlowDirS
+	elseif flowDirection == FlowDirSW then
+		return FlowDirNE
+	elseif flowDirection == FlowDirNE then
+		return FlowDirSW
+	elseif flowDirection == FlowDirNW then
+		return FlowDirSE
+	elseif flowDirection == FlowDirSE then
+		return FlowDirNW
+	end
+	return -1
+end
+
 local DirNames = {
 	[DirW] = "West",
 	[DirNW] = "Northwest",
@@ -2597,6 +2614,110 @@ function SubEdge:FindVerticalSubPolygons()
 	self.verticalSubPolygons = verticalSubPolygons
 end
 
+function SubEdge:FindFlowDirections()
+	local endSubPoly, otherEndSubPoly
+	local vertCount = 0
+	for subPolygon, yes in pairs(self.verticalSubPolygons) do
+		if endSubPoly then
+			otherEndSubPoly = subPolygon
+		else
+			endSubPoly = subPolygon
+		end
+		vertCount = vertCount + 1
+	end
+	-- EchoDebug(vertCount, "vertical subpolygons", #self.connectList, "connections")
+	local flowPairings = {}
+	flowPairings[endSubPoly] = {}
+	if otherEndSubPoly then
+		flowPairings[otherEndSubPoly] = {}
+	end
+	-- find one end of the edge
+	local endHex, endPairHex, endVertHex
+	for hex, pairHexes in pairs(self.pairings) do
+		for pairHex, direction in pairs(pairHexes) do
+			local upDir = direction - 1
+			if upDir == 0 then upDir = 6 end 
+			local downDir = direction + 1
+			if downDir == 7 then downDir = 1 end
+			local dirs = {upDir, downDir}
+			for i, dir2 in pairs(dirs) do
+				local aHex = hex:Adjacent(dir2)
+				if aHex and aHex.subPolygon == endSubPoly then
+					endHex, endPairHex, endVertHex = hex, pairHex, aHex
+					break
+				end
+			end
+			if endHex then break end
+		end
+		if endHex then break end
+	end
+	-- propagate from the end of the edge
+	local i = 0
+	local hex, pairHex, downstreamHex = endHex, endPairHex, endVertHex
+	while hex do
+		i = i + 1
+		local pairDir = hex:GetDirectionTo(pairHex)
+		local downstreamDir = hex:GetDirectionTo(downstreamHex)
+		-- store flow direction
+		local flowDir = GetFlowDirection(pairDir, downstreamDir)
+		flowPairings[endSubPoly][hex] = flowPairings[endSubPoly][hex] or {}
+		flowPairings[endSubPoly][hex][pairHex] = flowDir
+		flowPairings[endSubPoly][pairHex] = flowPairings[endSubPoly][pairHex] or {}
+		flowPairings[endSubPoly][pairHex][hex] = flowDir
+		if otherEndSubPoly then
+			local revFlowDir = GetOppositeFlowDirection(flowDir)
+			flowPairings[otherEndSubPoly][hex] = flowPairings[otherEndSubPoly][hex] or {}
+			flowPairings[otherEndSubPoly][hex][pairHex] = revFlowDir
+			flowPairings[otherEndSubPoly][pairHex] = flowPairings[otherEndSubPoly][pairHex] or {}
+			flowPairings[otherEndSubPoly][pairHex][hex] = revFlowDir
+		end
+		-- find next segment
+		local upstreamDir
+		local aDir = pairDir - 1
+		if aDir == 0 then aDir = 6 end 
+		local bDir = pairDir + 1
+		if bDir == 7 then bDir = 1 end
+		if downstreamDir == aDir then
+			upstreamDir = bDir
+		elseif downstreamDir == bDir then
+			upstreamDir = aDir
+		else
+			-- EchoDebug(i, "downstream direction isn't direction a or b")
+			break
+		end
+		local upstreamHex = hex:Adjacent(upstreamDir)
+		if not upstreamHex then
+			-- EchoDebug(i, "upstream direction doesn't point to a hex")
+			break
+		end
+		if not self.pairings[upstreamHex] then
+			-- EchoDebug(i, "upstream hex isn't on subedge")
+			break
+		end
+		if self.pairings[upstreamHex][hex] then
+			downstreamHex = pairHex
+			pairHex = hex
+			hex = upstreamHex
+		elseif self.pairings[upstreamHex][pairHex] then
+			downstreamHex = hex
+			hex = upstreamHex
+		end
+	end
+	-- if i > 1 then EchoDebug(i) end
+	local flowPairingsBySubEdge = {}
+	local conCount = 0
+	for i, subEdge in pairs(self.connectList) do
+		local flowPairings = flowPairings[subEdge.polygons[1]] or flowPairings[subEdge.polygons[2]]
+		if flowPairings then
+			flowPairingsBySubEdge[subEdge] = flowPairings
+			conCount = conCount + 1
+		end
+	end
+	-- EchoDebug("flowpairingsbysubedge count", conCount)
+	self.flowPairingsBySubPolygon = flowPairings
+	self.flowPairingsBySubEdge = flowPairingsBySubEdge
+end
+
 function SubEdge:DFS(evalFunc, limitFunc, fallbackFunc, visited, path, hexDirs)
 	if not hexDirs then fallbackPath = nil end
 	fallbackFunc = fallbackFunc or function(subEdge) return end
@@ -2675,7 +2796,7 @@ function SubEdge:BFSCollect(collectFunc, limitFunc)
 		else
 			for i, cse in pairs(se.connectList) do
 				if not visited[cse] and (not entry.parent or not cse.connections[entry.parent.subEdge]) and limitFunc(cse, wave, se) then
-					table.insert(nextBuffer, {subEdge = cse, parent = entry})
+					table.insert(nextBuffer, {subEdge = cse, parent = entry, hexCount = (entry.hexCount or 0) + #cse.hexes })
 				end
 			end
 		end
@@ -3632,6 +3753,8 @@ function Space:Compute(setWidth, setHeight, stopAfterPickCoasts, stopAfterLandfo
     self:FindEdgeConnections()
     EchoDebug("finding subedge vertical subpolygons...")
     self:FindSubEdgeVerticalSubPolygons()
+    EchoDebug("finding subedge flow directions...")
+    self:FindSubEdgeFlowDirections()
     EchoDebug("picking oceans...")
     self:PickOceans()
     EchoDebug("flooding astronomy basins...")
@@ -4768,6 +4891,12 @@ end
 function Space:FindSubEdgeVerticalSubPolygons()
 	for i, subEdge in pairs(self.subEdges) do
 		subEdge:FindVerticalSubPolygons()
+	end
+end
+
+function Space:FindSubEdgeFlowDirections()
+	for i, subEdge in pairs(self.subEdges) do
+		subEdge:FindFlowDirections()
 	end
 end
 
@@ -6956,7 +7085,7 @@ function Space:MutualNeighbors(polygonA, polygonB)
 	return mutual
 end
 
-function Space:RiverFromLineage(entry, reverse)
+function Space:SubEdgeRiverFromLineage(entry, reverse)
 	local river = {}
 	local cur = entry
 	while cur do
@@ -6981,6 +7110,63 @@ function Space:RiverFromLineage(entry, reverse)
 	else
 		return river
 	end
+end
+
+function Space:InkSubEdgeRiver(river, landmass)
+	local riverId = nil
+	riverId = self.nextRiverId
+	self.nextRiverId = self.nextRiverId + 1
+	for i, subEdge in ipairs(river) do
+		local flowPairings, opposite
+		if i == #river then
+			opposite = true
+			flowPairings = subEdge.flowPairingsBySubEdge[river[i-1]]
+		else
+			flowPairings = subEdge.flowPairingsBySubEdge[river[i+1]]
+		end
+		print(i, subEdge, river[i+1], subEdge.connections[river[i+1]], flowPairings, #subEdge.connectList, subEdge.flowPairingsBySubEdge)
+		for cse, flowPairing in pairs(subEdge.flowPairingsBySubEdge) do
+			print(cse, flowPairing, "flow pairing connection")
+		end
+		for i, cse in pairs(subEdge.connectList) do
+			print(cse, subEdge.flowPairingsBySubEdge[cse])
+		end
+		for subPolygon, yes in pairs(subEdge.verticalSubPolygons) do
+			print(subPolygon, "vert subpoly")
+		end
+		for aHex, bHexes in pairs(flowPairings) do
+			for bHex, flowDirection in pairs(bHexes) do
+				if opposite then
+					flowDirection = GetOppositeFlowDirection(flowDirection)
+				end
+				local direction = subEdge.pairings[aHex][bHex]
+				local BAdirection = subEdge.pairings[bHex][aHex]
+				aHex.ofRiver = aHex.ofRiver or {}
+				aHex.riverId = aHex.riverId or riverId
+				bHex.ofRiver = bHex.ofRiver or {}
+				bHex.riverId = bHex.riverId or riverId
+				aHex.ofRiver[BAdirection] = flowDirection
+				bHex.ofRiver[direction] = flowDirection
+				aHex.onRiver[bHex] = river
+				bHex.onRiver[aHex] = river
+				if not aHex.isRiver then
+					self.riverArea = (self.riverArea or 0) + 1
+					if landmass then landmass.riverArea = (landmass.riverArea or 0) + 1 end
+				end
+				if not bHex.isRiver then
+					self.riverArea = (self.riverArea or 0) + 1
+					if landmass then landmass.riverArea = (landmass.riverArea or 0) + 1 end
+				end
+				aHex.isRiver = aHex.isRiver or {}
+				bHex.isRiver = bHex.isRiver or {}
+				aHex.isRiver[river] = true
+				bHex.isRiver[river] = true
+			end
+		end
+	end
+	tInsert(self.rivers, river)
+	landmass.rivers = landmass.rivers or {}
+	tInsert(landmass.rivers, river)
 end
 
 function Space:SetRiverFuncs()
@@ -7108,10 +7294,17 @@ end
 
 function Space:DrawSubEdgeRiver(sourceEdge)
 	if not sourceEdge then return end
-	local mouthCollection, lastWave = sourceEdge:BFSCollect(self.oceanCollectFunc, self.riverLimitFunc)
-	if mouthCollection and lastWave then
-		local river = Space:RiverFromLineage(tGetRandom(mouthCollection[lastWave]), true)
-		return river
+	local collection, lastWave = sourceEdge:BFSCollect(self.oceanCollectFunc, self.riverLimitFunc)
+	if collection and lastWave then
+		for wave, entries in pairs(collection) do
+			for i, entry in pairs(entries) do
+				if entry.hexCount and entry.hexCount > 40 and entry.hexCount < 50 then
+					local river = Space:SubEdgeRiverFromLineage(entry, true)
+					print(entry.hexCount, wave, #river, lastWave)
+					return river
+				end
+			end
+		end
 	end
 end
 
@@ -7165,6 +7358,7 @@ function Space:DrawTestRiver(landmass)
 	if sourceSubEdge then
 		local river = self:DrawSubEdgeRiver(sourceSubEdge)
 		if river then
+			self:InkSubEdgeRiver(river, landmass)
 			sourceSubEdge.polygons[1].isRiverSource = 1
 			sourceSubEdge.polygons[2].isRiverSource = 1
 			for subPoly, yes in pairs(sourceSubEdge.verticalSubPolygons) do
@@ -7193,7 +7387,8 @@ function Space:DrawTestRiverBranch(river)
 			end
 		end
 	end
-	local sourceEdge = self:GetSourceSubEdge(river[1].polygons[1].landmass)
+	local landmass = river[1].polygons[1].landmass
+	local sourceEdge = self:GetSourceSubEdge(landmass)
 	if sourceEdge then
 		EchoDebug("got source edge for branch")
 		local collection, lastWave = sourceEdge:BFSCollect(collectFunc, self.branchLimitFunc)
@@ -7206,7 +7401,11 @@ function Space:DrawTestRiverBranch(river)
 				end
 			end
 			local entry = tGetRandom(collection[tGetRandom(possibleWaves)])
-			return self:RiverFromLineage(entry, true)
+			local branchRiver = self:SubEdgeRiverFromLineage(entry, true)
+			if branchRiver then
+				self:InkSubEdgeRiver(branchRiver, landmass)
+				return branchRiver
+			end
 		else
 			EchoDebug("BFS collection failed for branch", #collection, lastWave)
 		end
@@ -7221,36 +7420,36 @@ function Space:DrawAllLandmassRivers()
 	for i, landmass in pairs(self.landmasses) do
 		local river = self:DrawTestRiver(landmass)
 		if river then
-			table.insert(self.testRivers, river)
+			-- table.insert(self.testRivers, river)
 			print(#river, "river subedges")
 			local branch = self:DrawTestRiverBranch(river)
 			if branch then
 				print(#branch, "branch subedges")
-				table.insert(self.testRivers, branch)
+				-- table.insert(self.testRivers, branch)
 			end
 		end
 	end
-	EchoDebug("drawing rivers for each landmass...")
-	local riverGenTimer = StartDebugTimer()
-	local oldRiverLandRatio = self.riverLandRatio + 0
-	self.riverLandRatio = self.riverLandRatio * (self.rainfallMidpoint / 49.5)
-	EchoDebug("original riverLandRatio of " .. oldRiverLandRatio .. " modified by rainfallMidpoint of " .. self.rainfallMidpoint .. " is now " .. self.riverLandRatio)
-	local realPrescribedRiverArea =  mCeil(self.riverLandRatio * self.filledArea)
-	local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea * 1.1) -- because the algorithm tends to underproduce by roughly 10%
-	self.riverArea = 0
-	if self.oceanNumber == -1 and #self.inlandSeas == 0 and #self.lakeSubPolygons == 0 then
-		-- no rivers can be drawn if there are no bodies of water on the map
-		EchoDebug("no bodies of water on the map and therefore no rivers")
-		return
-	end
-	for i, landmass in ipairs(self.landmasses) do
-		landmass.rainfallFraction = landmass.rainfall / self.globalRainfall
-		if #landmass.hexes > 3 and landmass.rainfallFraction > 0.005 then
-			self:FindLandmassRiverSeeds(landmass)
-			self:DrawLandmassRivers(landmass)
-		end
-	end
-	EchoDebug(self.riverArea .. " river tiles created of " .. realPrescribedRiverArea .. " prescribed", StopDebugTimer(riverGenTimer))
+	-- EchoDebug("drawing rivers for each landmass...")
+	-- local riverGenTimer = StartDebugTimer()
+	-- local oldRiverLandRatio = self.riverLandRatio + 0
+	-- self.riverLandRatio = self.riverLandRatio * (self.rainfallMidpoint / 49.5)
+	-- EchoDebug("original riverLandRatio of " .. oldRiverLandRatio .. " modified by rainfallMidpoint of " .. self.rainfallMidpoint .. " is now " .. self.riverLandRatio)
+	-- local realPrescribedRiverArea =  mCeil(self.riverLandRatio * self.filledArea)
+	-- local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea * 1.1) -- because the algorithm tends to underproduce by roughly 10%
+	-- self.riverArea = 0
+	-- if self.oceanNumber == -1 and #self.inlandSeas == 0 and #self.lakeSubPolygons == 0 then
+	-- 	-- no rivers can be drawn if there are no bodies of water on the map
+	-- 	EchoDebug("no bodies of water on the map and therefore no rivers")
+	-- 	return
+	-- end
+	-- for i, landmass in ipairs(self.landmasses) do
+	-- 	landmass.rainfallFraction = landmass.rainfall / self.globalRainfall
+	-- 	if #landmass.hexes > 3 and landmass.rainfallFraction > 0.005 then
+	-- 		self:FindLandmassRiverSeeds(landmass)
+	-- 		self:DrawLandmassRivers(landmass)
+	-- 	end
+	-- end
+	-- EchoDebug(self.riverArea .. " river tiles created of " .. realPrescribedRiverArea .. " prescribed", StopDebugTimer(riverGenTimer))
 end
 
 function Space:FindLandmassRiverSeeds(landmass)
