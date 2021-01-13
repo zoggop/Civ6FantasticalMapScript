@@ -7124,16 +7124,16 @@ function Space:InkSubEdgeRiver(river, landmass)
 		else
 			flowPairings = subEdge.flowPairingsBySubEdge[river[i+1]]
 		end
-		print(i, subEdge, river[i+1], subEdge.connections[river[i+1]], flowPairings, #subEdge.connectList, subEdge.flowPairingsBySubEdge)
-		for cse, flowPairing in pairs(subEdge.flowPairingsBySubEdge) do
-			print(cse, flowPairing, "flow pairing connection")
-		end
-		for i, cse in pairs(subEdge.connectList) do
-			print(cse, subEdge.flowPairingsBySubEdge[cse])
-		end
-		for subPolygon, yes in pairs(subEdge.verticalSubPolygons) do
-			print(subPolygon, "vert subpoly")
-		end
+		EchoDebug(i, subEdge, river[i+1], subEdge.connections[river[i+1]], flowPairings, #subEdge.connectList, subEdge.flowPairingsBySubEdge)
+		-- for cse, flowPairing in pairs(subEdge.flowPairingsBySubEdge) do
+		-- 	print(cse, flowPairing, "flow pairing connection")
+		-- end
+		-- for i, cse in pairs(subEdge.connectList) do
+		-- 	print(cse, subEdge.flowPairingsBySubEdge[cse])
+		-- end
+		-- for subPolygon, yes in pairs(subEdge.verticalSubPolygons) do
+		-- 	print(subPolygon, "vert subpoly")
+		-- end
 		for aHex, bHexes in pairs(flowPairings) do
 			for bHex, flowDirection in pairs(bHexes) do
 				if opposite then
@@ -7292,23 +7292,33 @@ function Space:SetRiverFuncs()
 	end
 end
 
-function Space:DrawSubEdgeRiver(sourceEdge)
+function Space:DrawSubEdgeRiver(sourceEdge, collectFunc, limitFunc, minLenth, maxLength)
 	if not sourceEdge then return end
-	local collection, lastWave = sourceEdge:BFSCollect(self.oceanCollectFunc, self.riverLimitFunc)
+	local collection, lastWave = sourceEdge:BFSCollect(collectFunc, limitFunc)
 	if collection and lastWave then
-		for wave, entries in pairs(collection) do
-			for i, entry in pairs(entries) do
-				if entry.hexCount and entry.hexCount > 40 and entry.hexCount < 50 then
-					local river = Space:SubEdgeRiverFromLineage(entry, true)
-					print(entry.hexCount, wave, #river, lastWave)
-					return river
+		local thisWave
+		if not maxLength and (not minLength or lastWave > minLength) then
+			thisWave = lastWave
+		else
+			for wave, entries in pairs(collection) do
+				if (not minLength or wave >= minLenth) and (not maxLength or wave <= maxLength) then
+					thisWave = wave
+					break
 				end
 			end
 		end
+		if thisWave then
+			local entry = tGetRandom(collection[thisWave])
+			local river = Space:SubEdgeRiverFromLineage(entry, true)
+			print(entry.hexCount, #river, thisWave, lastWave)
+			return river, true
+		end
+		return nil, true
 	end
 end
 
-function Space:GetSourceSubEdge(landmass)
+function Space:GetSourceSubEdge(order)
+	local landmass = order.landmass
 	-- subPolygons are already sorted by descending riverSourceScore
 	for i, subPolygon in ipairs(landmass.subPolygons) do
 		if not subPolygon.isRiverSource and not subPolygon.lake and not subPolygon.river then
@@ -7338,7 +7348,7 @@ function Space:GetSourceSubEdge(landmass)
 						if not okay then break end
 						score = score + pairSubPolygon.riverSourceScore
 					end
-					if okay then
+					if okay and not (subEdge.skip and subEdge.skip[order]) then
 						if not highestScore	or score > highestScore then
 							highestScore = score
 							bestSubEdge = subEdge
@@ -7353,18 +7363,27 @@ function Space:GetSourceSubEdge(landmass)
 	end
 end
 
-function Space:DrawTestRiver(landmass)
-	local sourceSubEdge = self:GetSourceSubEdge(landmass)
+function Space:DrawAndInkRiver(order)
+	local landmass = order.landmass
+	local sourceFunc = order.sourceFunc or function(order) return self:GetSourceSubEdge(order) end
+	local collectFunc = order.collectFunc or self.oceanCollectFunc
+	local limitFunc = order.limitFunc or self.riverLimitFunc
+	local minLength = order.minLength
+	local maxLength = order.maxLength
+	local sourceSubEdge = sourceFunc(order)
 	if sourceSubEdge then
-		local river = self:DrawSubEdgeRiver(sourceSubEdge)
+		local river, collectedAny = self:DrawSubEdgeRiver(sourceSubEdge, collectFunc, limitFunc, minLength, maxLength)
 		if river then
 			self:InkSubEdgeRiver(river, landmass)
-			sourceSubEdge.polygons[1].isRiverSource = 1
-			sourceSubEdge.polygons[2].isRiverSource = 1
-			for subPoly, yes in pairs(sourceSubEdge.verticalSubPolygons) do
-				subPoly.isRiverSource = 2
-			end
+			-- sourceSubEdge.polygons[1].isRiverSource = 1
+			-- sourceSubEdge.polygons[2].isRiverSource = 1
+			-- for subPoly, yes in pairs(sourceSubEdge.verticalSubPolygons) do
+			-- 	subPoly.isRiverSource = 2
+			-- end
 			return river
+		elseif not collectedAny then
+			sourceSubEdge.skip = sourceSubEdge.skip or {}
+			sourceSubEdge.skip[order] = true
 		end
 	end
 end
@@ -7416,40 +7435,40 @@ end
 
 function Space:DrawAllLandmassRivers()
 	self:SetRiverFuncs()
-	self.testRivers = {}
-	for i, landmass in pairs(self.landmasses) do
-		local river = self:DrawTestRiver(landmass)
-		if river then
-			-- table.insert(self.testRivers, river)
-			print(#river, "river subedges")
-			local branch = self:DrawTestRiverBranch(river)
-			if branch then
-				print(#branch, "branch subedges")
-				-- table.insert(self.testRivers, branch)
-			end
-		end
-	end
-	-- EchoDebug("drawing rivers for each landmass...")
-	-- local riverGenTimer = StartDebugTimer()
-	-- local oldRiverLandRatio = self.riverLandRatio + 0
-	-- self.riverLandRatio = self.riverLandRatio * (self.rainfallMidpoint / 49.5)
-	-- EchoDebug("original riverLandRatio of " .. oldRiverLandRatio .. " modified by rainfallMidpoint of " .. self.rainfallMidpoint .. " is now " .. self.riverLandRatio)
-	-- local realPrescribedRiverArea =  mCeil(self.riverLandRatio * self.filledArea)
-	-- local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea * 1.1) -- because the algorithm tends to underproduce by roughly 10%
-	-- self.riverArea = 0
-	-- if self.oceanNumber == -1 and #self.inlandSeas == 0 and #self.lakeSubPolygons == 0 then
-	-- 	-- no rivers can be drawn if there are no bodies of water on the map
-	-- 	EchoDebug("no bodies of water on the map and therefore no rivers")
-	-- 	return
-	-- end
-	-- for i, landmass in ipairs(self.landmasses) do
-	-- 	landmass.rainfallFraction = landmass.rainfall / self.globalRainfall
-	-- 	if #landmass.hexes > 3 and landmass.rainfallFraction > 0.005 then
-	-- 		self:FindLandmassRiverSeeds(landmass)
-	-- 		self:DrawLandmassRivers(landmass)
+	-- self.testRivers = {}
+	-- for i, landmass in pairs(self.landmasses) do
+	-- 	local river = self:DrawTestRiver(landmass)
+	-- 	if river then
+	-- 		-- table.insert(self.testRivers, river)
+	-- 		print(#river, "river subedges")
+	-- 		local branch = self:DrawTestRiverBranch(river)
+	-- 		if branch then
+	-- 			print(#branch, "branch subedges")
+	-- 			-- table.insert(self.testRivers, branch)
+	-- 		end
 	-- 	end
 	-- end
-	-- EchoDebug(self.riverArea .. " river tiles created of " .. realPrescribedRiverArea .. " prescribed", StopDebugTimer(riverGenTimer))
+	EchoDebug("drawing rivers for each landmass...")
+	local riverGenTimer = StartDebugTimer()
+	local oldRiverLandRatio = self.riverLandRatio + 0
+	self.riverLandRatio = self.riverLandRatio * (self.rainfallMidpoint / 49.5)
+	EchoDebug("original riverLandRatio of " .. oldRiverLandRatio .. " modified by rainfallMidpoint of " .. self.rainfallMidpoint .. " is now " .. self.riverLandRatio)
+	local realPrescribedRiverArea =  mCeil(self.riverLandRatio * self.filledArea)
+	local prescribedRiverArea = mCeil(self.riverLandRatio * self.filledArea * 1.1) -- because the algorithm tends to underproduce by roughly 10%
+	self.riverArea = 0
+	if self.oceanNumber == -1 and #self.inlandSeas == 0 and #self.lakeSubPolygons == 0 then
+		-- no rivers can be drawn if there are no bodies of water on the map
+		EchoDebug("no bodies of water on the map and therefore no rivers")
+		return
+	end
+	for i, landmass in ipairs(self.landmasses) do
+		landmass.rainfallFraction = landmass.rainfall / self.globalRainfall
+		if #landmass.hexes > 3 and landmass.rainfallFraction > 0.005 then
+			-- self:FindLandmassRiverSeeds(landmass)
+			self:DrawLandmassRivers(landmass)
+		end
+	end
+	EchoDebug(self.riverArea .. " river tiles created of " .. realPrescribedRiverArea .. " prescribed", StopDebugTimer(riverGenTimer))
 end
 
 function Space:FindLandmassRiverSeeds(landmass)
@@ -7663,8 +7682,19 @@ function Space:DrawRiverCollectionOnLandmass(collection, maxAreaPerRiver, prescr
 	return inkedCount, iteration, deadIteration
 end
 
+function Space:DrawRiversFromMountainsOnLandmass(landmass, collectFunc, prescribedArea, minLength, maxLength)
+	local riverArea = 0
+	while riverArea < prescribedArea do
+		local beforeRiverArea = landmass.riverArea + 0
+		local river = self:DrawAndInkRiver({landmass = landmass, collectFunc = collectFunc, minLength = minLength, maxLength = maxLength})
+		riverArea = riverArea + (landmass.riverArea - beforeRiverArea)
+		EchoDebug(riverArea, landmass.riverArea, prescribedArea)
+		if not river then break end
+	end
+end
+
 function Space:DrawLandmassRivers(landmass)
-	if #landmass.riverSeeds == 0 then return end
+	-- if #landmass.riverSeeds == 0 then return end
 	landmass.prescribedRiverArea = mMax(2, mCeil(self.riverLandRatio * self.filledArea * landmass.rainfallFraction))
 	local prescribedRiverArea = landmass.prescribedRiverArea
 	local prescribedForkArea = mMax(2, mCeil(prescribedRiverArea * self.riverForkRatio))
@@ -7680,22 +7710,23 @@ function Space:DrawLandmassRivers(landmass)
 	EchoDebug("prescribed river area: " .. prescribedRiverArea, "prescribed fork area: " .. prescribedForkArea, "prescribedMainArea: " .. prescribedMainArea)
 	EchoDebug("max area per main river: " .. maxAreaPerMainRiver)
 	-- draw rivers connecting lakes if possible:
-	self:DrawLandmassLakeRivers(landmass)
+	-- self:DrawLandmassLakeRivers(landmass)
 	-- draw the main rivers without branches:
-	local mainInkedCount, iteration, deadIteration = self:DrawRiverCollectionOnLandmass(landmass.riverSeeds, maxAreaPerMainRiver, prescribedMainArea, landmass, mCeil(maxAreaPerMainRiver * 0.05))
-	EchoDebug(mainInkedCount .. " main rivers inked", landmass.riverArea .. " river tiles", prescribedMainArea .. " river tiles prescribed for main", iteration .. " iterations", deadIteration .. " dead iterations", #landmass.forkSeeds .. " fork seeds collected")
+	self:DrawRiversFromMountainsOnLandmass(landmass, self.oceanCollectFunc, prescribedMainArea)
+	-- local mainInkedCount, iteration, deadIteration = self:DrawRiverCollectionOnLandmass(landmass.riverSeeds, maxAreaPerMainRiver, prescribedMainArea, landmass, mCeil(maxAreaPerMainRiver * 0.05))
+	-- EchoDebug(mainInkedCount .. " main rivers inked", landmass.riverArea .. " river tiles", prescribedMainArea .. " river tiles prescribed for main", iteration .. " iterations", deadIteration .. " dead iterations", #landmass.forkSeeds .. " fork seeds collected")
 	-- draw branches flowing into the main river channels
 	if prescribedForkArea < 2 then
 		EchoDebug("less than 2 fork river tiles prescribed, there will be no fork rivers")
 		return
 	end
-	if #landmass.forkSeeds < 2 then
-		EchoDebug("less than 2 fork river seeds, there will be no fork rivers")
-		return
-	end
-	local maxAreaPerFork = mMax(self.minForkLength * 2, mCeil(prescribedForkArea * self.maxAreaFractionPerForkRiver))
-	local forkInkedCount, forkIteration, forkDeadIteration = self:DrawRiverCollectionOnLandmass(landmass.forkSeeds, maxAreaPerFork, prescribedRiverArea, landmass, self.minForkLength)
-	EchoDebug(forkInkedCount .. " fork rivers inked", landmass.riverArea .. " river tiles", prescribedRiverArea .. " river tiles prescribed", forkIteration .. " iterations for forks", forkDeadIteration .. " dead iterations")
+	-- if #landmass.forkSeeds < 2 then
+	-- 	EchoDebug("less than 2 fork river seeds, there will be no fork rivers")
+	-- 	return
+	-- end
+	-- local maxAreaPerFork = mMax(self.minForkLength * 2, mCeil(prescribedForkArea * self.maxAreaFractionPerForkRiver))
+	-- local forkInkedCount, forkIteration, forkDeadIteration = self:DrawRiverCollectionOnLandmass(landmass.forkSeeds, maxAreaPerFork, prescribedRiverArea, landmass, self.minForkLength)
+	-- EchoDebug(forkInkedCount .. " fork rivers inked", landmass.riverArea .. " river tiles", prescribedRiverArea .. " river tiles prescribed", forkIteration .. " iterations for forks", forkDeadIteration .. " dead iterations")
 end
 
 function Space:HillsOrMountains(...)
