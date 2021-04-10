@@ -2531,6 +2531,37 @@ function Polygon:PickSubPolygonRegions()
 	end
 end
 
+function Polygon:GetRiverSourceSubEdge(order)
+	local bestSubEdge, highestScore
+	for subEdge, yes in pairs(self.verticalSubEdges) do
+		local okay = true
+		local score = 0
+		for ii, pairSubPolygon in pairs(subEdge.polygons) do
+			if pairSubPolygon.lake or pairSubPolygon.isRiverSource or pairSubPolygon.river or not pairSubPolygon.riverSourceScore then
+				okay = false
+				break
+			end
+			for iii, neighbor in pairs(pairSubPolygon.neighbors) do
+				if not neighbor.superPolygon.continent or neighbor.isRiverSource or neighbor.river then -- or neighbor.lake
+					okay = false
+					break
+				end
+			end
+			if not okay then break end
+			score = score + pairSubPolygon.riverSourceScore
+		end
+		if okay and not (subEdge.skip and order and subEdge.skip[order]) then
+			if not highestScore	or score > highestScore then
+				highestScore = score
+				bestSubEdge = subEdge
+			end
+		end
+	end
+	if bestSubEdge then
+		return bestSubEdge
+	end
+end
+
 ------------------------------------------------------------------------------
 
 SubEdge = class(function(a, polygon1, polygon2)
@@ -2777,7 +2808,7 @@ function SubEdge:DFS(evalFunc, limitFunc, fallbackFunc, visited, path, hexDirs)
 	visited[self] = nil
 end
 
-function SubEdge:BFSCollect(collectFunc, limitFunc)
+function SubEdge:BFSCollect(collectFunc, limitFunc, shortest)
 	local buffer = {{subEdge = self}}
 	local nextBuffer = {}
 	local visited = {}
@@ -2793,10 +2824,13 @@ function SubEdge:BFSCollect(collectFunc, limitFunc)
 			collection[wave] = collection[wave] or {}
 			table.insert(collection[wave], entry)
 			lastWaveWithCollection = wave
+			if shortest then
+				return collection, lastWaveWithCollection
+			end
 		else
 			for i, cse in pairs(se.connectList) do
 				if not visited[cse] and (not entry.parent or not cse.connections[entry.parent.subEdge]) and limitFunc(cse, wave, se) then
-					table.insert(nextBuffer, {subEdge = cse, parent = entry, hexCount = (entry.hexCount or 0) + #cse.hexes })
+					table.insert(nextBuffer, {subEdge = cse, parent = entry})
 				end
 			end
 		end
@@ -7007,6 +7041,7 @@ function Space:ComputeLandmassRainfalls()
 	for i, continent in ipairs(self.continents) do
 		local hexes = {}
 		local subpolys = {}
+		local lakes = {}
 		for ii, polygon in ipairs(continent) do
 			for iii, hex in ipairs(polygon.hexes) do
 				if not hex.subPolygon.lake then
@@ -7014,12 +7049,14 @@ function Space:ComputeLandmassRainfalls()
 				end
 			end
 			for iii, subPolygon in ipairs(polygon.subPolygons) do
-				if not subPolygon.lake then
+				if subPolygon.lake then
+					tInsert(lakes, subPolygon)
+				else
 					tInsert(subpolys, subPolygon)
 				end
 			end
 		end
-		tInsert(self.landmasses, {continent = continent, hexes = hexes, subPolygons = subpolys})
+		tInsert(self.landmasses, {continent = continent, hexes = hexes, subPolygons = subpolys, lakes = lakes})
 	end
 	for i, subPolygon in ipairs(self.tinyIslandSubPolygons) do
 		local hexes = {}
@@ -7124,7 +7161,7 @@ function Space:InkSubEdgeRiver(river, landmass)
 		else
 			flowPairings = subEdge.flowPairingsBySubEdge[river[i+1]]
 		end
-		EchoDebug(i, subEdge, river[i+1], subEdge.connections[river[i+1]], flowPairings, #subEdge.connectList, subEdge.flowPairingsBySubEdge)
+		-- EchoDebug(i, subEdge, river[i+1], subEdge.connections[river[i+1]], flowPairings, #subEdge.connectList, subEdge.flowPairingsBySubEdge)
 		-- for cse, flowPairing in pairs(subEdge.flowPairingsBySubEdge) do
 		-- 	print(cse, flowPairing, "flow pairing connection")
 		-- end
@@ -7134,33 +7171,35 @@ function Space:InkSubEdgeRiver(river, landmass)
 		-- for subPolygon, yes in pairs(subEdge.verticalSubPolygons) do
 		-- 	print(subPolygon, "vert subpoly")
 		-- end
-		for aHex, bHexes in pairs(flowPairings) do
-			for bHex, flowDirection in pairs(bHexes) do
-				if opposite then
-					flowDirection = GetOppositeFlowDirection(flowDirection)
+		if flowPairings then
+			for aHex, bHexes in pairs(flowPairings) do
+				for bHex, flowDirection in pairs(bHexes) do
+					if opposite then
+						flowDirection = GetOppositeFlowDirection(flowDirection)
+					end
+					local direction = subEdge.pairings[aHex][bHex]
+					local BAdirection = subEdge.pairings[bHex][aHex]
+					aHex.ofRiver = aHex.ofRiver or {}
+					aHex.riverId = aHex.riverId or riverId
+					bHex.ofRiver = bHex.ofRiver or {}
+					bHex.riverId = bHex.riverId or riverId
+					aHex.ofRiver[BAdirection] = flowDirection
+					bHex.ofRiver[direction] = flowDirection
+					aHex.onRiver[bHex] = river
+					bHex.onRiver[aHex] = river
+					if not aHex.isRiver then
+						self.riverArea = (self.riverArea or 0) + 1
+						if landmass then landmass.riverArea = (landmass.riverArea or 0) + 1 end
+					end
+					if not bHex.isRiver then
+						self.riverArea = (self.riverArea or 0) + 1
+						if landmass then landmass.riverArea = (landmass.riverArea or 0) + 1 end
+					end
+					aHex.isRiver = aHex.isRiver or {}
+					bHex.isRiver = bHex.isRiver or {}
+					aHex.isRiver[river] = true
+					bHex.isRiver[river] = true
 				end
-				local direction = subEdge.pairings[aHex][bHex]
-				local BAdirection = subEdge.pairings[bHex][aHex]
-				aHex.ofRiver = aHex.ofRiver or {}
-				aHex.riverId = aHex.riverId or riverId
-				bHex.ofRiver = bHex.ofRiver or {}
-				bHex.riverId = bHex.riverId or riverId
-				aHex.ofRiver[BAdirection] = flowDirection
-				bHex.ofRiver[direction] = flowDirection
-				aHex.onRiver[bHex] = river
-				bHex.onRiver[aHex] = river
-				if not aHex.isRiver then
-					self.riverArea = (self.riverArea or 0) + 1
-					if landmass then landmass.riverArea = (landmass.riverArea or 0) + 1 end
-				end
-				if not bHex.isRiver then
-					self.riverArea = (self.riverArea or 0) + 1
-					if landmass then landmass.riverArea = (landmass.riverArea or 0) + 1 end
-				end
-				aHex.isRiver = aHex.isRiver or {}
-				bHex.isRiver = bHex.isRiver or {}
-				aHex.isRiver[river] = true
-				bHex.isRiver[river] = true
 			end
 		end
 	end
@@ -7292,25 +7331,25 @@ function Space:SetRiverFuncs()
 	end
 end
 
-function Space:DrawSubEdgeRiver(sourceEdge, collectFunc, limitFunc, minLenth, maxLength)
+function Space:DrawSubEdgeRiver(sourceEdge, collectFunc, limitFunc, minLenth, maxLength, shortest)
 	if not sourceEdge then return end
-	local collection, lastWave = sourceEdge:BFSCollect(collectFunc, limitFunc)
+	local collection, lastWave = sourceEdge:BFSCollect(collectFunc, limitFunc, shortest)
 	if collection and lastWave then
 		local thisWave
-		if not maxLength and (not minLength or lastWave > minLength) then
+		if (not maxLength or lastWave <= maxLength) and (not minLength or lastWave >= minLength) then
 			thisWave = lastWave
 		else
 			for wave, entries in pairs(collection) do
 				if (not minLength or wave >= minLenth) and (not maxLength or wave <= maxLength) then
 					thisWave = wave
-					break
+					if shortest then break end
 				end
 			end
 		end
 		if thisWave then
 			local entry = tGetRandom(collection[thisWave])
 			local river = Space:SubEdgeRiverFromLineage(entry, true)
-			print(entry.hexCount, #river, thisWave, lastWave)
+			EchoDebug(#river, thisWave, lastWave)
 			return river, true
 		end
 		return nil, true
@@ -7330,33 +7369,9 @@ function Space:GetSourceSubEdge(order)
 				end
 			end
 			if not nearWaterOrSource then
-				local bestSubEdge, highestScore
-				for subEdge, yes in pairs(subPolygon.verticalSubEdges) do
-					local okay = true
-					local score = 0
-					for ii, pairSubPolygon in pairs(subEdge.polygons) do
-						if pairSubPolygon.lake or pairSubPolygon.isRiverSource or pairSubPolygon.river or not pairSubPolygon.riverSourceScore then
-							okay = false
-							break
-						end
-						for iii, neighbor in pairs(pairSubPolygon.neighbors) do
-							if not neighbor.superPolygon.continent or neighbor.lake or neighbor.isRiverSource or neighbor.river then
-								okay = false
-								break
-							end
-						end
-						if not okay then break end
-						score = score + pairSubPolygon.riverSourceScore
-					end
-					if okay and not (subEdge.skip and subEdge.skip[order]) then
-						if not highestScore	or score > highestScore then
-							highestScore = score
-							bestSubEdge = subEdge
-						end
-					end
-				end
-				if bestSubEdge then
-					return bestSubEdge
+				local subEdge = subPolygon:GetRiverSourceSubEdge(order)
+				if subEdge then
+					return subEdge
 				end
 			end
 		end
@@ -7370,9 +7385,10 @@ function Space:DrawAndInkRiver(order)
 	local limitFunc = order.limitFunc or self.riverLimitFunc
 	local minLength = order.minLength
 	local maxLength = order.maxLength
+	local shortest = order.shortest
 	local sourceSubEdge = sourceFunc(order)
 	if sourceSubEdge then
-		local river, collectedAny = self:DrawSubEdgeRiver(sourceSubEdge, collectFunc, limitFunc, minLength, maxLength)
+		local river, collectedAny = self:DrawSubEdgeRiver(sourceSubEdge, collectFunc, limitFunc, minLength, maxLength, shortest)
 		if river then
 			self:InkSubEdgeRiver(river, landmass)
 			-- sourceSubEdge.polygons[1].isRiverSource = 1
@@ -7554,16 +7570,99 @@ function Space:FindLandmassLakeFlow(seeds, landmass)
 	end
 end
 
+-- function Space:DrawLandmassLakeRivers(landmass)
+-- 	landmass.lakeConnections = {}
+-- 	for i, subPolygon in ipairs(landmass.lakeList) do
+-- 		local seeds = landmass.lakeRiverSeeds[subPolygon]
+-- 		self:FindLandmassLakeFlow(seeds, landmass)
+-- 		if landmass.riverArea >= landmass.riverMaxLakeArea then
+-- 			break
+-- 		end
+-- 	end
+-- 	EchoDebug((landmass.riverArea or 0) .. " river tiles from lake rivers of " .. landmass.riverMaxLakeArea .. " maximum")
+-- end
+
 function Space:DrawLandmassLakeRivers(landmass)
-	landmass.lakeConnections = {}
-	for i, subPolygon in ipairs(landmass.lakeList) do
-		local seeds = landmass.lakeRiverSeeds[subPolygon]
-		self:FindLandmassLakeFlow(seeds, landmass)
-		if landmass.riverArea >= landmass.riverMaxLakeArea then
+	local lakeCollectFunc = function(subEdge)
+		for subPolygon, yes in pairs(subEdge.verticalSubPolygons) do
+			if subPolygon.lake and not subPolygon.connectedLake then
+				return true
+			end
+		end
+	end
+	local sourceSubPolygons = {}
+	for i, subPolygon in ipairs(landmass.subPolygons) do
+		if not subPolygon.isRiverSource and not subPolygon.lake and not subPolygon.river then
+			local nearWaterOrSource = false
+			for ii, neighbor in pairs(subPolygon.neighbors) do
+				if not neighbor.superPolygon.continent or neighbor.lake or neighbor.isRiverSource or neighbor.river then
+					nearWaterOrSource = true
+					break
+				end
+			end
+			if not nearWaterOrSource then
+				local smallestLakeDist
+				for ii, lakeSubPoly in pairs(landmass.lakes) do
+					local dist = subPolygon:DistanceToPolygon(lakeSubPoly)
+					if not smallestLakeDist or dist < smallestLakeDist then
+						smallestLakeDist = dist
+					end
+				end
+				if smallestLakeDist then
+					subPolygon.distanceToLake = smallestLakeDist
+					table.insert(sourceSubPolygons, subPolygon)
+				end
+			end
+		end
+	end
+	print("valid lake source subpolygons", #sourceSubPolygons)
+	if #sourceSubPolygons == 0 then return end
+	table.sort(sourceSubPolygons, function(a, b) return a.distanceToLake < b.distanceToLake end)
+	print("lake distances", sourceSubPolygons[1].distanceToLake, sourceSubPolygons[#sourceSubPolygons].distanceToLake)
+	local sourceSubEdge
+	for i, subPolygon in ipairs(sourceSubPolygons) do
+		local subEdge = subPolygon:GetRiverSourceSubEdge()
+		if subEdge then
+			sourceSubEdge = subEdge
 			break
 		end
 	end
-	EchoDebug((landmass.riverArea or 0) .. " river tiles from lake rivers of " .. landmass.riverMaxLakeArea .. " maximum")
+	if not sourceSubEdge then return end
+	local prescribedArea = landmass.riverMaxLakeArea
+	local beforeRiverArea = landmass.riverArea + 0
+	local firstRiver = self:DrawAndInkRiver({landmass = landmass, sourceFunc = function(order) return sourceSubEdge end, collectFunc = lakeCollectFunc, maxLength = 5, shortest = true})
+	local riverArea = landmass.riverArea - beforeRiverArea
+	if not firstRiver then return end
+	EchoDebug("river from mountains to lake", riverArea, prescribedArea)
+	local currentRiver = firstRiver
+	local noRiver = 0
+	while riverArea < prescribedArea do
+		local currentLake
+		for subPolygon, yes in pairs(currentRiver[#currentRiver].verticalSubPolygons) do
+			if subPolygon.lake then
+				currentLake = subPolygon
+				subPolygon.connectedLake = true
+			end
+		end
+		local sourceSubEdges = {}
+		for subEdge, yes in pairs(currentLake.verticalSubEdges) do
+			if not subEdge.river then
+				table.insert(sourceSubEdges, subEdge)
+			end
+		end
+		beforeRiverArea = landmass.riverArea + 0
+		local nextRiver 
+		repeat
+			nextRiver = self:DrawAndInkRiver({landmass = landmass, sourceFunc = function(order) return tRemoveRandom(sourceSubEdges) end, collectFunc = lakeCollectFunc, limitFunc = self.riverLimitFunc, maxLength = 5, shortest = true})
+		until nextRiver or #sourceSubEdges == 0
+		if nextRiver then
+			currentRiver = nextRiver
+			riverArea = riverArea + (landmass.riverArea - beforeRiverArea)
+			EchoDebug("river from lake to lake", riverArea, prescribedArea)
+		else
+			break
+		end
+	end
 end
 
 function Space:AnnotateRiverSeed(seed)
@@ -7684,12 +7783,18 @@ end
 
 function Space:DrawRiversFromMountainsOnLandmass(landmass, collectFunc, prescribedArea, minLength, maxLength)
 	local riverArea = 0
-	while riverArea < prescribedArea do
+	local order = {landmass = landmass, collectFunc = collectFunc, minLength = minLength, maxLength = maxLength}
+	local noRiver = 0
+	while riverArea < prescribedArea and noRiver < 5 do
 		local beforeRiverArea = landmass.riverArea + 0
-		local river = self:DrawAndInkRiver({landmass = landmass, collectFunc = collectFunc, minLength = minLength, maxLength = maxLength})
+		local river = self:DrawAndInkRiver(order)
 		riverArea = riverArea + (landmass.riverArea - beforeRiverArea)
-		EchoDebug(riverArea, landmass.riverArea, prescribedArea)
-		if not river then break end
+		EchoDebug(riverArea, "river area this order", prescribedArea, "prescribed area this order")
+		if river then
+			noRiver = 0
+		else
+			noRiver = noRiver + 1
+		end
 	end
 end
 
@@ -7710,7 +7815,7 @@ function Space:DrawLandmassRivers(landmass)
 	EchoDebug("prescribed river area: " .. prescribedRiverArea, "prescribed fork area: " .. prescribedForkArea, "prescribedMainArea: " .. prescribedMainArea)
 	EchoDebug("max area per main river: " .. maxAreaPerMainRiver)
 	-- draw rivers connecting lakes if possible:
-	-- self:DrawLandmassLakeRivers(landmass)
+	self:DrawLandmassLakeRivers(landmass)
 	-- draw the main rivers without branches:
 	self:DrawRiversFromMountainsOnLandmass(landmass, self.oceanCollectFunc, prescribedMainArea)
 	-- local mainInkedCount, iteration, deadIteration = self:DrawRiverCollectionOnLandmass(landmass.riverSeeds, maxAreaPerMainRiver, prescribedMainArea, landmass, mCeil(maxAreaPerMainRiver * 0.05))
